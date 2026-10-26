@@ -1,6 +1,8 @@
 # Privacy and local data
 
-GleamDesk does not require an author-hosted server. The source distribution contains no author runtime configuration, account database, personal avatar, service credential or historical development commits.
+GleamDesk does not require an author-hosted server. The source distribution contains no author runtime configuration, account database, private avatar uploads, service credential or historical development commits.
+
+The default illustrated avatar is intentionally distributed as the creator-authorized public brand logo. It is a bundled visual asset, not a connected user account; users can replace it locally.
 
 ## What stays on the computer
 

@@ -3,8 +3,23 @@ import assert from "node:assert/strict";
 import {loadRecentScopes,rememberRecentScope,conversationShortcuts} from "../src/services/roomWorkspace";
 import {readWorkbenchNotes,saveWorkbenchNotes,workbenchNotesKey,workbenchNotesBackupKey,type WorkbenchNoteData} from "../src/components/WorkbenchNotes";
 import type {ChatRoom} from "../src/domain/agent/roomWorkspace";
+import {createElement} from "react";
+import {renderToStaticMarkup} from "react-dom/server";
+import {WorkbenchOverview} from "../src/components/WorkbenchOverview";
+import {emptyDashboardData} from "../src/providers/dashboardAdapter";
+import {presentApiUsage} from "../src/presentation/quotaAdapter";
 const memory=()=>{const values=new Map<string,string>();return {values,getItem:(key:string)=>values.get(key)??null,setItem:(key:string,value:string)=>{values.set(key,value);}};};
 const rooms:ChatRoom[]=[{id:"room-a",name:"研究室",members:["GPT"],mode:"group"},{id:"room-b",name:"灵感室",members:["GPT"],mode:"free"}];
+test("first-use overview omits unconfigured API cards and VPS schedules but keeps Windows health",()=>{
+ const data=emptyDashboardData();data.providers=presentApiUsage([{id:"deepseek",name:"DeepSeek",state:"unknown",currency:"CNY",observedAt:"",availabilityReason:"not-enabled"},{id:"openai",name:"OpenAI API",state:"unknown",currency:"USD",observedAt:"",availabilityReason:"unconfigured"}],"unavailable");
+ const html=renderToStaticMarkup(createElement(WorkbenchOverview,{data,vpsInterval:30,onNotifications:()=>{},onRoom:()=>{},onConnections:()=>{}}));
+ assert.doesNotMatch(html,/<h3>DeepSeek<|<h3>OpenAI API<|VPS 自动读取|已配置间隔/);assert.match(html,/Windows 健康扫描/);assert.match(html,/当前筛选暂无摘要/);
+});
+test("configured API failures remain visible and a configured VPS shows its refresh interval",()=>{
+ const data=emptyDashboardData();data.providers=presentApiUsage([{id:"deepseek",name:"DeepSeek",state:"unknown",currency:"CNY",observedAt:"",availabilityReason:"read-failed"}],"error","网络读取失败");
+ const html=renderToStaticMarkup(createElement(WorkbenchOverview,{data,vpsInterval:45,vpsConfigured:true,onNotifications:()=>{},onRoom:()=>{},onConnections:()=>{}}));
+ assert.match(html,/<h3>DeepSeek</);assert.match(html,/VPS 自动读取/);assert.match(html,/刷新间隔 45 秒/);assert.doesNotMatch(html,/当前筛选暂无摘要/);
+});
 test("recent conversations track actual opens, deduplicate and exclude notes",()=>{
  const store=memory();assert.deepEqual(loadRecentScopes(store),[]);
  rememberRecentScope(store,"room-a");rememberRecentScope(store,"direct-GPT");rememberRecentScope(store,"room-a");

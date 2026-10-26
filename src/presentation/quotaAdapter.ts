@@ -101,7 +101,7 @@ export function presentApiUsage(accounts: ApiUsageAccount[], status: ProviderRes
       id: account.id, name: account.name, kind: "api", state: presentedState(account.state, status),
       dataState: mode === "demo" ? "Unknown" : status === "stale" ? "Stale" : status === "error" || status === "unavailable" ? "Unknown" : observedDataState(account.observedAt,300_000,Date.now(),false),
       balance: Number.isFinite(account.balance) ? account.balance : undefined, todayCost: Number.isFinite(account.todayCost) ? account.todayCost : undefined, monthlyCost: Number.isFinite(account.monthCost) ? account.monthCost : undefined, currency: account.currency,
-      apiAmountScope:apiAmountScope(account,mode),apiReadStatus:status,
+      apiAmountScope:apiAmountScope(account,mode),apiReadStatus:status,apiAvailabilityReason:account.availabilityReason,
       apiPeriodTimeZone:account.periodTimeZone??(account.sourceUrl?.includes("/organization")?"UTC":account.amountScope==="local-estimate"?"Asia/Shanghai":undefined),
       detail: status === "stale" ? `数据已过期 · ${error || "读取失败"}${description ? ` · ${description}` : ""}` : error || description,
       sourceUrl: account.sourceUrl, periodStart: account.periodStart, periodEnd: account.periodEnd,todayPeriodStart:account.todayPeriodStart,todayPeriodEnd:account.todayPeriodEnd,lastUpdated: account.observedAt,

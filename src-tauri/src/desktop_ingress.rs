@@ -6,7 +6,7 @@ $ErrorActionPreference='Stop'
 [Console]::InputEncoding=New-Object Text.UTF8Encoding($false)
 [Console]::OutputEncoding=New-Object Text.UTF8Encoding($false)
 Add-Type -AssemblyName System.Drawing
-Add-Type -TypeDefinition @'
+Add-Type -ReferencedAssemblies System.Drawing -TypeDefinition @'
 using System; using System.Runtime.InteropServices;
 public static class CodexFileIcons {
  [StructLayout(LayoutKind.Sequential,CharSet=CharSet.Unicode)] public struct Info {
@@ -17,6 +17,21 @@ public static class CodexFileIcons {
  [DllImport("shell32.dll",CharSet=CharSet.Unicode)] public static extern IntPtr SHGetFileInfo(string path,uint attrs,out Info info,uint size,uint flags);
  [DllImport("shell32.dll",PreserveSig=true)] public static extern int SHGetImageList(int imageList,ref Guid iid,out IntPtr imageListPointer); [DllImport("comctl32.dll",EntryPoint="ImageList_GetIcon")] public static extern IntPtr ImageListGetIcon(IntPtr imageList,int index,uint flags);
  [DllImport("user32.dll")] public static extern bool DestroyIcon(IntPtr icon);
+ public static System.Drawing.Bitmap VisibleBitmap(System.Drawing.Bitmap image) {
+  int left=image.Width,top=image.Height,right=-1,bottom=-1;
+  for(int y=0;y<image.Height;y++) for(int x=0;x<image.Width;x++) {
+   if(image.GetPixel(x,y).A<=12) continue;
+   left=Math.Min(left,x);top=Math.Min(top,y);right=Math.Max(right,x);bottom=Math.Max(bottom,y);
+  }
+  // A jumbo image-list slot can be empty; let the caller try the fallback icon.
+  if(right<left) return null;
+  int width=right-left+1,height=bottom-top+1;
+  if(width>=image.Width*.75 && height>=image.Height*.75) return image;
+  int padding=Math.Max(1,(int)Math.Round(Math.Min(width,height)*.02));
+  int cropX=Math.Max(0,left-padding),cropY=Math.Max(0,top-padding);
+  var area=new System.Drawing.Rectangle(cropX,cropY,Math.Min(image.Width-cropX,width+padding*2),Math.Min(image.Height-cropY,height+padding*2));
+  return image.Clone(area,System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+ }
 }
 '@
 $encoded=[Console]::In.ReadToEnd().Trim()
@@ -53,7 +68,9 @@ $results=@(foreach($path in $paths){
  }
   $icon='';$fallbackPath=$file.FullName;if($iconPath -and (Test-Path -LiteralPath $iconPath)){$fallbackPath=$iconPath}
  $info=New-Object CodexFileIcons+Info
- $systemList=[CodexFileIcons]::SHGetFileInfo($fallbackPath,0,[ref]$info,[Runtime.InteropServices.Marshal]::SizeOf($info),0x4100)
+ # Resolve the shortcut itself so its IconLocation resource index is respected.
+ $shellPath=if($extension -eq '.lnk'){$file.FullName}else{$fallbackPath}
+ $systemList=[CodexFileIcons]::SHGetFileInfo($shellPath,0,[ref]$info,[Runtime.InteropServices.Marshal]::SizeOf($info),0x4000)
  $imageList=[IntPtr]::Zero;$iconHandle=[IntPtr]::Zero
  try {
   if($systemList -ne [IntPtr]::Zero -and $info.index -ge 0){
@@ -63,8 +80,8 @@ $results=@(foreach($path in $paths){
     $iconHandle=[CodexFileIcons]::ImageListGetIcon($imageList,$info.index,0x20)
     if($iconHandle -ne [IntPtr]::Zero){
      $native=[System.Drawing.Icon]::FromHandle($iconHandle);$copy=$native.Clone()
-     try {$bitmap=$copy.ToBitmap();$stream=New-Object IO.MemoryStream
-      try {$bitmap.Save($stream,[System.Drawing.Imaging.ImageFormat]::Png);$icon='data:image/png;base64,'+[Convert]::ToBase64String($stream.ToArray())}finally{$stream.Dispose();$bitmap.Dispose()}
+     try {$bitmap=$copy.ToBitmap();$stream=New-Object IO.MemoryStream;$visible=$null
+      try {$visible=[CodexFileIcons]::VisibleBitmap($bitmap);if($visible){$visible.Save($stream,[System.Drawing.Imaging.ImageFormat]::Png);$icon='data:image/png;base64,'+[Convert]::ToBase64String($stream.ToArray())}}finally{if($visible -and -not[Object]::ReferenceEquals($visible,$bitmap)){$visible.Dispose()};$stream.Dispose();$bitmap.Dispose()}
      } finally {$copy.Dispose()}
     }
    }
@@ -76,11 +93,11 @@ $results=@(foreach($path in $paths){
  if(-not $icon){
   $info=New-Object CodexFileIcons+Info;$iconHandle=[IntPtr]::Zero
   try {
-   [void][CodexFileIcons]::SHGetFileInfo($fallbackPath,0,[ref]$info,[Runtime.InteropServices.Marshal]::SizeOf($info),0x100)
+   [void][CodexFileIcons]::SHGetFileInfo($shellPath,0,[ref]$info,[Runtime.InteropServices.Marshal]::SizeOf($info),0x100)
    if($info.icon -ne [IntPtr]::Zero){
     $iconHandle=$info.icon;$native=[System.Drawing.Icon]::FromHandle($iconHandle);$copy=$native.Clone()
-    try {$bitmap=$copy.ToBitmap();$stream=New-Object IO.MemoryStream
-     try {$bitmap.Save($stream,[System.Drawing.Imaging.ImageFormat]::Png);$icon='data:image/png;base64,'+[Convert]::ToBase64String($stream.ToArray())}finally{$stream.Dispose();$bitmap.Dispose()}
+    try {$bitmap=$copy.ToBitmap();$stream=New-Object IO.MemoryStream;$visible=$null
+     try {$visible=[CodexFileIcons]::VisibleBitmap($bitmap);if($visible){$visible.Save($stream,[System.Drawing.Imaging.ImageFormat]::Png);$icon='data:image/png;base64,'+[Convert]::ToBase64String($stream.ToArray())}}finally{if($visible -and -not[Object]::ReferenceEquals($visible,$bitmap)){$visible.Dispose()};$stream.Dispose();$bitmap.Dispose()}
     } finally {$copy.Dispose()}
    }
   } catch {} finally {if($iconHandle -ne [IntPtr]::Zero){[void][CodexFileIcons]::DestroyIcon($iconHandle)}}
@@ -117,6 +134,23 @@ pub async fn extract_original_app_icons(paths: Vec<String>) -> Result<Vec<Value>
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(windows)]
+    #[test]
+    fn jumbo_icons_crop_transparent_padding_and_reject_empty_slots() {
+        let definition=SCRIPT.split_once("Add-Type -ReferencedAssemblies System.Drawing -TypeDefinition @'\n").unwrap().1.split_once("\n'@").unwrap().0;
+        let script=format!("Add-Type -AssemblyName System.Drawing\nAdd-Type -ReferencedAssemblies System.Drawing -TypeDefinition @'\n{definition}\n'@\n{}",r#"
+$small=New-Object Drawing.Bitmap(256,256)
+$g=[Drawing.Graphics]::FromImage($small);$g.Clear([Drawing.Color]::Transparent);$g.FillRectangle([Drawing.Brushes]::Red,100,90,32,32);$g.Dispose()
+$cropped=[CodexFileIcons]::VisibleBitmap($small)
+$empty=New-Object Drawing.Bitmap(256,256)
+$full=New-Object Drawing.Bitmap(48,48);$g=[Drawing.Graphics]::FromImage($full);$g.Clear([Drawing.Color]::Blue);$g.Dispose()
+@{width=$cropped.Width;height=$cropped.Height;empty=($null -eq [CodexFileIcons]::VisibleBitmap($empty));unchanged=[Object]::ReferenceEquals($full,[CodexFileIcons]::VisibleBitmap($full))}|ConvertTo-Json -Compress
+$cropped.Dispose();$small.Dispose();$empty.Dispose();$full.Dispose()
+"#);
+        let executable=PathBuf::from(std::env::var_os("WINDIR").unwrap()).join("System32/WindowsPowerShell/v1.0/powershell.exe");
+        let result=crate::cli_reader::read_cli_json(&executable,&["-NoProfile","-NonInteractive","-Command",&script],Duration::from_secs(15)).unwrap();
+        assert_eq!(result["width"],34);assert_eq!(result["height"],34);assert_eq!(result["empty"],true);assert_eq!(result["unchanged"],true);
+    }
     #[test]
     #[ignore = "reads owned workspace fixtures without launching their targets"]
     fn inspect_owned_shortcut_url_and_folder_fixtures() {

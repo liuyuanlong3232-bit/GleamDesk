@@ -1,5 +1,5 @@
 import type {CSSProperties} from "react";
-import personalSheet from "../assets/avatars-3d/personal-placeholder.svg";
+import personalSheet from "../assets/avatars-3d/brand-avatar-themes.png";
 import hudSheet from "../assets/avatars-3d/hud-themes-v2.png";
 import roomSheet from "../assets/avatars-3d/room-members-v2.png";
 import {appThemes} from "../presentation/theme";

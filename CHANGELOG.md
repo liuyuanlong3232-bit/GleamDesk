@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### 0.1.1 candidate
+
+- Hide unconfigured API cards and the VPS polling interval from the first-use overview; configured account failures remain visible.
+- Normalize transparent padding for all extracted Windows app icons, fall back from empty jumbo slots, refresh old automatic icons once, and preserve explicitly selected custom icons on re-drop.
+- Ship the creator-authorized brand avatar as the theme-aware default; local avatar replacement remains available.
+
 ## [0.1.0] - 2026-10-26
 
 ### Added

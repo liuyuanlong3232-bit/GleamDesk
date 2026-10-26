@@ -16,43 +16,11 @@ export function dockWindowSize(count:number,expanded:boolean,menuOpen:boolean,me
   const open=expanded||menuOpen;return {width:open?Math.max(240,Math.min(2400,Math.max(0,count)*68+32)):64,height:menuOpen?450:messageOpen?120:open?72:64};
 }
 
-const iconRefreshMarker="codex-desktop.native-icons.v8";
-function isSmallPng(icon:string):boolean{
-  const payload=icon.match(/^data:image\/png;base64,([A-Za-z0-9+/=]+)/)?.[1];
-  if(!payload||payload.length<32)return false;
-  try{
-    const bytes=atob(payload.slice(0,32));
-    if(bytes.length<24)return false;
-    const dimension=(offset:number)=>((bytes.charCodeAt(offset)<<24)|(bytes.charCodeAt(offset+1)<<16)|(bytes.charCodeAt(offset+2)<<8)|bytes.charCodeAt(offset+3))>>>0;
-    const width=dimension(16),height=dimension(20);
-    return width>0&&height>0&&width<=64&&height<=64;
-  }catch{return false;}
-}
+const iconRefreshMarker="codex-desktop.native-icons.v9";
 function legacyIconPath(application:ApplicationItem):string|undefined{
-  if(application.iconSource==="custom"||!isSmallPng(application.icon))return undefined;
+  if(application.iconSource==="custom")return undefined;
   const path=application.sourcePath||application.target;
   return /^[A-Za-z]:[\\/]/.test(path)&&!path.startsWith("\\\\")?path:undefined;
-}
-
-async function cropTransparentPng(icon:string):Promise<string>{
-  if(!icon.startsWith("data:image/png;base64,"))return icon;
-  const image=new Image();image.src=icon;await image.decode();
-  const source=document.createElement("canvas");source.width=image.naturalWidth;source.height=image.naturalHeight;
-  const sourceContext=source.getContext("2d",{willReadFrequently:true});if(!sourceContext)return icon;
-  sourceContext.drawImage(image,0,0);
-  const {data}=sourceContext.getImageData(0,0,source.width,source.height);
-  let left=source.width,top=source.height,right=-1,bottom=-1;
-  for(let y=0;y<source.height;y++)for(let x=0;x<source.width;x++)if(data[(y*source.width+x)*4+3]>12){left=Math.min(left,x);top=Math.min(top,y);right=Math.max(right,x);bottom=Math.max(bottom,y);}
-  if(right<left||bottom<top)return icon;
-  const contentWidth=right-left+1,contentHeight=bottom-top+1;
-  if(contentWidth>=source.width*0.75&&contentHeight>=source.height*0.75)return icon;
-  const padding=Math.max(1,Math.round(Math.min(contentWidth,contentHeight)*0.02));
-  const x=Math.max(0,left-padding),y=Math.max(0,top-padding);
-  const width=Math.min(source.width-x,contentWidth+padding*2),height=Math.min(source.height-y,contentHeight+padding*2);
-  const cropped=document.createElement("canvas");cropped.width=width;cropped.height=height;
-  const croppedContext=cropped.getContext("2d");if(!croppedContext)return icon;
-  croppedContext.drawImage(image,x,y,width,height,0,0,width,height);
-  return cropped.toDataURL("image/png");
 }
 
 export function DockWindow() {
@@ -61,7 +29,6 @@ export function DockWindow() {
   const [applications, updateApplications] = useApplications(error => setMessage(error));
   const updateApplicationsRef=useRef(updateApplications);updateApplicationsRef.current=updateApplications;
   const iconRefreshStarted=useRef(false);
-  const iconCropStarted=useRef(false);
   const [settings, setSettings] = useState(loadSettings);
   const [menuOpen, setMenuOpen] = useState(false);
   const [message, setMessage] = useState("");
@@ -87,17 +54,6 @@ export function DockWindow() {
       if(refreshed.size)logEvent("info","dock.icon_refresh_succeeded",{count:refreshed.size});else if(complete)logEvent("warn","dock.icon_refresh_empty",{candidateCount:candidates.length});
       if(complete)localStorage.setItem(iconRefreshMarker,"done");
     })().catch(error=>setMessage(error instanceof Error?error.message:"应用配置保存失败"));
-  },[applications]);
-  useEffect(()=>{
-    if(!isTauri()||iconCropStarted.current)return;
-    const candidate=applications.find(app=>app.name==="AI Chart 智能技术图表终端"&&app.iconSource==="system"&&app.icon.startsWith("data:image/png;base64,"));
-    if(!candidate)return;
-    iconCropStarted.current=true;
-    void cropTransparentPng(candidate.icon).then(async icon=>{
-      if(icon===candidate.icon)return;
-      await updateApplicationsRef.current(current=>current.map(app=>app.id===candidate.id&&app.icon===candidate.icon?{...app,icon}:app));
-      logEvent("info","dock.icon_transparent_padding_cropped",{application:candidate.name});
-    }).catch(error=>{setMessage(error instanceof Error?error.message:"应用配置保存失败");logEvent("warn","dock.icon_crop_failed",{reason:"icon_crop_or_config_save_failed"});});
   },[applications]);
   const [expanded,setExpanded]=useState(false),[interacting,setInteracting]=useState(false);
   const [dockExpandedReady,setDockExpandedReady]=useState(false);

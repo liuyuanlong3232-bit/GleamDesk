@@ -27,6 +27,7 @@ export interface ProviderStatus {
   todayPeriodEnd?: string;
   apiAmountScope?: import("./domain/api/contracts").ApiAmountScope;
   apiReadStatus?: ProviderResultStatus;
+  apiAvailabilityReason?: import("./domain/api/contracts").ApiUnavailableReason;
   apiPeriodTimeZone?: "UTC"|"Asia/Shanghai";
   detail?: string;
   latency?: number;

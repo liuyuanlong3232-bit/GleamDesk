@@ -37,7 +37,8 @@ export function mergeDroppedApplications(current:ApplicationItem[],incoming:Appl
     const index=existing>=0?existing:placeholder;
     if(index>=0){
       const previous=next[index];
-      next[index]={...previous,...item,id:previous.id,name:previous.name,order:previous.order,pinned:true,icon:previous.icon||item.icon,glyph:previous.glyph||item.glyph,color:previous.color||item.color,
+      const keepCustom=previous.iconSource==="custom"&&Boolean(previous.icon);
+      next[index]={...previous,...item,id:previous.id,name:previous.name,order:previous.order,pinned:true,icon:keepCustom?previous.icon:item.icon||previous.icon,iconSource:keepCustom?"custom":item.icon?item.iconSource:previous.iconSource,glyph:previous.glyph||item.glyph,color:previous.color||item.color,
         ...(previous.target?{arguments:previous.arguments??item.arguments,processName:previous.processName??item.processName}:{} )};
     }else next.push({...item,order:next.length});
   }

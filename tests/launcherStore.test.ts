@@ -102,3 +102,16 @@ test("adding same-name applications never overwrites a different configured targ
 
 
 test("configured command entries remain distinct from executable entries with the same target",()=>{const base={id:"a",name:"App",type:"command" as const,target:"app.exe",icon:"",pinned:true,order:0,arguments:"user-argument"};const result=mergeDroppedApplications([base],[{...base,id:"b",type:"exe"}]);assert.equal(result.length,2);assert.equal(result[0].type,"command");assert.equal(result[0].arguments,"user-argument");});
+
+test("re-dropping an app replaces its stale system icon while retaining its identity and arguments",()=>{
+ const previous={id:"chart",name:"Chart",type:"shortcut" as const,target:"C:\\Apps\\Chart.lnk",icon:"old-padded-icon",iconSource:"system" as const,pinned:true,order:2,arguments:"--workspace saved"};
+ const incoming={...previous,id:"scan-chart",icon:"fresh-original-icon",arguments:"--other"};
+ const [merged]=mergeDroppedApplications([previous],[incoming]);
+ assert.equal(merged.icon,incoming.icon);assert.equal(merged.iconSource,"system");assert.equal(merged.id,previous.id);assert.equal(merged.arguments,previous.arguments);
+ assert.equal(mergeDroppedApplications([previous],[{...incoming,icon:""}])[0].icon,previous.icon);
+});
+test("re-dropping an app preserves an explicitly selected custom icon and its source marker",()=>{
+ const previous={id:"github",name:"GitHub",type:"shortcut" as const,target:"C:\\Apps\\GitHub.lnk",icon:"user-icon",iconSource:"custom" as const,pinned:true,order:0};
+ const [merged]=mergeDroppedApplications([previous],[{...previous,id:"incoming",icon:"new-system-icon",iconSource:"system"}]);
+ assert.equal(merged.icon,"user-icon");assert.equal(merged.iconSource,"custom");
+});

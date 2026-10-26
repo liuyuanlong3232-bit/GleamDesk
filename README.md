@@ -27,17 +27,17 @@ Keep frequently checked status and everyday shortcuts on your desktop. Open the 
 
 ### Dock — compact until you need it
 
-![Collapsed and expanded Dock](docs/images/dock.png)
+![Collapsed and expanded Dock](docs/images/dock.jpg)
 
 Hover over or click the avatar to expand the launcher; move away to collapse it. Pin applications and URLs, or open the workbench from the avatar. Built-in app icons are starter entries and require your own executable paths. Change the display name and avatar at the top left of the workbench.
 
 ### HUD — persistent status with expandable details
 
-![Top HUD and expanded quota details](docs/images/hud.png)
+![Top HUD and expanded quota details](docs/images/hud.jpg)
 
 Compact icons and status rings keep the desktop clear. Click to pin details, drag the HUD to a screen edge, and use the penguin button to open the workbench on the main or secondary display. **Exit the whole app from the HUD context menu**; closing the workbench only hides it.
 
-> These are isolated browser previews of the actual React components. HUD values are developer simulation data; Dock entries and the avatar are generic defaults. No personal accounts, servers or chats were read. Previews do not prove live quotas, installed applications, connectivity or native Windows window behavior. [Capture details](docs/images/README.md).
+> These are isolated browser previews of the actual React components. HUD values are developer simulation data; Dock entries are starter defaults and the avatar is the creator-authorized public brand logo. No personal accounts, servers or chats were read. Previews do not prove live quotas, installed applications, connectivity or native Windows window behavior. [Capture details](docs/images/README.md).
 
 ## Features
 
@@ -54,6 +54,8 @@ Compact icons and status rings keep the desktop clear. Click to pin details, dra
 **No author-hosted VPS is required.** New installations contain no author account, personal watchlist, server configuration or credentials. Free sources can be managed in settings; SSH, optional service connections and automatic paid generation start disabled.
 
 ## Get started
+
+The source and screenshots now reflect the 0.1.1 candidate. Published downloads below remain 0.1.0 until the next release.
 
 Download the Windows x64 packages from [GitHub Release v0.1.0](https://github.com/liuyuanlong3232-bit/GleamDesk/releases/tag/v0.1.0):
 
@@ -80,19 +82,19 @@ See [Build from source](docs/BUILDING.md) for validation and executable build co
 
 ### On-demand workbench
 
-![GleamDesk workbench preview](docs/images/overview.png)
+![GleamDesk workbench preview](docs/images/overview.jpg)
 
 Overview balances are explicitly labeled simulation values, not real accounts or investment results.
 
 ### Agent Room
 
-![Agent Room with unconfigured models](docs/images/agent-room.png)
+![Agent Room with unconfigured models](docs/images/agent-room.jpg)
 
 ### Appearance settings
 
-![Appearance and theme settings](docs/images/settings.png)
+![Appearance and theme settings](docs/images/settings.jpg)
 
-[Capture details](docs/images/README.md). The default public avatar is generic; users can choose their own image locally.
+[Capture details](docs/images/README.md). The default avatar is the creator-authorized GleamDesk brand logo; users can replace it locally.
 
 ## Data and privacy
 

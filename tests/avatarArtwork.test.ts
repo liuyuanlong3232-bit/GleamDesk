@@ -7,11 +7,10 @@ import {customAvatarEnabled,resetAvatar,subscribeAvatars} from "../src/services/
 import {roomMembers} from "../src/domain/agent/roomWorkspace";
 import {appThemes} from "../src/presentation/theme";
 test("approved artwork dimensions match the original PNG files",async()=>{
- for(const [kind,file] of [["daily","hud-themes-v2"],["member","room-members-v2"]] as const){
+ for(const [kind,file] of [["personal","brand-avatar-themes"],["daily","hud-themes-v2"],["member","room-members-v2"]] as const){
   const image=await readFile(`src/assets/avatars-3d/${file}.png`),crop=avatarCrop(kind,"DeepSeek");assert.equal(image.readUInt32BE(16),crop.width);assert.equal(image.readUInt32BE(20),crop.height);
  }
 });
-test("public personal avatar is a generic vector with matching crop dimensions",async()=>{const image=await readFile('src/assets/avatars-3d/personal-placeholder.svg','utf8'),crop=avatarCrop('personal','你');assert.match(image,new RegExp('width="'+crop.width+'"'));assert.match(image,new RegExp('height="'+crop.height+'"'));});
 
 test("all room members have distinct crops in roster order without changing routing IDs",()=>{
  const crops=roomMembers.map(id=>avatarCrop("member",id));assert.equal(new Set(crops.map(c=>`${c.x}:${c.y}`)).size,10);

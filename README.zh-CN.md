@@ -18,17 +18,17 @@
 
 ### Dock：收起时是头像，展开后是启动栏
 
-![Dock 收起与展开对照](docs/images/dock.png)
+![Dock 收起与展开对照](docs/images/dock.jpg)
 
 靠近或点击头像展开；离开后自动收起。可以固定常用应用和网址；内置图标只是初始入口，首次使用仍需配置本机应用路径。点击头像可打开工作台，显示名字和头像可在工作台左上角修改。
 
 ### 顶部 HUD：常驻状态，按需展开
 
-![顶部 HUD 与展开的额度详情](docs/images/hud.png)
+![顶部 HUD 与展开的额度详情](docs/images/hud.jpg)
 
 圆形图标和状态环减少桌面占用，点击可固定详情。拖动 HUD 可贴到屏幕四边；企鹅按钮打开工作台，并可选择主屏或副屏。**退出整个软件在 HUD 右键菜单中**；关闭工作台只隐藏工作台。
 
-> 以上为真实 React 组件的独立浏览器预览，HUD 数值是开发模拟数据，Dock 使用通用头像及内置入口。未读取私人账户、服务器或聊天。预览不代表真实额度、已安装应用或连接成功；窗口穿透、跨屏与系统启动行为以 Windows 桌面版为准。[截图说明](docs/images/README.md)
+> 以上为真实 React 组件的独立浏览器预览，HUD 数值是开发模拟数据，Dock 使用创作者授权公开的品牌头像及内置入口。未读取私人账户、服务器或聊天。预览不代表真实额度、已安装应用或连接成功；窗口穿透、跨屏与系统启动行为以 Windows 桌面版为准。[截图说明](docs/images/README.md)
 
 ## 功能
 
@@ -45,6 +45,8 @@
 **不依赖作者 VPS。** 新安装没有作者账户、服务器配置、个人自选和凭据。免费数据来源默认启用；SSH、可选服务和自动付费生成默认关闭。
 
 ## 开始使用
+
+当前源码与截图为 0.1.1 候选；下方下载入口仍是已发布的 0.1.0，待新版发布后更新。
 
 从 [GitHub Release v0.1.0](https://github.com/liuyuanlong3232-bit/GleamDesk/releases/tag/v0.1.0) 下载 Windows x64 版本：
 
@@ -71,17 +73,17 @@ npm.cmd run tauri -- dev
 
 ### 按需打开的工作台
 
-![工作台界面预览](docs/images/overview.png)
+![工作台界面预览](docs/images/overview.jpg)
 
 首页金额为标明的开发模拟数据，不代表实际账户或投资收益。
 
 ### Agent Room
 
-![未连接模型的 Agent Room](docs/images/agent-room.png)
+![未连接模型的 Agent Room](docs/images/agent-room.jpg)
 
 ### 外观设置
 
-![主题与外观设置](docs/images/settings.png)
+![主题与外观设置](docs/images/settings.jpg)
 
 ## 数据与隐私
 
