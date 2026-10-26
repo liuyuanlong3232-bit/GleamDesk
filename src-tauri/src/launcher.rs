@@ -333,79 +333,140 @@ fn internet_shortcut_url(path: &Path) -> Option<String> {
 
 #[tauri::command]
 pub fn open_application(application: LauncherApplication) -> Result<LaunchResult, String> {
+    validate_launch(&application)?;
+    #[cfg(not(windows))]
+    return Err("应用启动仅支持 Windows 桌面应用".into());
+    #[cfg(windows)]
+    std::thread::spawn(move || {
+        // Shell extensions and shortcut metadata need an STA. Keep it off the UI thread.
+        use windows_sys::Win32::System::Com::{CoInitializeEx, CoUninitialize, COINIT_APARTMENTTHREADED, COINIT_DISABLE_OLE1DDE};
+        let initialized = unsafe { CoInitializeEx(std::ptr::null(), COINIT_APARTMENTTHREADED as u32 | COINIT_DISABLE_OLE1DDE as u32) };
+        if initialized < 0 { return Err("Windows 启动接口初始化失败".into()); }
+        struct Apartment;
+        impl Drop for Apartment { fn drop(&mut self) { unsafe { CoUninitialize() } } }
+        let _apartment = Apartment;
+        launch_native(&application)
+    }).join().map_err(|_| "Windows 启动任务失败".to_string())?
+}
+
+fn validate_launch(application: &LauncherApplication) -> Result<(), String> {
     let target = application.target.trim();
     if target.is_empty() { return Err("应用目标路径为空，请先在应用管理中配置路径".into()); }
-    if application.kind == "url" && !(target.starts_with("https://") || target.starts_with("http://")) {
-        return Err("网址只支持 http 或 https 地址".into());
-    }
     if !["exe", "shortcut", "url", "command"].contains(&application.kind.as_str()) {
         return Err("不支持的应用类型".into());
     }
-
-    #[cfg(not(windows))]
-    return Err("应用启动仅支持 Windows 桌面应用".into());
-
-    #[cfg(windows)]
-    {
-        let payload = serde_json::to_vec(&application).map_err(|error| error.to_string())?;
-        let payload = base64_encode(&payload);
-        let script = format!(r#"
-$ErrorActionPreference = 'Stop'
-[Console]::OutputEncoding = New-Object System.Text.UTF8Encoding $false
-try {{
-  $payload = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('{payload}')) | ConvertFrom-Json
-  $target = [string]$payload.target
-  $arguments = [string]$payload.arguments
-  $processName = [string]$payload.processName
-  if ($payload.type -eq 'shortcut' -and [IO.Path]::GetExtension($target) -ieq '.lnk') {{
-    $shell = New-Object -ComObject WScript.Shell
-    $shortcut = $shell.CreateShortcut($target)
-    $target = [string]$shortcut.TargetPath
-    if (-not $arguments) {{ $arguments = [string]$shortcut.Arguments }}
-  }}
-  if ($payload.type -in @('exe', 'shortcut')) {{
-    if (-not $processName) {{ $processName = [IO.Path]::GetFileNameWithoutExtension($target) }}
-    Add-Type -TypeDefinition @'
-using System;
-using System.Runtime.InteropServices;
-public static class CodexDesktopWindow {{
-  [DllImport("user32.dll")] public static extern bool ShowWindowAsync(IntPtr handle, int command);
-  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr handle);
-}}
-'@
-    $candidates = @(Get-Process -Name $processName -ErrorAction SilentlyContinue | Where-Object {{ $_.MainWindowHandle -ne 0 }})
-    $targetPath = $null
-    try {{ $targetPath = [IO.Path]::GetFullPath($target) }} catch {{ }}
-    $process = $candidates | Where-Object {{ try {{ [IO.Path]::GetFullPath($_.Path) -ieq $targetPath }} catch {{ $false }} }} | Select-Object -First 1
-    if (-not $process -and $candidates.Count -eq 1) {{ $process = $candidates[0] }}
-    if ($process) {{
-      $handle = [IntPtr]$process.MainWindowHandle
-      [CodexDesktopWindow]::ShowWindowAsync($handle, 9) | Out-Null
-      [CodexDesktopWindow]::SetForegroundWindow($handle) | Out-Null
-      (New-Object -ComObject WScript.Shell).AppActivate([int]$process.Id) | Out-Null
-      @{{ status = 'activated'; processName = $processName }} | ConvertTo-Json -Compress
-      exit 0
-    }}
-  }}
-  switch ($payload.type) {{
-    'exe' {{ if ($arguments) {{ Start-Process -FilePath $target -ArgumentList $arguments | Out-Null }} else {{ Start-Process -FilePath $target | Out-Null }} }}
-    'shortcut' {{ if (-not $target) {{ throw '快捷方式没有可启动的目标' }}; if ($arguments) {{ Start-Process -FilePath $target -ArgumentList $arguments | Out-Null }} else {{ Start-Process -FilePath $target | Out-Null }} }}
-    'url' {{ Start-Process -FilePath ([string]$payload.target) | Out-Null }}
-    'command' {{ Start-Process -FilePath 'cmd.exe' -ArgumentList @('/d', '/s', '/c', [string]$payload.target) | Out-Null }}
-  }}
-  @{{ status = 'launched'; processName = $processName }} | ConvertTo-Json -Compress
-  exit 0
-}} catch {{
-  [Console]::Error.WriteLine($_.Exception.Message)
-  exit 1
-}}
-"#);
-        let output = run_powershell(&script)?;
-        serde_json::from_slice(&output.stdout).map_err(|_| {
-            let message = String::from_utf8_lossy(&output.stderr).trim().to_string();
-            if message.is_empty() { "Windows 未返回启动结果".into() } else { message }
-        })
+    if [target, application.arguments.as_str()].iter().any(|value| value.contains('\0') || value.encode_utf16().count() > 32767) {
+        return Err("应用路径或参数无效".into());
     }
+    if application.kind == "url" && !tauri::Url::parse(target).is_ok_and(|url| matches!(url.scheme(), "http" | "https")) {
+        return Err("网址只支持 http 或 https 地址".into());
+    }
+    Ok(())
+}
+
+#[cfg(windows)]
+fn wide_text(value: &str) -> Vec<u16> { value.encode_utf16().chain(Some(0)).collect() }
+
+#[cfg(windows)]
+fn shortcut_target(path: &str) -> Option<(String, String)> {
+    use windows::{core::{Interface, PCWSTR}, Win32::{
+        System::Com::{CoCreateInstance, IPersistFile, CLSCTX_INPROC_SERVER, STGM_READ},
+        UI::Shell::{IShellLinkW, ShellLink},
+    }};
+    let link: IShellLinkW = unsafe { CoCreateInstance(&ShellLink, None, CLSCTX_INPROC_SERVER) }.ok()?;
+    let file: IPersistFile = link.cast().ok()?;
+    let path = wide_text(path);
+    unsafe { file.Load(PCWSTR(path.as_ptr()), STGM_READ) }.ok()?;
+    let mut target = vec![0u16; 32768];
+    unsafe { link.GetPath(&mut target, std::ptr::null_mut(), 0) }.ok()?;
+    let text = |bytes: &[u16]| String::from_utf16_lossy(&bytes[..bytes.iter().position(|unit| *unit == 0).unwrap_or(bytes.len())]);
+    let target = text(&target);
+    if target.is_empty() { return None; }
+    let mut directory = vec![0u16; 32768];
+    let _ = unsafe { link.GetWorkingDirectory(&mut directory) };
+    Some((target, text(&directory)))
+}
+
+#[cfg(windows)]
+fn normalized_launch_path(value: &str) -> String {
+    let path = Path::new(value).canonicalize().ok().map(|path| path.to_string_lossy().into_owned()).unwrap_or_else(|| value.into());
+    path.trim_start_matches("\\\\?\\").replace('/', "\\").to_lowercase()
+}
+
+#[cfg(windows)]
+fn activate_existing(target:&str)->Result<bool,String>{
+    use windows_sys::Win32::{Foundation::{CloseHandle,HWND,LPARAM},System::Threading::{OpenProcess,QueryFullProcessImageNameW,PROCESS_QUERY_LIMITED_INFORMATION},UI::WindowsAndMessaging::{EnumWindows,GetWindow,GetWindowThreadProcessId,IsIconic,IsWindowVisible,SetForegroundWindow,ShowWindowAsync,GW_OWNER,SW_RESTORE}};
+    if !Path::new(target).is_absolute(){return Ok(false);}
+    struct Search{target:String,window:HWND}
+    unsafe extern "system" fn visit(window:HWND,context:LPARAM)->i32{
+        if IsWindowVisible(window)==0||!GetWindow(window,GW_OWNER).is_null(){return 1;}
+        let search=&mut*(context as *mut Search);let mut pid=0;GetWindowThreadProcessId(window,&mut pid);
+        let process=OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION,0,pid);if process.is_null(){return 1;}
+        let mut buffer=vec![0u16;32768];let mut length=buffer.len() as u32;
+        let ok=QueryFullProcessImageNameW(process,0,buffer.as_mut_ptr(),&mut length);CloseHandle(process);
+        if ok!=0&&normalized_launch_path(&String::from_utf16_lossy(&buffer[..length as usize]))==search.target{search.window=window;return 0;}1
+    }
+    let mut search=Search{target:normalized_launch_path(target),window:std::ptr::null_mut()};
+    unsafe{EnumWindows(Some(visit),&mut search as *mut _ as LPARAM)};
+    if search.window.is_null(){return Ok(false);}
+    unsafe{if IsIconic(search.window)!=0{ShowWindowAsync(search.window,SW_RESTORE);}if SetForegroundWindow(search.window)!=0{return Ok(true);}}
+    // Do not spawn a duplicate or force foreground rights when Windows refuses focus.
+    Err("应用已在运行，Windows 未允许切换到前台，请从任务栏打开".into())
+}
+
+#[cfg(windows)]
+fn shell_open(target: &str, arguments: &str, directory: Option<&str>) -> Result<(), String> {
+    use windows_sys::Win32::{Foundation::GetLastError, UI::{
+        Shell::{ShellExecuteExW, SHELLEXECUTEINFOW, SEE_MASK_NOASYNC, SEE_MASK_UNICODE, SEE_MASK_FLAG_NO_UI},
+        WindowsAndMessaging::SW_SHOWNORMAL,
+    }};
+    let verb = wide_text("open");
+    let target = wide_text(target);
+    let arguments = wide_text(arguments);
+    let directory = directory.map(wide_text);
+    let mut request: SHELLEXECUTEINFOW = unsafe { std::mem::zeroed() };
+    request.cbSize = std::mem::size_of_val(&request) as u32;
+    // Suppress generic file-open error dialogs; normal security/elevation prompts remain enabled.
+    request.fMask = SEE_MASK_NOASYNC | SEE_MASK_UNICODE | SEE_MASK_FLAG_NO_UI;
+    request.lpVerb = verb.as_ptr();
+    request.lpFile = target.as_ptr();
+    request.lpParameters = if arguments.len() > 1 { arguments.as_ptr() } else { std::ptr::null() };
+    request.lpDirectory = directory.as_ref().map_or(std::ptr::null(), |path| path.as_ptr());
+    request.nShow = SW_SHOWNORMAL;
+    if unsafe { ShellExecuteExW(&mut request) } != 0 { return Ok(()); }
+    let code = unsafe { GetLastError() };
+    Err(match code {
+        225 | 226 => format!("Windows 安全防护阻止了该应用（代码 {code}），请查看防护记录"),
+        1223 => "已取消启动或权限确认".into(),
+        _ => format!("Windows 无法启动该入口（代码 {code}）"),
+    })
+}
+
+#[cfg(windows)]
+fn launch_native(application: &LauncherApplication) -> Result<LaunchResult, String> {
+    let target = application.target.trim();
+    let shortcut = if application.kind == "shortcut" && Path::new(target).extension().is_some_and(|ext| ext.eq_ignore_ascii_case("lnk")) {
+        shortcut_target(target)
+    } else { None };
+    let executable = shortcut.as_ref().map(|(path, _)| path.as_str()).unwrap_or(target);
+    let process_name = (!application.process_name.trim().is_empty()).then(|| application.process_name.clone())
+        .or_else(|| Path::new(executable).file_stem().map(|stem| stem.to_string_lossy().into_owned()));
+    if matches!(application.kind.as_str(), "exe" | "shortcut") && activate_existing(executable)? {
+        return Ok(LaunchResult { status: "activated".into(), process_name });
+    }
+    match application.kind.as_str() {
+        "command" => {
+            let command = crate::network_tools::system_executable("cmd.exe")?;
+            // A terminal is intentional only for an explicit user-configured command entry.
+            shell_open(&command.to_string_lossy(), &format!("/d /s /c {target}"), None)?;
+        },
+        "shortcut" if !application.arguments.is_empty() => {
+            let (path, directory) = shortcut.ok_or("该快捷方式无法解析自定义参数，请直接编辑快捷方式或选择 EXE")?;
+            shell_open(&path, &application.arguments, (!directory.is_empty()).then_some(directory.as_str()))?;
+        },
+        _ => shell_open(target, &application.arguments, None)?,
+    }
+    Ok(LaunchResult { status: "launched".into(), process_name })
 }
 
 #[tauri::command]
@@ -423,21 +484,6 @@ pub fn reveal_application_target(target: String) -> Result<(), String> {
     }
     #[cfg(not(windows))]
     Err("打开文件位置仅支持 Windows 桌面应用".into())
-}
-
-#[cfg(windows)]
-fn run_powershell(script: &str) -> Result<std::process::Output, String> {
-    let encoded = script.encode_utf16().flat_map(u16::to_le_bytes).collect::<Vec<_>>();
-    let encoded = base64_encode(&encoded);
-    let output = Command::new("powershell.exe")
-        .args(["-NoLogo", "-NoProfile", "-NonInteractive", "-WindowStyle", "Hidden", "-EncodedCommand", &encoded])
-        .output()
-        .map_err(|error| format!("无法启动 Windows PowerShell：{error}"))?;
-    if !output.status.success() {
-        let message = String::from_utf8_lossy(&output.stderr).trim().to_string();
-        return Err(if message.is_empty() { "应用启动失败".into() } else { message.chars().take(240).collect() });
-    }
-    Ok(output)
 }
 
 pub(crate) fn base64_encode(bytes: &[u8]) -> String {
@@ -470,6 +516,76 @@ mod tests {
     }
     impl Drop for ConfigDirectory { fn drop(&mut self) { let _ = fs::remove_dir_all(&self.0); } }
     fn config(name: &str) -> serde_json::Value { serde_json::json!({"version":2,"apps":[{"id":"test","name":name,"icon":"","type":"exe","target":"mock.exe","pinned":true,"order":0}]}) }
+
+    fn application(kind: &str, target: &str, arguments: &str) -> super::LauncherApplication {
+        super::LauncherApplication { name: "launch test".into(), kind: kind.into(), target: target.into(), arguments: arguments.into(), process_name: String::new() }
+    }
+
+    #[test]
+    fn launch_rejects_invalid_targets_before_starting_any_process() {
+        for entry in [application("exe", " ", ""), application("invalid", "app.exe", ""),
+            application("exe", "bad\0.exe", ""), application("exe", "app.exe", "bad\0arg"),
+            application("url", "file:///C:/app.exe", ""), application("url", "javascript:alert(1)", ""),
+            application("exe", &"a".repeat(32768), "")] {
+            assert!(super::validate_launch(&entry).is_err());
+        }
+        assert!(super::validate_launch(&application("url", "https://example.test/path", "")).is_ok());
+        assert!(super::validate_launch(&application("exe", "C:\\测试 空格\\app.exe", r#""two words" "$literal; & value""#)).is_ok());
+    }
+
+    /// Opt-in Windows acceptance: only launches the disposable GUI fixture supplied by the developer.
+    #[cfg(windows)]
+    #[test]
+    #[ignore]
+    fn native_launch_acceptance() {
+        use windows::{core::{Interface, PCWSTR}, Win32::{System::Com::{CoCreateInstance, IPersistFile, CLSCTX_INPROC_SERVER}, UI::Shell::{IShellLinkW, ShellLink}}};
+        let directory = std::path::PathBuf::from(std::env::var_os("GLEAMDESK_LAUNCH_FIXTURE").expect("set owned fixture directory"));
+        let executable = directory.join("launch fixture.exe");
+        assert!(executable.is_file());
+        for name in ["direct.txt", "duplicate.txt", "shortcut.txt", "override.txt"] {
+            match fs::remove_file(directory.join(name)) {
+                Ok(()) => (),
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => (),
+                Err(error) => panic!("cannot reset owned fixture record: {error}"),
+            }
+        }
+        let wait_record = |name: &str| {
+            let record = directory.join(name);
+            for _ in 0..100 { if let Ok(text) = fs::read_to_string(&record) { if text.lines().count() >= 4 { return text; } } std::thread::sleep(std::time::Duration::from_millis(100)); }
+            panic!("fixture did not report: {name}");
+        };
+        let args = |name: &str, seconds: u32| format!(r#""{}" "two words" "$literal; & value" {seconds}"#, directory.join(name).display());
+        let direct = application("exe", &executable.to_string_lossy(), &args("direct.txt", 4));
+        assert_eq!(super::open_application(direct).unwrap().status, "launched");
+        let record = wait_record("direct.txt");
+        assert_eq!(record.lines().nth(1), Some("two words"));
+        assert_eq!(record.lines().nth(2), Some("$literal; & value"));
+        let repeated = super::open_application(application("exe", &executable.to_string_lossy(), &args("duplicate.txt", 4)));
+        match repeated { Ok(result) => assert_eq!(result.status, "activated"), Err(error) => assert!(error.contains("应用已在运行"), "{error}") }
+        assert!(!directory.join("duplicate.txt").exists(), "repeat click must not launch another instance");
+        std::thread::sleep(std::time::Duration::from_secs(5));
+        let shortcut = directory.join("快捷方式 fixture.lnk");
+        unsafe {
+            assert!(windows_sys::Win32::System::Com::CoInitializeEx(std::ptr::null(), 6) >= 0);
+            let link: IShellLinkW = CoCreateInstance(&ShellLink, None, CLSCTX_INPROC_SERVER).unwrap();
+            link.SetPath(PCWSTR(super::wide_text(&executable.to_string_lossy()).as_ptr())).unwrap();
+            link.SetWorkingDirectory(PCWSTR(super::wide_text(&directory.to_string_lossy()).as_ptr())).unwrap();
+            link.SetArguments(PCWSTR(super::wide_text(&args("shortcut.txt", 4)).as_ptr())).unwrap();
+            let file: IPersistFile = link.cast().unwrap();
+            file.Save(PCWSTR(super::wide_text(&shortcut.to_string_lossy()).as_ptr()), true).unwrap();
+            let (resolved, working_directory) = super::shortcut_target(&shortcut.to_string_lossy()).unwrap();
+            assert_eq!(super::normalized_launch_path(&resolved), super::normalized_launch_path(&executable.to_string_lossy()));
+            assert_eq!(super::normalized_launch_path(&working_directory), super::normalized_launch_path(&directory.to_string_lossy()));
+            drop(file); drop(link);
+            windows_sys::Win32::System::Com::CoUninitialize();
+        }
+        assert_eq!(super::open_application(application("shortcut", &shortcut.to_string_lossy(), "")).unwrap().status, "launched");
+        assert!(wait_record("shortcut.txt").lines().last().unwrap().eq_ignore_ascii_case(&directory.to_string_lossy()));
+        std::thread::sleep(std::time::Duration::from_secs(5));
+        assert_eq!(super::open_application(application("shortcut", &shortcut.to_string_lossy(), &args("override.txt", 90))).unwrap().status, "launched");
+        assert!(wait_record("override.txt").contains("two words"));
+        assert!(super::open_application(application("exe", &directory.join("missing.exe").to_string_lossy(), "")).is_err());
+    }
 
     #[test]
     fn application_config_preserves_previous_version_and_schema() {
