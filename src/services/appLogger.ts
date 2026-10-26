@@ -17,7 +17,7 @@ export function logEvent(
 ) {
   const entry: AppLogEntry = { at: new Date().toISOString(), level, event, details };
   const output = level === "error" ? console.error : level === "warn" ? console.warn : console.info;
-  output("[AgentRoom]", entry);
+  output("[GleamDesk]", entry);
   try {
     const previous = JSON.parse(localStorage.getItem(storageKey) ?? "[]") as AppLogEntry[];
     localStorage.setItem(storageKey, JSON.stringify([...previous.slice(-(maxEntries - 1)), entry]));

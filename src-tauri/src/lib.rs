@@ -234,7 +234,7 @@ fn create_dashboard(app: AppHandle) -> Result<(), String> {
     }
 
     let mut builder = WebviewWindowBuilder::new(&app, "dashboard", dashboard_url()?)
-        .title("AgentRoom · 控制台")
+        .title("GleamDesk · 工作台")
         .decorations(false)
         .transparent(true)
         .shadow(false)
@@ -525,5 +525,5 @@ pub fn run() {
             Ok(())
         })
         .run(tauri::generate_context!())
-        .expect("error while running AgentRoom");
+        .expect("error while running GleamDesk");
 }

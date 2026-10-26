@@ -2,7 +2,7 @@
 name = "codex-desktop"
 version = "0.1.0"
 description = "A lightweight dual-display AI control center"
-authors = ["AgentRoom"]
+authors = ["GleamDesk contributors"]
 edition = "2021"
 
 [patch.crates-io]

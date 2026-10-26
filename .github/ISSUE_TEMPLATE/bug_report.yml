@@ -1,0 +1,34 @@
+name: Bug report / 问题反馈
+description: Report a reproducible problem without private data.
+body:
+  - type: markdown
+    attributes:
+      value: "Please remove credentials, server addresses and private chats. Security issues: see SECURITY.md."
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit / 版本
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Windows version and display setup / 系统与屏幕
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps / 复现步骤
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual behavior / 预期与实际结果
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Redacted screenshot or error / 已脱敏截图或错误

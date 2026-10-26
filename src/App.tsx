@@ -1019,7 +1019,7 @@ function Dashboard({
           data: (<DataSourceConnectionsSettings/>),
           beszel: (<div className="settings-section beszel-settings"><strong>Beszel VPS 连接</strong>
             <details className="settings-help beszel-hub-startup"><summary>本机 Hub 随软件启动</summary>
-              <label className="settings-toggle"><input type="checkbox" checked={beszelHubDraft.enabled} onChange={e=>setBeszelHubDraft(v=>({...v,enabled:e.target.checked}))}/>随 AgentRoom 启动本机 Hub</label>
+              <label className="settings-toggle"><input type="checkbox" checked={beszelHubDraft.enabled} onChange={e=>setBeszelHubDraft(v=>({...v,enabled:e.target.checked}))}/>随 GleamDesk 启动本机 Hub</label>
               {beszelHubDraft.enabled&&<>
                 <label>Hub 程序路径<input value={beszelHubDraft.executable} placeholder="已安装的 beszel.exe 完整路径" maxLength={1024} onChange={e=>setBeszelHubDraft(v=>({...v,executable:e.target.value}))}/></label>
                 <label>原数据目录<input value={beszelHubDraft.dataDirectory} placeholder="包含 data.db 的 beszel_data 目录" maxLength={1024} onChange={e=>setBeszelHubDraft(v=>({...v,dataDirectory:e.target.value}))}/></label>
