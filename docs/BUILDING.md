@@ -44,6 +44,6 @@ $env:CARGO_TARGET_DIR = Join-Path $PWD 'src-tauri/target'
 npm.cmd run tauri -- build --debug --no-bundle
 ```
 
-This produces a debug desktop executable under `src-tauri/target/debug`. Omit `--debug` for an optimized build. First-time dependency downloads require network access. `--offline --locked` can be passed to Cargo only after dependencies are cached.
+This produces a debug desktop executable under `src-tauri/target/debug`. Omit `--debug` for an optimized build. For a named `GleamDesk.exe`, current-user NSIS installer and portable-package notes, see [Windows packages](WINDOWS_PACKAGES.md). First-time dependency downloads require network access. `--offline --locked` can be passed to Cargo only after dependencies are cached.
 
 Build outputs are unsigned. Do not include `node_modules`, `dist`, Cargo `target`, databases, credentials or logs in a source contribution. Rust debug libraries and incremental caches can use several GB; keep them in the development directory.
