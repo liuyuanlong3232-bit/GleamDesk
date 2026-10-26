@@ -1,0 +1,100 @@
+{
+  "closedWeekdays": [
+    "2026-01-01",
+    "2026-01-02",
+    "2026-02-16",
+    "2026-02-17",
+    "2026-02-18",
+    "2026-02-19",
+    "2026-02-20",
+    "2026-02-23",
+    "2026-04-06",
+    "2026-05-01",
+    "2026-05-04",
+    "2026-05-05",
+    "2026-06-19",
+    "2026-09-25",
+    "2026-10-01",
+    "2026-10-02",
+    "2026-10-05",
+    "2026-10-06",
+    "2026-10-07"
+  ],
+  "noNightEvenings": [
+    "2026-02-13",
+    "2026-04-03",
+    "2026-04-30",
+    "2026-06-18",
+    "2026-09-24",
+    "2026-09-30"
+  ],
+  "exchanges": {
+    "SH": {
+      "name": "上海证券交易所",
+      "calendarSource": {
+        "url": "https://www.sse.com.cn/disclosure/announcement/general/c/c_20251222_10802507.shtml",
+        "name": "上证公告〔2025〕45号"
+      }
+    },
+    "SHF": {
+      "name": "上海期货交易所",
+      "calendarSource": {
+        "url": "https://www.shfe.com.cn/services/calenderandholidays/holiday/",
+        "name": "上期所2026年休市安排"
+      },
+      "hoursSource": {
+        "url": "https://www.shfe.com.cn/services/calenderandholidays/tradinghours/",
+        "name": "上期所交易时间"
+      }
+    },
+    "SZ": {
+      "name": "深圳证券交易所",
+      "calendarSource": {
+        "url": "https://www.szse.cn/disclosure/notice/general/t20251222_618087.html",
+        "name": "深证会〔2025〕481号（官方搜索收录正文核对）"
+      }
+    },
+    "ZCE": {
+      "noticeUrl": "https://www.czce.com.cn/cn/gyjys/jysdt/ggytz/webinfo/2025/12/528a2b72a3c949ae88ee93391e1d6c0f.htm",
+      "hoursSource": {
+        "url": "https://futures.cmschina.com/main/busihall/transaction/riskmanage/tradingtime/index.shtml",
+        "name": "招商期货公布的交易时间表及郑商所品种细则"
+      },
+      "noticeAccess": "原站412；核对交易所署名公告转载及既有Tushare全年日历",
+      "calendarSource": {
+        "coverageTo": "2026-12-31",
+        "retrievedAt": "2026-10-18T18:50:31.0000000+08:00",
+        "url": "https://tushare.pro/document/2?doc_id=467",
+        "sha256": "60b4276a797d020c31a268d10177855dd946ca5bfa0d93b1f84034f33f69b4b8",
+        "name": "Tushare Pro · 交易日历",
+        "coverageFrom": "2026-01-01"
+      },
+      "name": "郑州商品交易所",
+      "noticeCopyUrl": "https://finance.eastmoney.com/a/202512173594248238.html"
+    },
+    "DCE": {
+      "noticeUrl": "https://www.dce.com.cn/dce/content/2025/ywggytz/18625615.html",
+      "hoursSource": {
+        "url": "https://futures.cmschina.com/main/busihall/transaction/riskmanage/tradingtime/index.shtml",
+        "name": "招商期货公布的交易时间表"
+      },
+      "noticeAccess": "原站超时；核对交易所署名公告转载及既有Tushare全年日历",
+      "calendarSource": {
+        "coverageTo": "2026-12-31",
+        "retrievedAt": "2026-10-18T18:50:30.0000000+08:00",
+        "url": "https://tushare.pro/document/2?doc_id=467",
+        "sha256": "7ebfbd47efd9c67660401a3560383963c6b632f07d35669ee83971bfdaac60c9",
+        "name": "Tushare Pro · 交易日历",
+        "coverageFrom": "2026-01-01"
+      },
+      "name": "大连商品交易所",
+      "noticeCopyUrl": "https://finance.eastmoney.com/a/202512173594230398.html"
+    }
+  },
+  "coverageTo": "2026-12-31",
+  "schemaVersion": 1,
+  "id": "cn-exchanges-2026-v1",
+  "coverageFrom": "2026-01-01",
+  "timezone": "Asia/Shanghai",
+  "checkedAt": "2026-10-24T22:46:04.6830728+08:00"
+}

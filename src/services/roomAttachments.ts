@@ -1,0 +1,11 @@
+import type {ChatAttachment} from "../domain/agent/roomWorkspace";
+export function validateTextAttachment(name:string,size:number){if(!/\.(txt|md|csv|json|log)$/i.test(name))throw Error("当前文件入口支持 TXT、MD、CSV、JSON、LOG；图片请用添加照片");if(!size||size>12000)throw Error("文本文件最大12KB，请选取需要的段落")}
+export async function readChatAttachment(file:File,photo:boolean):Promise<ChatAttachment>{
+ const attachment:ChatAttachment={id:crypto.randomUUID(),name:file.name.slice(0,160),size:file.size,mime:file.type||"text/plain",text:null,data:null};
+ if(!photo){validateTextAttachment(file.name,file.size);const text=new TextDecoder("utf-8",{fatal:true}).decode(await file.arrayBuffer());if(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(text))throw Error("请使用 UTF-8 编码的文本文件");return {...attachment,mime:"text/plain",text}}
+ if(!["image/png","image/jpeg","image/webp"].includes(file.type)||!file.size||file.size>20*1024*1024)throw Error("照片支持 PNG、JPEG、WebP，原图最大20MB");
+ const bytes=new Uint8Array(await file.slice(0,12).arrayBuffer());const ascii=(a:number,b:number)=>String.fromCharCode(...bytes.slice(a,b));const valid=file.type==="image/png"?bytes[0]===137&&ascii(1,4)==="PNG":file.type==="image/jpeg"?bytes[0]===255&&bytes[1]===216&&bytes[2]===255:ascii(0,4)==="RIFF"&&ascii(8,12)==="WEBP";if(!valid)throw Error("照片内容与格式不符");
+ const url=URL.createObjectURL(file);try{const image=new Image();image.src=url;await image.decode();if(!image.naturalWidth||image.naturalWidth*image.naturalHeight>30000000)throw Error("照片尺寸过大，请先缩小");const canvas=document.createElement("canvas");let side=1024;
+ for(let attempt=0;attempt<4;attempt++){const scale=Math.min(1,side/Math.max(image.naturalWidth,image.naturalHeight));canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));const context=canvas.getContext("2d");if(!context)throw Error("无法预览照片");context.fillStyle="#fff";context.fillRect(0,0,canvas.width,canvas.height);context.drawImage(image,0,0,canvas.width,canvas.height);const data=canvas.toDataURL("image/jpeg",.8-attempt*.1).split(",")[1];if(data.length<=180000)return {...attachment,mime:"image/jpeg",data};side=Math.round(side*.75)}throw Error("照片压缩后仍太大，请选一张小图")
+ }finally{URL.revokeObjectURL(url)}
+}

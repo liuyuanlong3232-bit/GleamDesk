@@ -1,0 +1,34 @@
+import {test} from "node:test";
+import assert from "node:assert/strict";
+import {createElement} from "react";
+import {renderToStaticMarkup} from "react-dom/server";
+import {mockIPC,clearMocks} from "@tauri-apps/api/mocks";
+import {parsePublicWasde,wasdeState} from "../src/domain/agriculture/publicWasde";
+import {PublicWasdeSupply} from "../src/components/PublicWasdeSupply";
+import {createPublicWasdeProvider} from "../src/providers/publicDataProviders";
+import {providersFor} from "../src/providers/registry";
+import {syncSimulationMode} from "../src/services/simulationSafety";
+import {emptySnapshotConnection} from "../src/domain/agriculture/contracts";
+// Small synthetic DOM: no real USDA rows or downloaded reports in the repository.
+function element(tagName:string,attrs:Record<string,string>={},children:any[]=[]):any{return {tagName,attributes:Object.entries(attrs).map(([name,value])=>({name,value})),children,getAttribute:(key:string)=>attrs[key]??null,getElementsByTagName:(tag:string):any[]=>children.flatMap(c=>[...(tag==="*"||c.tagName===tag?[c]:[]),...c.getElementsByTagName(tag)])};}
+const raw=()=>({key:"wasde",collectedAt:"2026-10-23T01:00:00Z",sourceUrl:"https://www.usda.gov/oce/commodity/wasde/wasde1026.xml",body:"<Report/>"});
+function documentFixture(options:{month?:string;unit?:string;year?:string;missing?:boolean;conflict?:boolean;noCurrentMonth?:boolean;blank?:boolean}={}){
+ const fields=(v:string)=>["Production","Domestic\nTotal 2/","Exports","Ending\nStocks"].map((label,i)=>element("field",{attribute1:label},[element("Cell",options.blank||options.missing&&i===3?{}:{cell_value1:i===2?"0":v})]));
+ const group=(v="1,234.50")=>element("region",{region1:"World  3/"},[element("month",{forecast_month1:"Sep"},fields("999")),...options.noCurrentMonth?[]:[element("month",{forecast_month1:"Oct"},fields(v))]]);
+ const report=(crop:string)=>element("Report",{Name:"test",Report_Month:options.month??"October 2026",sub_report_title:`World ${crop} Supply and Use 1/`,sub_report_subtitle:options.unit??"(Million Metric Tons)"},[element("matrix",{region_header1:"2025/26 Est."},[group("888")]),element("matrix",{region_header1:options.year??"2026/27 Proj."},[group(),...options.conflict?[group("2")]:[]])]);
+ const root=element("Report",{Name:"wasde"},[report("Corn"),report("Wheat"),report("Soybean")]);return ()=>({documentElement:root,getElementsByTagName:(tag:string)=>root.getElementsByTagName(tag)}) as Document;
+}
+test("三品种逐地区分别读取，只用最新年度本月记录",()=>{const s=parsePublicWasde(raw(),documentFixture());assert.equal(s.items.length,12);assert.deepEqual(s.items.filter(r=>r.region==="全球").map(r=>r.production),[1234.5,1234.5,1234.5]);assert.equal(s.items[0].marketingYear,"2026/27");assert.equal(s.items[0].kind,"预测");assert.equal(s.items[0].exports,0);assert.equal(s.items[1].production,null);assert.equal(s.items[1].region,"美国");assert.equal(s.reportMonth,"2026-10");});
+test("缺字段不补零，缺地区不借别国数值",()=>{const s=parsePublicWasde(raw(),documentFixture({missing:true}));assert.equal(s.items[0].stocks,null);assert.match(s.items[0].warning!,/暂不可用/);assert.equal(s.items[1].production,null);});
+test("缺本月记录不复用上月或上一年度",()=>{assert.throws(()=>parsePublicWasde(raw(),documentFixture({noCurrentMonth:true})));});
+test("冲突记录不任意选取",()=>{assert.throws(()=>parsePublicWasde(raw(),documentFixture({conflict:true})));});
+test("报告月、单位和年度格式变化拒绝混接",()=>{for(const opt of [{month:"September 2026"},{unit:"Million Bushels"},{year:"2026/28 Proj."}])assert.throws(()=>parsePublicWasde(raw(),documentFixture(opt)));});
+test("无数字的文件不能当成功",()=>{assert.throws(()=>parsePublicWasde(raw(),documentFixture({blank:true})));});
+test("来源只允许官方月报，不能跳转任意文件",()=>{for(const sourceUrl of ["https://example.com/wasde1026.xml","https://www.usda.gov/oce/commodity/wasde/wasde1026.xml?key=x","https://www.usda.gov/oce/commodity/wasde/wasde1326.xml","https://www.usda.gov/oce/commodity/wasde/wasde0127.xml"])assert.throws(()=>parsePublicWasde({...raw(),sourceUrl},documentFixture()));});
+test("超大小、错误类型与伪造读取时间拒绝",()=>{for(const patch of [{body:"x".repeat(4*1024*1024+1)},{key:"other"},{collectedAt:"2026-02-30T00:00:00Z"},{collectedAt:"2999-01-01T00:00:00Z"}])assert.throws(()=>parsePublicWasde({...raw(),...patch},documentFixture()));});
+test("DTD与实体禁止执行",()=>{assert.throws(()=>parsePublicWasde({...raw(),body:'<!DOCTYPE x [<!ENTITY a "b">]>'},documentFixture()));});
+test("月报不套日行情时效，失败和旧缓存标未更新",()=>{const s=parsePublicWasde(raw(),documentFixture()),now=Date.parse(s.collectedAt);assert.equal(wasdeState(s,false,now),"月报 · 发布时效未确认");assert.equal(wasdeState(s,true,now),"数据未更新");assert.equal(wasdeState(s,false,now+8*3600000),"数据未更新");assert.equal(wasdeState({...s,reportMonth:"2025-01"},false,now),"历史月报");});
+test("显示单位、市场年度、预测和缺值，不混入NASS统计",()=>{const html=renderToStaticMarkup(createElement(PublicWasdeSupply,{snapshot:parsePublicWasde(raw(),documentFixture()),error:"断网"}));for(const pattern of [/2026-10 月报 · 百万吨/,/2026\/27 · 预测/,/数据未更新/,/—/,/不推算具体发布日期/,/不是交易价格、出口检验或 NASS/])assert.match(html,pattern);});
+test("加载、空数据和读取失败均有清楚文字",()=>{assert.match(renderToStaticMarkup(createElement(PublicWasdeSupply,{loading:true})),/正在读取/);assert.match(renderToStaticMarkup(createElement(PublicWasdeSupply,{error:"断网"})),/暂不可用/);});
+test("默认开启、独立关闭、无后台轮询和自动重试",()=>{assert.equal(emptySnapshotConnection.wasdeEnabled,true);const [p]=providersFor(["public-wasde"]);assert.equal(p.refreshIntervalMs,21600000);assert.equal(p.backgroundRefreshIntervalMs,null);assert.equal(p.retryPolicy?.maxRetries,0);assert.equal(providersFor(["public-wasde"],undefined,{includeDemoProviders:true}).length,0);});
+test("关闭或模拟不读取真实接口，失败不重试",async()=>{const previous=Object.getOwnPropertyDescriptor(globalThis,"window"),tauri=Object.getOwnPropertyDescriptor(globalThis,"isTauri");Object.defineProperty(globalThis,"window",{value:globalThis,configurable:true});Object.defineProperty(globalThis,"isTauri",{value:true,configurable:true});const calls:string[]=[];mockIPC((c,args)=>{calls.push(c);if(c==="set_simulation_mode")return null;assert.equal((args as any).key,"wasde");throw Error("offline");});try{assert.equal((await createPublicWasdeProvider(false).load(new AbortController().signal)).status,"unavailable");assert.equal(calls.length,0);await syncSimulationMode(true);assert.equal((await createPublicWasdeProvider().load(new AbortController().signal)).status,"error");assert.ok(calls.every(c=>c==="set_simulation_mode"));await syncSimulationMode(false);assert.equal((await createPublicWasdeProvider().load(new AbortController().signal)).status,"error");assert.equal(calls.filter(c=>c==="read_builtin_public_source").length,1);}finally{clearMocks();if(previous)Object.defineProperty(globalThis,"window",previous);else Reflect.deleteProperty(globalThis,"window");if(tauri)Object.defineProperty(globalThis,"isTauri",tauri);else Reflect.deleteProperty(globalThis,"isTauri");}});

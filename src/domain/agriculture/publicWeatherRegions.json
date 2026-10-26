@@ -1,0 +1,11 @@
+[
+  {"name":"美国玉米带","crop":"玉米/大豆","latitude":41.5,"longitude":-93.5},
+  {"name":"美国大平原","crop":"小麦","latitude":39,"longitude":-100},
+  {"name":"巴西马托格罗索","crop":"大豆/玉米","latitude":-13,"longitude":-56},
+  {"name":"巴西巴拉那","crop":"大豆/玉米","latitude":-24.5,"longitude":-51.5},
+  {"name":"阿根廷核心区","crop":"大豆/玉米","latitude":-33,"longitude":-61},
+  {"name":"内蒙古","crop":"玉米","latitude":43.5,"longitude":112},
+  {"name":"黑龙江","crop":"大豆/玉米","latitude":47,"longitude":128},
+  {"name":"新疆","crop":"棉花","latitude":42,"longitude":85},
+  {"name":"河南","crop":"小麦/玉米","latitude":34,"longitude":113.5}
+]

@@ -1,0 +1,141 @@
+/* Close controls use geometric centering instead of a font's text baseline. */
+#root button.ui-icon-button{display:inline-grid;place-items:center;box-sizing:border-box;flex-shrink:0;width:var(--close-hit-size,32px);height:var(--close-hit-size,32px);min-width:var(--close-hit-size,32px);min-height:var(--close-hit-size,32px);padding:0;line-height:1}
+.widget-tools .ui-icon-button{--close-hit-size:22px;--close-icon-size:14px}
+.history-analysis-heading{align-items:center}
+/* Explicit Latin faces keep CJK on the chosen Chinese UI family. No downloads. */
+@font-face { font-family: "Desktop Latin"; src: local("Segoe UI"), local("Arial"); font-style: normal; font-weight: 400; unicode-range: U+0000-024F, U+2000-206F; }
+@font-face { font-family: "Desktop Latin"; src: local("Segoe UI Semibold"), local("Arial Bold"); font-style: normal; font-weight: 600; unicode-range: U+0000-024F, U+2000-206F; }
+@font-face { font-family: "Desktop Latin"; src: local("Segoe UI Bold"), local("Arial Bold"); font-style: normal; font-weight: 700; unicode-range: U+0000-024F, U+2000-206F; }
+:root {
+  --font-ui: "Desktop Latin", "Microsoft YaHei UI", "PingFang SC", "Noto Sans SC", sans-serif;
+  --font-numeric: "JetBrains Mono", "Consolas", "Desktop Latin", "Microsoft YaHei UI", "PingFang SC", "Noto Sans SC", monospace;
+  --font-symbol: "Segoe UI Symbol", "Microsoft YaHei UI", sans-serif;
+  --surface-rim: #ffffff24;
+  --surface-shine: inset 0 1px 0 #ffffff12, inset 0 0 18px #b3618712;
+  --surface-depth: 0 12px 28px #0004;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  line-height: 1.6;
+  font-synthesis: none;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+button, input, select, textarea { font-family: var(--font-ui); }
+/* Ordinary workbench text can acquire a navigation caret in WebView2's F7 mode.
+   Keep text selectable; restore the insertion caret only in real editing controls.
+   External native webviews have their own document and do not inherit this style. */
+#root { caret-color: transparent; }
+#root :is(input, textarea, [contenteditable="true"], [contenteditable=""], [contenteditable="plaintext-only"]) { caret-color: auto; }
+:where(.dashboard-screen, .main-screen) .widget-card { font-size: 13px; line-height: 1.6; }
+.dashboard-heading h1, .settings-dialog-header h2 { font-family: var(--font-ui); font-size: 20px; font-weight: 700; line-height: 1.4; letter-spacing: .02em; }
+.card-heading { flex-wrap: wrap; row-gap: 4px; }
+.card-heading > strong { font-size: 15px; font-weight: 600; line-height: 1.4; letter-spacing: .02em; white-space: normal; overflow-wrap: anywhere; }
+.heading-glyph, .provider-symbol, .glyph, .api-mark { font-family: var(--font-symbol); }
+.dashboard-screen :is(.card-link, .updated-label, .monitor-chip, .monitor-chip small, .dashboard-footer, .demo-tag, .eyebrow, .section-kicker, .edit-instructions, .hardware-sampled-at) { font-size: 12px; line-height: 1.6; }
+.dashboard-screen :is(.action-button, .preset-switch button, .toolbar-controls select, .reset-button, .card-heading select) { font-size: 13px; }
+.dashboard-screen .widget-card :is(small, .widget-footnote, .confidence-tag, .agent-source-label, .agent-quota-windows span, .health-event-status, .server-services, .server-last-success, .local-model-list, .chart-time, .chart-axis) { font-size: 12px; line-height: 1.6; }
+.dashboard-screen .widget-card :is(.widget-source-details, .ai-agent-tile > p, .health-empty, .health-event-detail p, .notice-row strong, .hardware-network-values, .hardware-disk > div:first-child, .hardware-gpu, .health-row, .chart-network, .server-network, .metric-label, .balance-name) { font-size: 13px; line-height: 1.6; }
+.dashboard-screen .widget-card :is(.ai-agent-tile header > strong, .server-banner > div strong, .health-banner strong, .hardware-metric-heading strong, .hardware-detail > strong, .event-summary strong, .agent-name) { font-size: 13px; font-weight: 600; line-height: 1.6; }
+.dashboard-screen .widget-card :is(.agent-quota-windows b, .gauge strong, .metric-label strong, .chart-value) { font-size: 14px; font-weight: 600; }
+.dashboard-screen :is(.balance-heading strong, .balance-numbers, .agent-quota-windows b, .agent-quota-windows small, .gauge strong, .hardware-metric > b, .hardware-network-values, .hardware-disk small, .hardware-gpu small, .header-clock strong, .header-clock span, .hardware-sampled-at, .latency, .server-network > span:last-child, .metric-label strong, .chart-axis, .chart-time, .chart-network) { font-family: var(--font-numeric); font-variant-numeric: lining-nums tabular-nums; letter-spacing: 0; }
+.dashboard-screen .header-clock strong { font-size: 18px; font-weight: 600; }
+.dashboard-screen .header-clock span { font-size: 12px; }
+.dashboard-screen .widget-card :is(.widget-footnote, .agent-source-label, .ai-agent-tile > small, .agent-quota-windows span, .agent-quota-windows small, .health-event-status, .notice-row small, .event-summary small, .hardware-metric > small, .hardware-detail > small, .chart-time) { color: var(--glass-text-muted); }
+.ai-agent-tile { padding: 12px; }
+.ai-agent-tile header { gap: 6px; }
+.confidence-tag { padding: 2px 5px; }
+.agent-quota-windows { column-gap: 10px; }
+.agent-quota-windows b { white-space: nowrap; }
+.balance-row { align-items: flex-start; gap: 10px; padding: 12px 0; }
+.balance-content { flex: 1; min-width: 0; }
+.balance-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.balance-heading .balance-name { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+.balance-heading strong { flex-shrink: 0; min-width: 7ch; color: var(--glass-text-primary); font-size: 14px; font-weight: 700; text-align: right; }
+.balance-numbers { align-items: flex-end; width: 100%; margin: 4px 0 0; gap: 4px; text-align: right; }
+.balance-numbers small { white-space: normal; overflow-wrap: anywhere; }
+.balance-numbers details { max-width: 100%; }
+.balance-numbers details summary { font-family: var(--font-ui); font-size: 12px; color: var(--glass-text-muted); }
+.balance-numbers details small { font-family: var(--font-ui); }
+.hardware-metric-heading { flex-wrap: wrap; }
+.server-banner > div { min-width: 0; }
+.server-banner > div small { overflow-wrap: anywhere; }
+.event-summary { min-width: 0; }
+.event-summary small, .notice-row small { white-space: normal; }
+.main-screen :is(.island-item, .popover-row, .rail-metric) { font-size: 13px; line-height: 1.6; }
+.main-screen :is(.island-item small, .island-label, .desktop-shortcut small, .main-hint, .passthrough-toggle) { font-size: 12px; line-height: 1.6; }
+.main-screen :is(.island-item small, .popover-row > strong, .rail-metric strong) { font-family: var(--font-numeric); font-variant-numeric: lining-nums tabular-nums; }
+.main-screen :is(.rail-metric strong, .popover-title) { font-size: 14px; font-weight: 600; }
+.main-screen .popover-title { letter-spacing: .02em; }
+.main-screen .island-item { min-width: 0; padding: 9px 6px; }
+.main-screen .island-item > span { min-width: 0; }
+.main-screen .island-item small { overflow: hidden; text-overflow: ellipsis; }
+.dock-window .dock-item small { font-family: var(--font-ui); font-size: 12px; }
+/* Narrow secondary tiles keep quota labels and values on one readable row. */
+.agent-claude .agent-quota-windows { grid-template-columns: 1fr; gap: 9px; }
+.agent-claude .agent-quota-windows > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 2px 6px; }
+.agent-claude .agent-quota-windows small { grid-column: 1 / -1; }
+.dashboard-screen .widget-card :is(.health-event-status strong, .health-event-detail small, .gauge span, .server-services span, .hardware-metric-heading span) { font-size: 12px; line-height: 1.6; }
+.dashboard-screen .health-event-status strong { font-family: var(--font-numeric); }
+.chart-axis { flex-basis: 38px; white-space: nowrap; }
+/* Stable full-width headers align active details and compact name-only rows. */
+.ai-control-center .ai-ecosystem-grid { grid-template-columns: minmax(0, 1fr); gap: 7px; }
+.ai-control-center .ai-agent-tile { grid-column: 1; }
+.ai-control-center .ai-agent-tile header { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; align-items: center; gap: 7px; }
+.ai-control-center .ai-agent-tile header > strong { overflow-wrap: anywhere; }
+.ai-control-center .ai-agent-tile.is-collapsed { padding: 8px 12px; background: transparent; }
+.ai-control-center .ai-agent-tile.is-collapsed header { min-height: 21px; }
+.ai-control-center .agent-claude .agent-quota-windows { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ai-control-center .agent-claude .agent-quota-windows > div { display: flex; }
+.ai-control-center .agent-claude .agent-quota-windows small { grid-column: auto; }
+/* Main-screen preview of the dashboard's quick-launch card. */
+.dock-window .quick-launch-preview { width: 100%; height: auto; min-height: 0; padding: 5px 10px; overflow: visible; border-radius: 28px; border-color: var(--surface-rim); background: linear-gradient(135deg,#c780a40b,transparent 65%),rgba(15,14,18,var(--glass-alpha,.82)); backdrop-filter: blur(var(--glass-blur,24px)) saturate(115%); -webkit-backdrop-filter: blur(var(--glass-blur,24px)) saturate(115%); box-shadow: var(--surface-shine),var(--surface-depth); --glass-text-primary: #f5f1f3; --glass-text-secondary: #ded1dd; --glass-text-muted: #bfb0c2; }
+.dock-window .quick-launch-preview .card-heading { padding: 0 8px; margin-bottom: 10px; }
+.dock-window .quick-launch-preview .card-link { font-size: 12px; }
+.dock-window .quick-launch-preview .dock { width: 100%; max-width: 100%; height: 46px; gap: 16px; padding: 0 8px; align-items: center; border-radius: 0; background: transparent !important; }
+.dock-window .quick-launch-preview .dock::before { display: none; }
+.dock-window .quick-launch-preview .dock-item { flex: 0 0 52px; width: 52px; min-width: 52px; height: 46px; padding: 0; gap: 0; border-radius: 13px; transform: none; transition: transform .18s ease, background .18s ease; }
+.dock-window .quick-launch-preview .dock-item:hover, .dock-window .quick-launch-preview .dock-item:focus-visible { background: linear-gradient(145deg,#d49db829,#c2263f12) !important; box-shadow: inset 0 0 0 1px #ffffff24,inset 0 1px 0 #ffffff12; transform: none; }
+.dock-window .quick-launch-preview .dock-item .app-icon { width: 34px; height: 34px; border-radius: 12px; font-size: 15px; transform: none; background: linear-gradient(145deg, color-mix(in srgb, var(--app-color), white 10%), color-mix(in srgb, var(--app-color), black 24%)); box-shadow: 0 5px 15px color-mix(in srgb, var(--app-color), transparent 75%); }
+.dock-window .quick-launch-preview .dock-item small { position: static; width: 100%; max-width: 100%; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; color: var(--glass-text-secondary); font-size: 13px; line-height: 1.5; transform: none; opacity: 1; }
+.dock-window .quick-launch-preview .dock-manage { display: none; }
+.dock-window .quick-launch-preview .dock-drop-active { outline: 1px dashed var(--accent); outline-offset: 3px; }
+.dock-window .dock-drop-message, .dock-window .dock-window-message { bottom: 70px; }
+.dock-window .app-context-menu { bottom: 160px; max-height: calc(100vh - 176px); }
+.dock-window.reduce-motion .quick-launch-preview .dock-item:hover { transform: none; }
+/* Match the secondary-screen launcher icon size and keep the main dock compact. */
+.dock-window .quick-launch-preview { padding: 5px 10px; }
+.dock-window .quick-launch-preview .dock { gap: 16px; padding: 0 8px; }
+.dock-window .quick-launch-preview .dock-item { flex-basis: 52px; width: 52px; min-width: 52px; height: 46px; gap: 0; }
+.dock-window .quick-launch-preview .dock-item .app-icon { width: 34px; height: 34px; border-radius: 10px; font-size: 18px; }
+.dock-window .quick-launch-preview .dock-item .app-image-icon { padding: 3px; }
+.dock-window .quick-launch-preview .dock-manage { display: grid; flex: 0 0 40px; width: 40px; height: 40px; margin: 0; border: 1px dashed rgba(194,38,63,.45); color: var(--glass-text-secondary); background: rgba(194,38,63,.10); font-size: 26px; }
+.dock-window .quick-launch-preview .dock-manage::before { display: none; }
+
+/* Crossfade between the compact avatar and expanded launcher. */
+.dock-window,.dock-window body,.dock-window #root{min-width:0}
+.dock-window .dock-surface::before,.dock-window .dock-surface::after{content:none;display:none}
+.dock-window .dock-surface.is-collapsed{padding:8px;align-items:center}
+.dock-window .dock-card{opacity:0;transform:translateY(9px) scale(.985);pointer-events:none;transition:opacity .22s ease,transform .28s cubic-bezier(.2,.8,.2,1)}
+.dock-window .is-collapsed .dock-card{position:absolute;bottom:2px;left:0}
+.dock-window .is-expanded .dock-card{position:relative;bottom:auto;left:auto}
+.dock-window .is-expanded.is-ready .dock-card{opacity:1;transform:translateY(0) scale(1);pointer-events:auto}
+.dock-window .is-expanded:not(.is-ready) .dock-card{transition:none}
+.dock-window .dock-pill{position:absolute;z-index:2;left:50%;bottom:8px;display:grid;place-items:center;width:48px;height:48px;padding:2px;border:2px solid #a62943;border-radius:50%;background:rgba(28,18,26,.88);backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:0 0 0 3px #c2263f16,0 0 12px #c2263f40;animation:dock-avatar-breathe 3.2s ease-in-out infinite}
+.dock-window .dock-pill{opacity:1;transform:translate(-50%,0) scale(1);pointer-events:auto;transition:opacity .22s ease,transform .28s cubic-bezier(.2,.8,.2,1)}
+.dock-window .is-expanded.is-ready .dock-pill{opacity:0;transform:translate(-50%,7px) scale(.88);pointer-events:none}
+.dock-window .dock-pill img{display:block;width:40px;height:40px;border-radius:50%;object-fit:cover;object-position:50% 25%;pointer-events:none}
+.dock-window .dock-pill .ar-avatar{display:block;width:40px;height:40px;border-radius:50%;overflow:hidden;pointer-events:none}
+.dock-window .dock-pill:focus-visible{outline-color:var(--theme-accent,#d95570);outline-offset:4px}
+@keyframes dock-avatar-breathe{0%,100%{border-color:rgba(var(--theme-accent-rgb,194,38,63),.68);box-shadow:0 0 0 3px rgba(var(--theme-accent-rgb,194,38,63),.06),0 0 9px rgba(var(--theme-accent-rgb,194,38,63),.16)}50%{border-color:rgba(var(--theme-accent-rgb,194,38,63),.95);box-shadow:0 0 0 4px rgba(var(--theme-accent-rgb,194,38,63),.1),0 0 16px rgba(var(--theme-accent-rgb,194,38,63),.3)}}
+.dock-window.reduce-motion .dock-pill,.dock-window.reduce-motion .dock-card{animation:none;transition:none}
+.dock-window.reduce-motion .quick-launch-preview .dock-item:focus-visible{transform:none}
+@media(prefers-reduced-motion:reduce){.dock-window .dock-pill{animation:none}.dock-window .quick-launch-preview .dock-item:hover,.dock-window .quick-launch-preview .dock-item:focus-visible{transform:none}}
+@media(prefers-reduced-motion:reduce){.dock-window .dock-pill,.dock-window .dock-card{transition:none}}
+.dock-window .quick-launch-preview .dock-item .app-icon-plain{display:block;flex:none;width:34px;height:34px;margin:0;padding:0;border:0;border-radius:0;object-fit:contain;background:transparent;box-shadow:none;filter:none;transform:none;transition:none}
+.dock-window .quick-launch-preview .dock-item{transition:background .18s ease,box-shadow .18s ease}
+.dock-window .app-context-menu.glass{border:1px solid var(--surface-rim);border-radius:18px;background:linear-gradient(135deg,rgba(var(--theme-accent-rgb,194,38,63),.10),transparent 65%),rgba(var(--theme-surface-rgb,20,17,25),.96);box-shadow:var(--surface-shine),0 16px 36px #0006;backdrop-filter:blur(18px)}
+.dock-window .app-context-menu>strong{font-size:14px;color:var(--glass-text-primary);padding:7px 9px 10px}
+.dock-window .app-context-menu>button{font-size:14px;line-height:1.5;min-height:38px;padding:8px 10px;border:1px solid transparent;color:var(--glass-text-secondary);white-space:normal}
+.dock-window .app-context-menu>button:is(:hover,:focus-visible):not(:disabled){border-color:rgba(var(--theme-line-rgb,255,255,255),.14);background:rgba(var(--theme-accent-rgb,194,38,63),.16);color:var(--glass-text-primary)}
+.dock-window .dock-running-dot{background:#e5d4e0;box-shadow:0 0 5px #d1adc17a}
+.dock-window.reduce-motion .quick-launch-preview .dock-item{transition:none}
+@media(prefers-reduced-motion:reduce){.dock-window .quick-launch-preview .dock-item{transition:none}}

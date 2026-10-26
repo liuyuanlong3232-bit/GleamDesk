@@ -1,0 +1,2470 @@
+{
+  "generatedAt": "2026-10-05T02:10:00.000Z",
+  "batchId": "bbef20eb83f7e8ca36e335a79d9f2d38168b412f58d365de2a9c2ceea8e01c5b",
+  "batch": {
+    "schemaVersion": 1,
+    "request": {
+      "from": "2026-10-05T02:00:00.000Z",
+      "to": "2026-10-05T02:10:00.000Z",
+      "timeZone": "Asia/Shanghai",
+      "sources": [
+        "hardware",
+        "system",
+        "vps",
+        "api"
+      ]
+    },
+    "generatedAt": "2026-10-05T02:10:00.000Z",
+    "actualFrom": "2026-10-05T02:00:10.000Z",
+    "actualTo": "2026-10-05T02:09:40.000Z",
+    "evidence": [
+      {
+        "id": "hardware_history:sample-0",
+        "recordId": "sample-0",
+        "kind": "hardware_history",
+        "source": "hardware",
+        "providerId": "hardware-status",
+        "observedAt": "2026-10-05T02:00:10.000Z",
+        "metrics": [
+          {
+            "key": "hardware.cpu",
+            "label": "本机 CPU",
+            "unit": "%",
+            "value": 10
+          },
+          {
+            "key": "hardware.memory",
+            "label": "本机内存占用",
+            "unit": "%",
+            "value": 41.12345
+          },
+          {
+            "key": "hardware.upload",
+            "label": "本机网络上传",
+            "unit": "B/s",
+            "value": 1234.125
+          },
+          {
+            "key": "hardware.download",
+            "label": "本机网络下载",
+            "unit": "B/s",
+            "value": 4096.25
+          },
+          {
+            "key": "hardware.disk.C:\\",
+            "label": "本机磁盘 C:\\",
+            "unit": "%",
+            "value": 30
+          },
+          {
+            "key": "hardware.gpu-memory.RTX Test",
+            "label": "RTX Test 显存占用",
+            "unit": "%",
+            "value": 15.5893536121673
+          },
+          {
+            "key": "hardware.gpu-temperature.RTX Test",
+            "label": "RTX Test 温度",
+            "unit": "°C",
+            "value": 62
+          }
+        ]
+      },
+      {
+        "id": "hardware_history:sample-1",
+        "recordId": "sample-1",
+        "kind": "hardware_history",
+        "source": "hardware",
+        "providerId": "hardware-status",
+        "observedAt": "2026-10-05T02:00:40.000Z",
+        "metrics": [
+          {
+            "key": "hardware.cpu",
+            "label": "本机 CPU",
+            "unit": "%",
+            "value": 11
+          },
+          {
+            "key": "hardware.memory",
+            "label": "本机内存占用",
+            "unit": "%",
+            "value": 41.12345
+          },
+          {
+            "key": "hardware.upload",
+            "label": "本机网络上传",
+            "unit": "B/s",
+            "value": 1234.125
+          },
+          {
+            "key": "hardware.download",
+            "label": "本机网络下载",
+            "unit": "B/s",
+            "value": 4096.25
+          },
+          {
+            "key": "hardware.disk.C:\\",
+            "label": "本机磁盘 C:\\",
+            "unit": "%",
+            "value": 30
+          },
+          {
+            "key": "hardware.gpu-memory.RTX Test",
+            "label": "RTX Test 显存占用",
+            "unit": "%",
+            "value": 15.5893536121673
+          },
+          {
+            "key": "hardware.gpu-temperature.RTX Test",
+            "label": "RTX Test 温度",
+            "unit": "°C",
+            "value": 62
+          }
+        ]
+      },
+      {
+        "id": "hardware_history:sample-2",
+        "recordId": "sample-2",
+        "kind": "hardware_history",
+        "source": "hardware",
+        "providerId": "hardware-status",
+        "observedAt": "2026-10-05T02:01:10.000Z",
+        "metrics": [
+          {
+            "key": "hardware.cpu",
+            "label": "本机 CPU",
+            "unit": "%",
+            "value": 12
+          },
+          {
+            "key": "hardware.memory",
+            "label": "本机内存占用",
+            "unit": "%",
+            "value": 41.12345
+          },
+          {
+            "key": "hardware.upload",
+            "label": "本机网络上传",
+            "unit": "B/s",
+            "value": 1234.125
+          },
+          {
+            "key": "hardware.download",
+            "label": "本机网络下载",
+            "unit": "B/s",
+            "value": 4096.25
+          },
+          {
+            "key": "hardware.disk.C:\\",
+            "label": "本机磁盘 C:\\",
+            "unit": "%",
+            "value": 30
+          },
+          {
+            "key": "hardware.gpu-memory.RTX Test",
+            "label": "RTX Test 显存占用",
+            "unit": "%",
+            "value": 15.5893536121673
+          },
+          {
+            "key": "hardware.gpu-temperature.RTX Test",
+            "label": "RTX Test 温度",
+            "unit": "°C",
+            "value": 62
+          }
+        ]
+      },
+      {
+        "id": "hardware_history:sample-3",
+        "recordId": "sample-3",
+        "kind": "hardware_history",
+        "source": "hardware",
+        "providerId": "hardware-status",
+        "observedAt": "2026-10-05T02:01:40.000Z",
+        "metrics": [
+          {
+            "key": "hardware.cpu",
+            "label": "本机 CPU",
+            "unit": "%",
+            "value": 13
+          },
+          {
+            "key": "hardware.memory",
+            "label": "本机内存占用",
+            "unit": "%",
+            "value": 41.12345
+          },
+          {
+            "key": "hardware.upload",
+            "label": "本机网络上传",
+            "unit": "B/s",
+            "value": 1234.125
+          },
+          {
+            "key": "hardware.download",
+            "label": "本机网络下载",
+            "unit": "B/s",
+            "value": 4096.25
+          },
+          {
+            "key": "hardware.disk.C:\\",
+            "label": "本机磁盘 C:\\",
+            "unit": "%",
+            "value": 30
+          },
+          {
+            "key": "hardware.gpu-memory.RTX Test",
+            "label": "RTX Test 显存占用",
+            "unit": "%",
+            "value": 15.5893536121673
+          },
+          {
+            "key": "hardware.gpu-temperature.RTX Test",
+            "label": "RTX Test 温度",
+            "unit": "°C",
+            "value": 62
+          }
+        ]
+      },
+      {
+        "id": "hardware_history:sample-4",
+        "recordId": "sample-4",
+        "kind": "hardware_history",
+        "source": "hardware",
+        "providerId": "hardware-status",
+        "observedAt": "2026-10-05T02:02:10.000Z",
+        "metrics": [
+          {
+            "key": "hardware.cpu",
+            "label": "本机 CPU",
+            "unit": "%",
+            "value": 14
+          },
+          {
+            "key": "hardware.memory",
+            "label": "本机内存占用",
+            "unit": "%",
+            "value": 41.12345
+          },
+          {
+            "key": "hardware.upload",
+            "label": "本机网络上传",
+            "unit": "B/s",
+            "value": 1234.125
+          },
+          {
+            "key": "hardware.download",
+            "label": "本机网络下载",
+            "unit": "B/s",
+            "value": 4096.25
+          },
+          {
+            "key": "hardware.disk.C:\\",
+            "label": "本机磁盘 C:\\",
+            "unit": "%",
+            "value": 30
+          },
+          {
+            "key": "hardware.gpu-memory.RTX Test",
+            "label": "RTX Test 显存占用",
+            "unit": "%",
+            "value": 15.5893536121673
+          },
+          {
+            "key": "hardware.gpu-temperature.RTX Test",
+            "label": "RTX Test 温度",
+            "unit": "°C",
+            "value": 62
+          }
+        ]
+      },
+      {
+        "id": "hardware_history:sample-5",
+        "recordId": "sample-5",
+        "kind": "hardware_history",
+        "source": "hardware",
+        "providerId": "hardware-status",
+        "observedAt": "2026-10-05T02:02:40.000Z",
+        "metrics": [
+          {
+            "key": "hardware.cpu",
+            "label": "本机 CPU",
+            "unit": "%",
+            "value": 15
+          },
+          {
+            "key": "hardware.memory",
+            "label": "本机内存占用",
+            "unit": "%",
+            "value": 41.12345
+          },
+          {
+            "key": "hardware.upload",
+            "label": "本机网络上传",
+            "unit": "B/s",
+            "value": 1234.125
+          },
+          {
+            "key": "hardware.download",
+            "label": "本机网络下载",
+            "unit": "B/s",
+            "value": 4096.25
+          },
+          {
+            "key": "hardware.disk.C:\\",
+            "label": "本机磁盘 C:\\",
+            "unit": "%",
+            "value": 30
+          },
+          {
+            "key": "hardware.gpu-memory.RTX Test",
+            "label": "RTX Test 显存占用",
+            "unit": "%",
+            "value": 15.5893536121673
+          },
+          {
+            "key": "hardware.gpu-temperature.RTX Test",
+            "label": "RTX Test 温度",
+            "unit": "°C",
+            "value": 62
+          }
+        ]
+      },
+      {
+        "id": "hardware_history:sample-6",
+        "recordId": "sample-6",
+        "kind": "hardware_history",
+        "source": "hardware",
+        "providerId": "hardware-status",
+        "observedAt": "2026-10-05T02:03:10.000Z",
+        "metrics": [
+          {
+            "key": "hardware.cpu",
+            "label": "本机 CPU",
+            "unit": "%",
+            "value": 16
+          },
+          {
+            "key": "hardware.memory",
+            "label": "本机内存占用",
+            "unit": "%",
+            "value": 41.12345
+          },
+          {
+            "key": "hardware.upload",
+            "label": "本机网络上传",
+            "unit": "B/s",
+            "value": 1234.125
+          },
+          {
+            "key": "hardware.download",
+            "label": "本机网络下载",
+            "unit": "B/s",
+            "value": 4096.25
+          },
+          {
+            "key": "hardware.disk.C:\\",
+            "label": "本机磁盘 C:\\",
+            "unit": "%",
+            "value": 30
+          },
+          {
+            "key": "hardware.gpu-memory.RTX Test",
+            "label": "RTX Test 显存占用",
+            "unit": "%",
+            "value": 15.5893536121673
+          },
+          {
+            "key": "hardware.gpu-temperature.RTX Test",
+            "label": "RTX Test 温度",
+            "unit": "°C",
+            "value": 62
+          }
+        ]
+      },
+      {
+        "id": "hardware_history:sample-7",
+        "recordId": "sample-7",
+        "kind": "hardware_history",
+        "source": "hardware",
+        "providerId": "hardware-status",
+        "observedAt": "2026-10-05T02:03:40.000Z",
+        "metrics": [
+          {
+            "key": "hardware.cpu",
+            "label": "本机 CPU",
+            "unit": "%",
+            "value": 17
+          },
+          {
+            "key": "hardware.memory",
+            "label": "本机内存占用",
+            "unit": "%",
+            "value": 41.12345
+          },
+          {
+            "key": "hardware.upload",
+            "label": "本机网络上传",
+            "unit": "B/s",
+            "value": 1234.125
+          },
+          {
+            "key": "hardware.download",
+            "label": "本机网络下载",
+            "unit": "B/s",
+            "value": 4096.25
+          },
+          {
+            "key": "hardware.disk.C:\\",
+            "label": "本机磁盘 C:\\",
+            "unit": "%",
+            "value": 30
+          },
+          {
+            "key": "hardware.gpu-memory.RTX Test",
+            "label": "RTX Test 显存占用",
+            "unit": "%",
+            "value": 15.5893536121673
+          },
+          {
+            "key": "hardware.gpu-temperature.RTX Test",
+            "label": "RTX Test 温度",
+            "unit": "°C",
+            "value": 62
+          }
+        ]
+      },
+      {
+        "id": "hardware_history:sample-8",
+        "recordId": "sample-8",
+        "kind": "hardware_history",
+        "source": "hardware",
+        "providerId": "hardware-status",
+        "observedAt": "2026-10-05T02:04:10.000Z",
+        "metrics": [
+          {
+            "key": "hardware.cpu",
+            "label": "本机 CPU",
+            "unit": "%",
+            "value": 18
+          },
+          {
+            "key": "hardware.memory",
+            "label": "本机内存占用",
+            "unit": "%",
+            "value": 41.12345
+          },
+          {
+            "key": "hardware.upload",
+            "label": "本机网络上传",
+            "unit": "B/s",
+            "value": 1234.125
+          },
+          {
+            "key": "hardware.download",
+            "label": "本机网络下载",
+            "unit": "B/s",
+            "value": 4096.25
+          },
+          {
+            "key": "hardware.disk.C:\\",
+            "label": "本机磁盘 C:\\",
+            "unit": "%",
+            "value": 30
+          },
+          {
+            "key": "hardware.gpu-memory.RTX Test",
+            "label": "RTX Test 显存占用",
+            "unit": "%",
+            "value": 15.5893536121673
+          },
+          {
+            "key": "hardware.gpu-temperature.RTX Test",
+            "label": "RTX Test 温度",
+            "unit": "°C",
+            "value": 62
+          }
+        ]
+      },
+      {
+        "id": "hardware_history:sample-9",
+        "recordId": "sample-9",
+        "kind": "hardware_history",
+        "source": "hardware",
+        "providerId": "hardware-status",
+        "observedAt": "2026-10-05T02:04:40.000Z",
+        "metrics": [
+          {
+            "key": "hardware.cpu",
+            "label": "本机 CPU",
+            "unit": "%",
+            "value": 19
+          },
+          {
+            "key": "hardware.memory",
+            "label": "本机内存占用",
+            "unit": "%",
+            "value": 41.12345
+          },
+          {
+            "key": "hardware.upload",
+            "label": "本机网络上传",
+            "unit": "B/s",
+            "value": 1234.125
+          },
+          {
+            "key": "hardware.download",
+            "label": "本机网络下载",
+            "unit": "B/s",
+            "value": 4096.25
+          },
+          {
+            "key": "hardware.disk.C:\\",
+            "label": "本机磁盘 C:\\",
+            "unit": "%",
+            "value": 30
+          },
+          {
+            "key": "hardware.gpu-memory.RTX Test",
+            "label": "RTX Test 显存占用",
+            "unit": "%",
+            "value": 15.5893536121673
+          },
+          {
+            "key": "hardware.gpu-temperature.RTX Test",
+            "label": "RTX Test 温度",
+            "unit": "°C",
+            "value": 62
+          }
+        ]
+      },
+      {
+        "id": "hardware_history:sample-10",
+        "recordId": "sample-10",
+        "kind": "hardware_history",
+        "source": "hardware",
+        "providerId": "hardware-status",
+        "observedAt": "2026-10-05T02:05:10.000Z",
+        "metrics": [
+          {
+            "key": "hardware.cpu",
+            "label": "本机 CPU",
+            "unit": "%",
+            "value": 20
+          },
+          {
+            "key": "hardware.memory",
+            "label": "本机内存占用",
+            "unit": "%",
+            "value": 41.12345
+          },
+          {
+            "key": "hardware.upload",
+            "label": "本机网络上传",
+            "unit": "B/s",
+            "value": 1234.125
+          },
+          {
+            "key": "hardware.download",
+            "label": "本机网络下载",
+            "unit": "B/s",
+            "value": 4096.25
+          },
+          {
+            "key": "hardware.disk.C:\\",
+            "label": "本机磁盘 C:\\",
+            "unit": "%",
+            "value": 30
+          },
+          {
+            "key": "hardware.gpu-memory.RTX Test",
+            "label": "RTX Test 显存占用",
+            "unit": "%",
+            "value": 15.5893536121673
+          },
+          {
+            "key": "hardware.gpu-temperature.RTX Test",
+            "label": "RTX Test 温度",
+            "unit": "°C",
+            "value": 62
+          }
+        ]
+      },
+      {
+        "id": "hardware_history:sample-11",
+        "recordId": "sample-11",
+        "kind": "hardware_history",
+        "source": "hardware",
+        "providerId": "hardware-status",
+        "observedAt": "2026-10-05T02:05:40.000Z",
+        "metrics": [
+          {
+            "key": "hardware.cpu",
+            "label": "本机 CPU",
+            "unit": "%",
+            "value": 21
+          },
+          {
+            "key": "hardware.memory",
+            "label": "本机内存占用",
+            "unit": "%",
+            "value": 41.12345
+          },
+          {
+            "key": "hardware.upload",
+            "label": "本机网络上传",
+            "unit": "B/s",
+            "value": 1234.125
+          },
+          {
+            "key": "hardware.download",
+            "label": "本机网络下载",
+            "unit": "B/s",
+            "value": 4096.25
+          },
+          {
+            "key": "hardware.disk.C:\\",
+            "label": "本机磁盘 C:\\",
+            "unit": "%",
+            "value": 30
+          },
+          {
+            "key": "hardware.gpu-memory.RTX Test",
+            "label": "RTX Test 显存占用",
+            "unit": "%",
+            "value": 15.5893536121673
+          },
+          {
+            "key": "hardware.gpu-temperature.RTX Test",
+            "label": "RTX Test 温度",
+            "unit": "°C",
+            "value": 62
+          }
+        ]
+      },
+      {
+        "id": "hardware_history:sample-12",
+        "recordId": "sample-12",
+        "kind": "hardware_history",
+        "source": "hardware",
+        "providerId": "hardware-status",
+        "observedAt": "2026-10-05T02:06:10.000Z",
+        "metrics": [
+          {
+            "key": "hardware.cpu",
+            "label": "本机 CPU",
+            "unit": "%",
+            "value": 22
+          },
+          {
+            "key": "hardware.memory",
+            "label": "本机内存占用",
+            "unit": "%",
+            "value": 41.12345
+          },
+          {
+            "key": "hardware.upload",
+            "label": "本机网络上传",
+            "unit": "B/s",
+            "value": 1234.125
+          },
+          {
+            "key": "hardware.download",
+            "label": "本机网络下载",
+            "unit": "B/s",
+            "value": 4096.25
+          },
+          {
+            "key": "hardware.disk.C:\\",
+            "label": "本机磁盘 C:\\",
+            "unit": "%",
+            "value": 30
+          },
+          {
+            "key": "hardware.gpu-memory.RTX Test",
+            "label": "RTX Test 显存占用",
+            "unit": "%",
+            "value": 15.5893536121673
+          },
+          {
+            "key": "hardware.gpu-temperature.RTX Test",
+            "label": "RTX Test 温度",
+            "unit": "°C",
+            "value": 62
+          }
+        ]
+      },
+      {
+        "id": "hardware_history:sample-13",
+        "recordId": "sample-13",
+        "kind": "hardware_history",
+        "source": "hardware",
+        "providerId": "hardware-status",
+        "observedAt": "2026-10-05T02:06:40.000Z",
+        "metrics": [
+          {
+            "key": "hardware.cpu",
+            "label": "本机 CPU",
+            "unit": "%",
+            "value": 23
+          },
+          {
+            "key": "hardware.memory",
+            "label": "本机内存占用",
+            "unit": "%",
+            "value": 41.12345
+          },
+          {
+            "key": "hardware.upload",
+            "label": "本机网络上传",
+            "unit": "B/s",
+            "value": 1234.125
+          },
+          {
+            "key": "hardware.download",
+            "label": "本机网络下载",
+            "unit": "B/s",
+            "value": 4096.25
+          },
+          {
+            "key": "hardware.disk.C:\\",
+            "label": "本机磁盘 C:\\",
+            "unit": "%",
+            "value": 30
+          },
+          {
+            "key": "hardware.gpu-memory.RTX Test",
+            "label": "RTX Test 显存占用",
+            "unit": "%",
+            "value": 15.5893536121673
+          },
+          {
+            "key": "hardware.gpu-temperature.RTX Test",
+            "label": "RTX Test 温度",
+            "unit": "°C",
+            "value": 62
+          }
+        ]
+      },
+      {
+        "id": "hardware_history:sample-14",
+        "recordId": "sample-14",
+        "kind": "hardware_history",
+        "source": "hardware",
+        "providerId": "hardware-status",
+        "observedAt": "2026-10-05T02:07:10.000Z",
+        "metrics": [
+          {
+            "key": "hardware.cpu",
+            "label": "本机 CPU",
+            "unit": "%",
+            "value": 24
+          },
+          {
+            "key": "hardware.memory",
+            "label": "本机内存占用",
+            "unit": "%",
+            "value": 41.12345
+          },
+          {
+            "key": "hardware.upload",
+            "label": "本机网络上传",
+            "unit": "B/s",
+            "value": 1234.125
+          },
+          {
+            "key": "hardware.download",
+            "label": "本机网络下载",
+            "unit": "B/s",
+            "value": 4096.25
+          },
+          {
+            "key": "hardware.disk.C:\\",
+            "label": "本机磁盘 C:\\",
+            "unit": "%",
+            "value": 30
+          },
+          {
+            "key": "hardware.gpu-memory.RTX Test",
+            "label": "RTX Test 显存占用",
+            "unit": "%",
+            "value": 15.5893536121673
+          },
+          {
+            "key": "hardware.gpu-temperature.RTX Test",
+            "label": "RTX Test 温度",
+            "unit": "°C",
+            "value": 62
+          }
+        ]
+      },
+      {
+        "id": "hardware_history:sample-15",
+        "recordId": "sample-15",
+        "kind": "hardware_history",
+        "source": "hardware",
+        "providerId": "hardware-status",
+        "observedAt": "2026-10-05T02:07:40.000Z",
+        "metrics": [
+          {
+            "key": "hardware.cpu",
+            "label": "本机 CPU",
+            "unit": "%",
+            "value": 25
+          },
+          {
+            "key": "hardware.memory",
+            "label": "本机内存占用",
+            "unit": "%",
+            "value": 41.12345
+          },
+          {
+            "key": "hardware.upload",
+            "label": "本机网络上传",
+            "unit": "B/s",
+            "value": 1234.125
+          },
+          {
+            "key": "hardware.download",
+            "label": "本机网络下载",
+            "unit": "B/s",
+            "value": 4096.25
+          },
+          {
+            "key": "hardware.disk.C:\\",
+            "label": "本机磁盘 C:\\",
+            "unit": "%",
+            "value": 30
+          },
+          {
+            "key": "hardware.gpu-memory.RTX Test",
+            "label": "RTX Test 显存占用",
+            "unit": "%",
+            "value": 15.5893536121673
+          },
+          {
+            "key": "hardware.gpu-temperature.RTX Test",
+            "label": "RTX Test 温度",
+            "unit": "°C",
+            "value": 62
+          }
+        ]
+      },
+      {
+        "id": "hardware_history:sample-16",
+        "recordId": "sample-16",
+        "kind": "hardware_history",
+        "source": "hardware",
+        "providerId": "hardware-status",
+        "observedAt": "2026-10-05T02:08:10.000Z",
+        "metrics": [
+          {
+            "key": "hardware.cpu",
+            "label": "本机 CPU",
+            "unit": "%",
+            "value": 26
+          },
+          {
+            "key": "hardware.memory",
+            "label": "本机内存占用",
+            "unit": "%",
+            "value": 41.12345
+          },
+          {
+            "key": "hardware.upload",
+            "label": "本机网络上传",
+            "unit": "B/s",
+            "value": 1234.125
+          },
+          {
+            "key": "hardware.download",
+            "label": "本机网络下载",
+            "unit": "B/s",
+            "value": 4096.25
+          },
+          {
+            "key": "hardware.disk.C:\\",
+            "label": "本机磁盘 C:\\",
+            "unit": "%",
+            "value": 30
+          },
+          {
+            "key": "hardware.gpu-memory.RTX Test",
+            "label": "RTX Test 显存占用",
+            "unit": "%",
+            "value": 15.5893536121673
+          },
+          {
+            "key": "hardware.gpu-temperature.RTX Test",
+            "label": "RTX Test 温度",
+            "unit": "°C",
+            "value": 62
+          }
+        ]
+      },
+      {
+        "id": "hardware_history:sample-17",
+        "recordId": "sample-17",
+        "kind": "hardware_history",
+        "source": "hardware",
+        "providerId": "hardware-status",
+        "observedAt": "2026-10-05T02:08:40.000Z",
+        "metrics": [
+          {
+            "key": "hardware.cpu",
+            "label": "本机 CPU",
+            "unit": "%",
+            "value": 27
+          },
+          {
+            "key": "hardware.memory",
+            "label": "本机内存占用",
+            "unit": "%",
+            "value": 41.12345
+          },
+          {
+            "key": "hardware.upload",
+            "label": "本机网络上传",
+            "unit": "B/s",
+            "value": 1234.125
+          },
+          {
+            "key": "hardware.download",
+            "label": "本机网络下载",
+            "unit": "B/s",
+            "value": 4096.25
+          },
+          {
+            "key": "hardware.disk.C:\\",
+            "label": "本机磁盘 C:\\",
+            "unit": "%",
+            "value": 30
+          },
+          {
+            "key": "hardware.gpu-memory.RTX Test",
+            "label": "RTX Test 显存占用",
+            "unit": "%",
+            "value": 15.5893536121673
+          },
+          {
+            "key": "hardware.gpu-temperature.RTX Test",
+            "label": "RTX Test 温度",
+            "unit": "°C",
+            "value": 62
+          }
+        ]
+      },
+      {
+        "id": "system_events:event-0",
+        "recordId": "event-0",
+        "kind": "system_events",
+        "source": "system",
+        "providerId": "windows-health",
+        "observedAt": "2026-10-05T02:09:00.000Z",
+        "metrics": [],
+        "event": {
+          "source": "Display",
+          "eventId": 1000,
+          "severity": "error",
+          "message": "Fixture event: no real crash or system change."
+        }
+      },
+      {
+        "id": "system_events:event-1",
+        "recordId": "event-1",
+        "kind": "system_events",
+        "source": "system",
+        "providerId": "windows-health",
+        "observedAt": "2026-10-05T02:09:01.000Z",
+        "metrics": [],
+        "event": {
+          "source": "Application Error",
+          "eventId": 1001,
+          "severity": "error",
+          "message": "Fixture event: no real crash or system change."
+        }
+      },
+      {
+        "id": "hardware_history:sample-18",
+        "recordId": "sample-18",
+        "kind": "hardware_history",
+        "source": "hardware",
+        "providerId": "hardware-status",
+        "observedAt": "2026-10-05T02:09:10.000Z",
+        "metrics": [
+          {
+            "key": "hardware.cpu",
+            "label": "本机 CPU",
+            "unit": "%",
+            "value": 28
+          },
+          {
+            "key": "hardware.memory",
+            "label": "本机内存占用",
+            "unit": "%",
+            "value": 41.12345
+          },
+          {
+            "key": "hardware.upload",
+            "label": "本机网络上传",
+            "unit": "B/s",
+            "value": 1234.125
+          },
+          {
+            "key": "hardware.download",
+            "label": "本机网络下载",
+            "unit": "B/s",
+            "value": 4096.25
+          },
+          {
+            "key": "hardware.disk.C:\\",
+            "label": "本机磁盘 C:\\",
+            "unit": "%",
+            "value": 30
+          },
+          {
+            "key": "hardware.gpu-memory.RTX Test",
+            "label": "RTX Test 显存占用",
+            "unit": "%",
+            "value": 15.5893536121673
+          },
+          {
+            "key": "hardware.gpu-temperature.RTX Test",
+            "label": "RTX Test 温度",
+            "unit": "°C",
+            "value": 62
+          }
+        ]
+      },
+      {
+        "id": "vps_history:vps",
+        "recordId": "vps",
+        "kind": "vps_history",
+        "source": "vps",
+        "providerId": "vps-status",
+        "observedAt": "2026-10-05T02:09:30.000Z",
+        "metrics": [
+          {
+            "key": "vps.[\"https://fixture.example.com\",\"fixture-id\"].CPU",
+            "label": "fixture-id · https://fixture.example.com CPU",
+            "unit": "%",
+            "value": 12
+          },
+          {
+            "key": "vps.[\"https://fixture.example.com\",\"fixture-id\"].内存",
+            "label": "fixture-id · https://fixture.example.com 内存",
+            "unit": "%",
+            "value": 40
+          }
+        ],
+        "sourceUrl": "https://fixture.example.com"
+      },
+      {
+        "id": "hardware_history:sample-19",
+        "recordId": "sample-19",
+        "kind": "hardware_history",
+        "source": "hardware",
+        "providerId": "hardware-status",
+        "observedAt": "2026-10-05T02:09:40.000Z",
+        "metrics": [
+          {
+            "key": "hardware.cpu",
+            "label": "本机 CPU",
+            "unit": "%",
+            "value": 29
+          },
+          {
+            "key": "hardware.memory",
+            "label": "本机内存占用",
+            "unit": "%",
+            "value": 41.12345
+          },
+          {
+            "key": "hardware.upload",
+            "label": "本机网络上传",
+            "unit": "B/s",
+            "value": 1234.125
+          },
+          {
+            "key": "hardware.download",
+            "label": "本机网络下载",
+            "unit": "B/s",
+            "value": 4096.25
+          },
+          {
+            "key": "hardware.disk.C:\\",
+            "label": "本机磁盘 C:\\",
+            "unit": "%",
+            "value": 30
+          },
+          {
+            "key": "hardware.gpu-memory.RTX Test",
+            "label": "RTX Test 显存占用",
+            "unit": "%",
+            "value": 15.5893536121673
+          },
+          {
+            "key": "hardware.gpu-temperature.RTX Test",
+            "label": "RTX Test 温度",
+            "unit": "°C",
+            "value": 62
+          }
+        ]
+      },
+      {
+        "id": "usage_history:api-anthropic",
+        "recordId": "api-anthropic",
+        "kind": "usage_history",
+        "source": "api",
+        "providerId": "api-anthropic",
+        "observedAt": "2026-10-05T02:09:40.000Z",
+        "metrics": [
+          {
+            "key": "api.anthropic.fixture.USD.today.2026-10-05T00:00:00.000Z/2026-10-06T00:00:00.000Z",
+            "label": "anthropic USD 当日费用快照",
+            "unit": "USD",
+            "value": 1.25,
+            "periodStart": "2026-10-05T00:00:00.000Z",
+            "periodEnd": "2026-10-06T00:00:00.000Z"
+          },
+          {
+            "key": "api.anthropic.fixture.USD.month.2026-10-01T00:00:00.000Z/2026-11-01T00:00:00.000Z",
+            "label": "anthropic USD 月累计费用快照",
+            "unit": "USD",
+            "value": 10.25,
+            "periodStart": "2026-10-01T00:00:00.000Z",
+            "periodEnd": "2026-11-01T00:00:00.000Z"
+          }
+        ],
+        "sourceUrl": "https://api.anthropic.com/v1/organizations/cost_report"
+      },
+      {
+        "id": "usage_history:api-deepseek",
+        "recordId": "api-deepseek",
+        "kind": "usage_history",
+        "source": "api",
+        "providerId": "api-deepseek",
+        "observedAt": "2026-10-05T02:09:40.000Z",
+        "metrics": [
+          {
+            "key": "api.deepseek.fixture.CNY.balance",
+            "label": "deepseek CNY 余额快照",
+            "unit": "CNY",
+            "value": 123.45
+          }
+        ],
+        "sourceUrl": "https://api.deepseek.com/user/balance"
+      }
+    ],
+    "candidates": [
+      {
+        "id": "metric:api.anthropic.fixture.USD.month.2026-10-01T00:00:00.000Z/2026-11-01T00:00:00.000Z",
+        "kind": "metric-summary",
+        "title": "anthropic USD 月累计费用快照",
+        "detail": "1 个有效样本，最小 10.25、最大 10.25、样本均值 10.25 USD",
+        "evidenceIds": [
+          "usage_history:api-anthropic"
+        ]
+      },
+      {
+        "id": "metric:api.anthropic.fixture.USD.today.2026-10-05T00:00:00.000Z/2026-10-06T00:00:00.000Z",
+        "kind": "metric-summary",
+        "title": "anthropic USD 当日费用快照",
+        "detail": "1 个有效样本，最小 1.25、最大 1.25、样本均值 1.25 USD",
+        "evidenceIds": [
+          "usage_history:api-anthropic"
+        ]
+      },
+      {
+        "id": "metric:api.deepseek.fixture.CNY.balance",
+        "kind": "metric-summary",
+        "title": "deepseek CNY 余额快照",
+        "detail": "1 个有效样本，最小 123.45、最大 123.45、样本均值 123.45 CNY",
+        "evidenceIds": [
+          "usage_history:api-deepseek"
+        ]
+      },
+      {
+        "id": "metric:hardware.cpu",
+        "kind": "metric-summary",
+        "title": "本机 CPU",
+        "detail": "20 个有效样本，最小 10.00、最大 29.00、样本均值 19.50 %",
+        "evidenceIds": [
+          "hardware_history:sample-0",
+          "hardware_history:sample-1",
+          "hardware_history:sample-2",
+          "hardware_history:sample-3",
+          "hardware_history:sample-4",
+          "hardware_history:sample-5",
+          "hardware_history:sample-6",
+          "hardware_history:sample-7",
+          "hardware_history:sample-8",
+          "hardware_history:sample-9",
+          "hardware_history:sample-10",
+          "hardware_history:sample-11",
+          "hardware_history:sample-12",
+          "hardware_history:sample-13",
+          "hardware_history:sample-14",
+          "hardware_history:sample-15",
+          "hardware_history:sample-16",
+          "hardware_history:sample-17",
+          "hardware_history:sample-18",
+          "hardware_history:sample-19"
+        ]
+      },
+      {
+        "id": "metric:hardware.disk.C:\\",
+        "kind": "metric-summary",
+        "title": "本机磁盘 C:\\",
+        "detail": "20 个有效样本，最小 30.00、最大 30.00、样本均值 30.00 %",
+        "evidenceIds": [
+          "hardware_history:sample-0",
+          "hardware_history:sample-1",
+          "hardware_history:sample-2",
+          "hardware_history:sample-3",
+          "hardware_history:sample-4",
+          "hardware_history:sample-5",
+          "hardware_history:sample-6",
+          "hardware_history:sample-7",
+          "hardware_history:sample-8",
+          "hardware_history:sample-9",
+          "hardware_history:sample-10",
+          "hardware_history:sample-11",
+          "hardware_history:sample-12",
+          "hardware_history:sample-13",
+          "hardware_history:sample-14",
+          "hardware_history:sample-15",
+          "hardware_history:sample-16",
+          "hardware_history:sample-17",
+          "hardware_history:sample-18",
+          "hardware_history:sample-19"
+        ]
+      },
+      {
+        "id": "metric:hardware.download",
+        "kind": "metric-summary",
+        "title": "本机网络下载",
+        "detail": "20 个有效样本，最小 4096.25、最大 4096.25、样本均值 4096.25 B/s",
+        "evidenceIds": [
+          "hardware_history:sample-0",
+          "hardware_history:sample-1",
+          "hardware_history:sample-2",
+          "hardware_history:sample-3",
+          "hardware_history:sample-4",
+          "hardware_history:sample-5",
+          "hardware_history:sample-6",
+          "hardware_history:sample-7",
+          "hardware_history:sample-8",
+          "hardware_history:sample-9",
+          "hardware_history:sample-10",
+          "hardware_history:sample-11",
+          "hardware_history:sample-12",
+          "hardware_history:sample-13",
+          "hardware_history:sample-14",
+          "hardware_history:sample-15",
+          "hardware_history:sample-16",
+          "hardware_history:sample-17",
+          "hardware_history:sample-18",
+          "hardware_history:sample-19"
+        ]
+      },
+      {
+        "id": "metric:hardware.gpu-memory.RTX Test",
+        "kind": "metric-summary",
+        "title": "RTX Test 显存占用",
+        "detail": "20 个有效样本，最小 15.59、最大 15.59、样本均值 15.59 %",
+        "evidenceIds": [
+          "hardware_history:sample-0",
+          "hardware_history:sample-1",
+          "hardware_history:sample-2",
+          "hardware_history:sample-3",
+          "hardware_history:sample-4",
+          "hardware_history:sample-5",
+          "hardware_history:sample-6",
+          "hardware_history:sample-7",
+          "hardware_history:sample-8",
+          "hardware_history:sample-9",
+          "hardware_history:sample-10",
+          "hardware_history:sample-11",
+          "hardware_history:sample-12",
+          "hardware_history:sample-13",
+          "hardware_history:sample-14",
+          "hardware_history:sample-15",
+          "hardware_history:sample-16",
+          "hardware_history:sample-17",
+          "hardware_history:sample-18",
+          "hardware_history:sample-19"
+        ]
+      },
+      {
+        "id": "metric:hardware.gpu-temperature.RTX Test",
+        "kind": "metric-summary",
+        "title": "RTX Test 温度",
+        "detail": "20 个有效样本，最小 62.00、最大 62.00、样本均值 62.00 °C",
+        "evidenceIds": [
+          "hardware_history:sample-0",
+          "hardware_history:sample-1",
+          "hardware_history:sample-2",
+          "hardware_history:sample-3",
+          "hardware_history:sample-4",
+          "hardware_history:sample-5",
+          "hardware_history:sample-6",
+          "hardware_history:sample-7",
+          "hardware_history:sample-8",
+          "hardware_history:sample-9",
+          "hardware_history:sample-10",
+          "hardware_history:sample-11",
+          "hardware_history:sample-12",
+          "hardware_history:sample-13",
+          "hardware_history:sample-14",
+          "hardware_history:sample-15",
+          "hardware_history:sample-16",
+          "hardware_history:sample-17",
+          "hardware_history:sample-18",
+          "hardware_history:sample-19"
+        ]
+      },
+      {
+        "id": "metric:hardware.memory",
+        "kind": "metric-summary",
+        "title": "本机内存占用",
+        "detail": "20 个有效样本，最小 41.12、最大 41.12、样本均值 41.12 %",
+        "evidenceIds": [
+          "hardware_history:sample-0",
+          "hardware_history:sample-1",
+          "hardware_history:sample-2",
+          "hardware_history:sample-3",
+          "hardware_history:sample-4",
+          "hardware_history:sample-5",
+          "hardware_history:sample-6",
+          "hardware_history:sample-7",
+          "hardware_history:sample-8",
+          "hardware_history:sample-9",
+          "hardware_history:sample-10",
+          "hardware_history:sample-11",
+          "hardware_history:sample-12",
+          "hardware_history:sample-13",
+          "hardware_history:sample-14",
+          "hardware_history:sample-15",
+          "hardware_history:sample-16",
+          "hardware_history:sample-17",
+          "hardware_history:sample-18",
+          "hardware_history:sample-19"
+        ]
+      },
+      {
+        "id": "metric:hardware.upload",
+        "kind": "metric-summary",
+        "title": "本机网络上传",
+        "detail": "20 个有效样本，最小 1234.13、最大 1234.13、样本均值 1234.12 B/s",
+        "evidenceIds": [
+          "hardware_history:sample-0",
+          "hardware_history:sample-1",
+          "hardware_history:sample-2",
+          "hardware_history:sample-3",
+          "hardware_history:sample-4",
+          "hardware_history:sample-5",
+          "hardware_history:sample-6",
+          "hardware_history:sample-7",
+          "hardware_history:sample-8",
+          "hardware_history:sample-9",
+          "hardware_history:sample-10",
+          "hardware_history:sample-11",
+          "hardware_history:sample-12",
+          "hardware_history:sample-13",
+          "hardware_history:sample-14",
+          "hardware_history:sample-15",
+          "hardware_history:sample-16",
+          "hardware_history:sample-17",
+          "hardware_history:sample-18",
+          "hardware_history:sample-19"
+        ]
+      },
+      {
+        "id": "metric:vps.[\"https://fixture.example.com\",\"fixture-id\"].内存",
+        "kind": "metric-summary",
+        "title": "fixture-id · https://fixture.example.com 内存",
+        "detail": "1 个有效样本，最小 40.00、最大 40.00、样本均值 40.00 %",
+        "evidenceIds": [
+          "vps_history:vps"
+        ]
+      },
+      {
+        "id": "metric:vps.[\"https://fixture.example.com\",\"fixture-id\"].CPU",
+        "kind": "metric-summary",
+        "title": "fixture-id · https://fixture.example.com CPU",
+        "detail": "1 个有效样本，最小 12.00、最大 12.00、样本均值 12.00 %",
+        "evidenceIds": [
+          "vps_history:vps"
+        ]
+      },
+      {
+        "id": "proximity:system_events:event-0|system_events:event-1",
+        "kind": "time-proximity",
+        "title": "不同来源的事件时间接近",
+        "detail": "两条事件在 5 分钟内出现。该记录只说明时间共现，不能判断原因。",
+        "evidenceIds": [
+          "system_events:event-0",
+          "system_events:event-1"
+        ]
+      }
+    ],
+    "uncertainties": [
+      "统计和观察项来自本机历史计算；启用远程分析时，模型只筛选、排列这些观察项。",
+      "均值按有效样本计算，不是整个时间段的时间加权均值；缺失指标不补零。",
+      "离散网络速率不插值、不跨中断连接；API 余额与费用分开，币种和 UTC 费用范围分开。",
+      "历史样本不证明当前连接可用；事件筛选历史不等于完整 Windows 日志。时间共现不证明因果。"
+    ]
+  },
+  "records": [
+    {
+      "id": "sample-0",
+      "kind": "hardware_history",
+      "createdAt": "2026-10-05T02:00:00.000Z",
+      "payload": {
+        "sampledAtUnixMs": 1791165610000,
+        "provenance": {
+          "schemaVersion": 1,
+          "mode": "live",
+          "providerId": "hardware-status"
+        },
+        "cpu": {
+          "usageStatus": "available",
+          "usagePercent": 10
+        },
+        "memory": {
+          "status": "available",
+          "usagePercent": 41.12345
+        },
+        "network": {
+          "status": "available",
+          "uploadBytesPerSecond": 1234.125,
+          "downloadBytesPerSecond": 4096.25
+        },
+        "disks": {
+          "status": "available",
+          "volumes": [
+            {
+              "name": "C:\\",
+              "totalBytes": 1000,
+              "usedBytes": 300,
+              "usagePercent": 30
+            }
+          ]
+        },
+        "gpu": {
+          "name": "RTX Test",
+          "status": "available",
+          "usageStatus": "unsupported",
+          "memoryStatus": "available",
+          "memoryUsedBytes": 123,
+          "memoryTotalBytes": 789,
+          "temperatureStatus": "available",
+          "temperatureC": 62
+        }
+      }
+    },
+    {
+      "id": "sample-1",
+      "kind": "hardware_history",
+      "createdAt": "2026-10-05T02:00:30.000Z",
+      "payload": {
+        "sampledAtUnixMs": 1791165640000,
+        "provenance": {
+          "schemaVersion": 1,
+          "mode": "live",
+          "providerId": "hardware-status"
+        },
+        "cpu": {
+          "usageStatus": "available",
+          "usagePercent": 11
+        },
+        "memory": {
+          "status": "available",
+          "usagePercent": 41.12345
+        },
+        "network": {
+          "status": "available",
+          "uploadBytesPerSecond": 1234.125,
+          "downloadBytesPerSecond": 4096.25
+        },
+        "disks": {
+          "status": "available",
+          "volumes": [
+            {
+              "name": "C:\\",
+              "totalBytes": 1000,
+              "usedBytes": 300,
+              "usagePercent": 30
+            }
+          ]
+        },
+        "gpu": {
+          "name": "RTX Test",
+          "status": "available",
+          "usageStatus": "unsupported",
+          "memoryStatus": "available",
+          "memoryUsedBytes": 123,
+          "memoryTotalBytes": 789,
+          "temperatureStatus": "available",
+          "temperatureC": 62
+        }
+      }
+    },
+    {
+      "id": "sample-2",
+      "kind": "hardware_history",
+      "createdAt": "2026-10-05T02:01:00.000Z",
+      "payload": {
+        "sampledAtUnixMs": 1791165670000,
+        "provenance": {
+          "schemaVersion": 1,
+          "mode": "live",
+          "providerId": "hardware-status"
+        },
+        "cpu": {
+          "usageStatus": "available",
+          "usagePercent": 12
+        },
+        "memory": {
+          "status": "available",
+          "usagePercent": 41.12345
+        },
+        "network": {
+          "status": "available",
+          "uploadBytesPerSecond": 1234.125,
+          "downloadBytesPerSecond": 4096.25
+        },
+        "disks": {
+          "status": "available",
+          "volumes": [
+            {
+              "name": "C:\\",
+              "totalBytes": 1000,
+              "usedBytes": 300,
+              "usagePercent": 30
+            }
+          ]
+        },
+        "gpu": {
+          "name": "RTX Test",
+          "status": "available",
+          "usageStatus": "unsupported",
+          "memoryStatus": "available",
+          "memoryUsedBytes": 123,
+          "memoryTotalBytes": 789,
+          "temperatureStatus": "available",
+          "temperatureC": 62
+        }
+      }
+    },
+    {
+      "id": "sample-3",
+      "kind": "hardware_history",
+      "createdAt": "2026-10-05T02:01:30.000Z",
+      "payload": {
+        "sampledAtUnixMs": 1791165700000,
+        "provenance": {
+          "schemaVersion": 1,
+          "mode": "live",
+          "providerId": "hardware-status"
+        },
+        "cpu": {
+          "usageStatus": "available",
+          "usagePercent": 13
+        },
+        "memory": {
+          "status": "available",
+          "usagePercent": 41.12345
+        },
+        "network": {
+          "status": "available",
+          "uploadBytesPerSecond": 1234.125,
+          "downloadBytesPerSecond": 4096.25
+        },
+        "disks": {
+          "status": "available",
+          "volumes": [
+            {
+              "name": "C:\\",
+              "totalBytes": 1000,
+              "usedBytes": 300,
+              "usagePercent": 30
+            }
+          ]
+        },
+        "gpu": {
+          "name": "RTX Test",
+          "status": "available",
+          "usageStatus": "unsupported",
+          "memoryStatus": "available",
+          "memoryUsedBytes": 123,
+          "memoryTotalBytes": 789,
+          "temperatureStatus": "available",
+          "temperatureC": 62
+        }
+      }
+    },
+    {
+      "id": "sample-4",
+      "kind": "hardware_history",
+      "createdAt": "2026-10-05T02:02:00.000Z",
+      "payload": {
+        "sampledAtUnixMs": 1791165730000,
+        "provenance": {
+          "schemaVersion": 1,
+          "mode": "live",
+          "providerId": "hardware-status"
+        },
+        "cpu": {
+          "usageStatus": "available",
+          "usagePercent": 14
+        },
+        "memory": {
+          "status": "available",
+          "usagePercent": 41.12345
+        },
+        "network": {
+          "status": "available",
+          "uploadBytesPerSecond": 1234.125,
+          "downloadBytesPerSecond": 4096.25
+        },
+        "disks": {
+          "status": "available",
+          "volumes": [
+            {
+              "name": "C:\\",
+              "totalBytes": 1000,
+              "usedBytes": 300,
+              "usagePercent": 30
+            }
+          ]
+        },
+        "gpu": {
+          "name": "RTX Test",
+          "status": "available",
+          "usageStatus": "unsupported",
+          "memoryStatus": "available",
+          "memoryUsedBytes": 123,
+          "memoryTotalBytes": 789,
+          "temperatureStatus": "available",
+          "temperatureC": 62
+        }
+      }
+    },
+    {
+      "id": "sample-5",
+      "kind": "hardware_history",
+      "createdAt": "2026-10-05T02:02:30.000Z",
+      "payload": {
+        "sampledAtUnixMs": 1791165760000,
+        "provenance": {
+          "schemaVersion": 1,
+          "mode": "live",
+          "providerId": "hardware-status"
+        },
+        "cpu": {
+          "usageStatus": "available",
+          "usagePercent": 15
+        },
+        "memory": {
+          "status": "available",
+          "usagePercent": 41.12345
+        },
+        "network": {
+          "status": "available",
+          "uploadBytesPerSecond": 1234.125,
+          "downloadBytesPerSecond": 4096.25
+        },
+        "disks": {
+          "status": "available",
+          "volumes": [
+            {
+              "name": "C:\\",
+              "totalBytes": 1000,
+              "usedBytes": 300,
+              "usagePercent": 30
+            }
+          ]
+        },
+        "gpu": {
+          "name": "RTX Test",
+          "status": "available",
+          "usageStatus": "unsupported",
+          "memoryStatus": "available",
+          "memoryUsedBytes": 123,
+          "memoryTotalBytes": 789,
+          "temperatureStatus": "available",
+          "temperatureC": 62
+        }
+      }
+    },
+    {
+      "id": "sample-6",
+      "kind": "hardware_history",
+      "createdAt": "2026-10-05T02:03:00.000Z",
+      "payload": {
+        "sampledAtUnixMs": 1791165790000,
+        "provenance": {
+          "schemaVersion": 1,
+          "mode": "live",
+          "providerId": "hardware-status"
+        },
+        "cpu": {
+          "usageStatus": "available",
+          "usagePercent": 16
+        },
+        "memory": {
+          "status": "available",
+          "usagePercent": 41.12345
+        },
+        "network": {
+          "status": "available",
+          "uploadBytesPerSecond": 1234.125,
+          "downloadBytesPerSecond": 4096.25
+        },
+        "disks": {
+          "status": "available",
+          "volumes": [
+            {
+              "name": "C:\\",
+              "totalBytes": 1000,
+              "usedBytes": 300,
+              "usagePercent": 30
+            }
+          ]
+        },
+        "gpu": {
+          "name": "RTX Test",
+          "status": "available",
+          "usageStatus": "unsupported",
+          "memoryStatus": "available",
+          "memoryUsedBytes": 123,
+          "memoryTotalBytes": 789,
+          "temperatureStatus": "available",
+          "temperatureC": 62
+        }
+      }
+    },
+    {
+      "id": "sample-7",
+      "kind": "hardware_history",
+      "createdAt": "2026-10-05T02:03:30.000Z",
+      "payload": {
+        "sampledAtUnixMs": 1791165820000,
+        "provenance": {
+          "schemaVersion": 1,
+          "mode": "live",
+          "providerId": "hardware-status"
+        },
+        "cpu": {
+          "usageStatus": "available",
+          "usagePercent": 17
+        },
+        "memory": {
+          "status": "available",
+          "usagePercent": 41.12345
+        },
+        "network": {
+          "status": "available",
+          "uploadBytesPerSecond": 1234.125,
+          "downloadBytesPerSecond": 4096.25
+        },
+        "disks": {
+          "status": "available",
+          "volumes": [
+            {
+              "name": "C:\\",
+              "totalBytes": 1000,
+              "usedBytes": 300,
+              "usagePercent": 30
+            }
+          ]
+        },
+        "gpu": {
+          "name": "RTX Test",
+          "status": "available",
+          "usageStatus": "unsupported",
+          "memoryStatus": "available",
+          "memoryUsedBytes": 123,
+          "memoryTotalBytes": 789,
+          "temperatureStatus": "available",
+          "temperatureC": 62
+        }
+      }
+    },
+    {
+      "id": "sample-8",
+      "kind": "hardware_history",
+      "createdAt": "2026-10-05T02:04:00.000Z",
+      "payload": {
+        "sampledAtUnixMs": 1791165850000,
+        "provenance": {
+          "schemaVersion": 1,
+          "mode": "live",
+          "providerId": "hardware-status"
+        },
+        "cpu": {
+          "usageStatus": "available",
+          "usagePercent": 18
+        },
+        "memory": {
+          "status": "available",
+          "usagePercent": 41.12345
+        },
+        "network": {
+          "status": "available",
+          "uploadBytesPerSecond": 1234.125,
+          "downloadBytesPerSecond": 4096.25
+        },
+        "disks": {
+          "status": "available",
+          "volumes": [
+            {
+              "name": "C:\\",
+              "totalBytes": 1000,
+              "usedBytes": 300,
+              "usagePercent": 30
+            }
+          ]
+        },
+        "gpu": {
+          "name": "RTX Test",
+          "status": "available",
+          "usageStatus": "unsupported",
+          "memoryStatus": "available",
+          "memoryUsedBytes": 123,
+          "memoryTotalBytes": 789,
+          "temperatureStatus": "available",
+          "temperatureC": 62
+        }
+      }
+    },
+    {
+      "id": "sample-9",
+      "kind": "hardware_history",
+      "createdAt": "2026-10-05T02:04:30.000Z",
+      "payload": {
+        "sampledAtUnixMs": 1791165880000,
+        "provenance": {
+          "schemaVersion": 1,
+          "mode": "live",
+          "providerId": "hardware-status"
+        },
+        "cpu": {
+          "usageStatus": "available",
+          "usagePercent": 19
+        },
+        "memory": {
+          "status": "available",
+          "usagePercent": 41.12345
+        },
+        "network": {
+          "status": "available",
+          "uploadBytesPerSecond": 1234.125,
+          "downloadBytesPerSecond": 4096.25
+        },
+        "disks": {
+          "status": "available",
+          "volumes": [
+            {
+              "name": "C:\\",
+              "totalBytes": 1000,
+              "usedBytes": 300,
+              "usagePercent": 30
+            }
+          ]
+        },
+        "gpu": {
+          "name": "RTX Test",
+          "status": "available",
+          "usageStatus": "unsupported",
+          "memoryStatus": "available",
+          "memoryUsedBytes": 123,
+          "memoryTotalBytes": 789,
+          "temperatureStatus": "available",
+          "temperatureC": 62
+        }
+      }
+    },
+    {
+      "id": "sample-10",
+      "kind": "hardware_history",
+      "createdAt": "2026-10-05T02:05:00.000Z",
+      "payload": {
+        "sampledAtUnixMs": 1791165910000,
+        "provenance": {
+          "schemaVersion": 1,
+          "mode": "live",
+          "providerId": "hardware-status"
+        },
+        "cpu": {
+          "usageStatus": "available",
+          "usagePercent": 20
+        },
+        "memory": {
+          "status": "available",
+          "usagePercent": 41.12345
+        },
+        "network": {
+          "status": "available",
+          "uploadBytesPerSecond": 1234.125,
+          "downloadBytesPerSecond": 4096.25
+        },
+        "disks": {
+          "status": "available",
+          "volumes": [
+            {
+              "name": "C:\\",
+              "totalBytes": 1000,
+              "usedBytes": 300,
+              "usagePercent": 30
+            }
+          ]
+        },
+        "gpu": {
+          "name": "RTX Test",
+          "status": "available",
+          "usageStatus": "unsupported",
+          "memoryStatus": "available",
+          "memoryUsedBytes": 123,
+          "memoryTotalBytes": 789,
+          "temperatureStatus": "available",
+          "temperatureC": 62
+        }
+      }
+    },
+    {
+      "id": "sample-11",
+      "kind": "hardware_history",
+      "createdAt": "2026-10-05T02:05:30.000Z",
+      "payload": {
+        "sampledAtUnixMs": 1791165940000,
+        "provenance": {
+          "schemaVersion": 1,
+          "mode": "live",
+          "providerId": "hardware-status"
+        },
+        "cpu": {
+          "usageStatus": "available",
+          "usagePercent": 21
+        },
+        "memory": {
+          "status": "available",
+          "usagePercent": 41.12345
+        },
+        "network": {
+          "status": "available",
+          "uploadBytesPerSecond": 1234.125,
+          "downloadBytesPerSecond": 4096.25
+        },
+        "disks": {
+          "status": "available",
+          "volumes": [
+            {
+              "name": "C:\\",
+              "totalBytes": 1000,
+              "usedBytes": 300,
+              "usagePercent": 30
+            }
+          ]
+        },
+        "gpu": {
+          "name": "RTX Test",
+          "status": "available",
+          "usageStatus": "unsupported",
+          "memoryStatus": "available",
+          "memoryUsedBytes": 123,
+          "memoryTotalBytes": 789,
+          "temperatureStatus": "available",
+          "temperatureC": 62
+        }
+      }
+    },
+    {
+      "id": "sample-12",
+      "kind": "hardware_history",
+      "createdAt": "2026-10-05T02:06:00.000Z",
+      "payload": {
+        "sampledAtUnixMs": 1791165970000,
+        "provenance": {
+          "schemaVersion": 1,
+          "mode": "live",
+          "providerId": "hardware-status"
+        },
+        "cpu": {
+          "usageStatus": "available",
+          "usagePercent": 22
+        },
+        "memory": {
+          "status": "available",
+          "usagePercent": 41.12345
+        },
+        "network": {
+          "status": "available",
+          "uploadBytesPerSecond": 1234.125,
+          "downloadBytesPerSecond": 4096.25
+        },
+        "disks": {
+          "status": "available",
+          "volumes": [
+            {
+              "name": "C:\\",
+              "totalBytes": 1000,
+              "usedBytes": 300,
+              "usagePercent": 30
+            }
+          ]
+        },
+        "gpu": {
+          "name": "RTX Test",
+          "status": "available",
+          "usageStatus": "unsupported",
+          "memoryStatus": "available",
+          "memoryUsedBytes": 123,
+          "memoryTotalBytes": 789,
+          "temperatureStatus": "available",
+          "temperatureC": 62
+        }
+      }
+    },
+    {
+      "id": "sample-13",
+      "kind": "hardware_history",
+      "createdAt": "2026-10-05T02:06:30.000Z",
+      "payload": {
+        "sampledAtUnixMs": 1791166000000,
+        "provenance": {
+          "schemaVersion": 1,
+          "mode": "live",
+          "providerId": "hardware-status"
+        },
+        "cpu": {
+          "usageStatus": "available",
+          "usagePercent": 23
+        },
+        "memory": {
+          "status": "available",
+          "usagePercent": 41.12345
+        },
+        "network": {
+          "status": "available",
+          "uploadBytesPerSecond": 1234.125,
+          "downloadBytesPerSecond": 4096.25
+        },
+        "disks": {
+          "status": "available",
+          "volumes": [
+            {
+              "name": "C:\\",
+              "totalBytes": 1000,
+              "usedBytes": 300,
+              "usagePercent": 30
+            }
+          ]
+        },
+        "gpu": {
+          "name": "RTX Test",
+          "status": "available",
+          "usageStatus": "unsupported",
+          "memoryStatus": "available",
+          "memoryUsedBytes": 123,
+          "memoryTotalBytes": 789,
+          "temperatureStatus": "available",
+          "temperatureC": 62
+        }
+      }
+    },
+    {
+      "id": "sample-14",
+      "kind": "hardware_history",
+      "createdAt": "2026-10-05T02:07:00.000Z",
+      "payload": {
+        "sampledAtUnixMs": 1791166030000,
+        "provenance": {
+          "schemaVersion": 1,
+          "mode": "live",
+          "providerId": "hardware-status"
+        },
+        "cpu": {
+          "usageStatus": "available",
+          "usagePercent": 24
+        },
+        "memory": {
+          "status": "available",
+          "usagePercent": 41.12345
+        },
+        "network": {
+          "status": "available",
+          "uploadBytesPerSecond": 1234.125,
+          "downloadBytesPerSecond": 4096.25
+        },
+        "disks": {
+          "status": "available",
+          "volumes": [
+            {
+              "name": "C:\\",
+              "totalBytes": 1000,
+              "usedBytes": 300,
+              "usagePercent": 30
+            }
+          ]
+        },
+        "gpu": {
+          "name": "RTX Test",
+          "status": "available",
+          "usageStatus": "unsupported",
+          "memoryStatus": "available",
+          "memoryUsedBytes": 123,
+          "memoryTotalBytes": 789,
+          "temperatureStatus": "available",
+          "temperatureC": 62
+        }
+      }
+    },
+    {
+      "id": "sample-15",
+      "kind": "hardware_history",
+      "createdAt": "2026-10-05T02:07:30.000Z",
+      "payload": {
+        "sampledAtUnixMs": 1791166060000,
+        "provenance": {
+          "schemaVersion": 1,
+          "mode": "live",
+          "providerId": "hardware-status"
+        },
+        "cpu": {
+          "usageStatus": "available",
+          "usagePercent": 25
+        },
+        "memory": {
+          "status": "available",
+          "usagePercent": 41.12345
+        },
+        "network": {
+          "status": "available",
+          "uploadBytesPerSecond": 1234.125,
+          "downloadBytesPerSecond": 4096.25
+        },
+        "disks": {
+          "status": "available",
+          "volumes": [
+            {
+              "name": "C:\\",
+              "totalBytes": 1000,
+              "usedBytes": 300,
+              "usagePercent": 30
+            }
+          ]
+        },
+        "gpu": {
+          "name": "RTX Test",
+          "status": "available",
+          "usageStatus": "unsupported",
+          "memoryStatus": "available",
+          "memoryUsedBytes": 123,
+          "memoryTotalBytes": 789,
+          "temperatureStatus": "available",
+          "temperatureC": 62
+        }
+      }
+    },
+    {
+      "id": "sample-16",
+      "kind": "hardware_history",
+      "createdAt": "2026-10-05T02:08:00.000Z",
+      "payload": {
+        "sampledAtUnixMs": 1791166090000,
+        "provenance": {
+          "schemaVersion": 1,
+          "mode": "live",
+          "providerId": "hardware-status"
+        },
+        "cpu": {
+          "usageStatus": "available",
+          "usagePercent": 26
+        },
+        "memory": {
+          "status": "available",
+          "usagePercent": 41.12345
+        },
+        "network": {
+          "status": "available",
+          "uploadBytesPerSecond": 1234.125,
+          "downloadBytesPerSecond": 4096.25
+        },
+        "disks": {
+          "status": "available",
+          "volumes": [
+            {
+              "name": "C:\\",
+              "totalBytes": 1000,
+              "usedBytes": 300,
+              "usagePercent": 30
+            }
+          ]
+        },
+        "gpu": {
+          "name": "RTX Test",
+          "status": "available",
+          "usageStatus": "unsupported",
+          "memoryStatus": "available",
+          "memoryUsedBytes": 123,
+          "memoryTotalBytes": 789,
+          "temperatureStatus": "available",
+          "temperatureC": 62
+        }
+      }
+    },
+    {
+      "id": "sample-17",
+      "kind": "hardware_history",
+      "createdAt": "2026-10-05T02:08:30.000Z",
+      "payload": {
+        "sampledAtUnixMs": 1791166120000,
+        "provenance": {
+          "schemaVersion": 1,
+          "mode": "live",
+          "providerId": "hardware-status"
+        },
+        "cpu": {
+          "usageStatus": "available",
+          "usagePercent": 27
+        },
+        "memory": {
+          "status": "available",
+          "usagePercent": 41.12345
+        },
+        "network": {
+          "status": "available",
+          "uploadBytesPerSecond": 1234.125,
+          "downloadBytesPerSecond": 4096.25
+        },
+        "disks": {
+          "status": "available",
+          "volumes": [
+            {
+              "name": "C:\\",
+              "totalBytes": 1000,
+              "usedBytes": 300,
+              "usagePercent": 30
+            }
+          ]
+        },
+        "gpu": {
+          "name": "RTX Test",
+          "status": "available",
+          "usageStatus": "unsupported",
+          "memoryStatus": "available",
+          "memoryUsedBytes": 123,
+          "memoryTotalBytes": 789,
+          "temperatureStatus": "available",
+          "temperatureC": 62
+        }
+      }
+    },
+    {
+      "id": "sample-18",
+      "kind": "hardware_history",
+      "createdAt": "2026-10-05T02:09:00.000Z",
+      "payload": {
+        "sampledAtUnixMs": 1791166150000,
+        "provenance": {
+          "schemaVersion": 1,
+          "mode": "live",
+          "providerId": "hardware-status"
+        },
+        "cpu": {
+          "usageStatus": "available",
+          "usagePercent": 28
+        },
+        "memory": {
+          "status": "available",
+          "usagePercent": 41.12345
+        },
+        "network": {
+          "status": "available",
+          "uploadBytesPerSecond": 1234.125,
+          "downloadBytesPerSecond": 4096.25
+        },
+        "disks": {
+          "status": "available",
+          "volumes": [
+            {
+              "name": "C:\\",
+              "totalBytes": 1000,
+              "usedBytes": 300,
+              "usagePercent": 30
+            }
+          ]
+        },
+        "gpu": {
+          "name": "RTX Test",
+          "status": "available",
+          "usageStatus": "unsupported",
+          "memoryStatus": "available",
+          "memoryUsedBytes": 123,
+          "memoryTotalBytes": 789,
+          "temperatureStatus": "available",
+          "temperatureC": 62
+        }
+      }
+    },
+    {
+      "id": "sample-19",
+      "kind": "hardware_history",
+      "createdAt": "2026-10-05T02:09:30.000Z",
+      "payload": {
+        "sampledAtUnixMs": 1791166180000,
+        "provenance": {
+          "schemaVersion": 1,
+          "mode": "live",
+          "providerId": "hardware-status"
+        },
+        "cpu": {
+          "usageStatus": "available",
+          "usagePercent": 29
+        },
+        "memory": {
+          "status": "available",
+          "usagePercent": 41.12345
+        },
+        "network": {
+          "status": "available",
+          "uploadBytesPerSecond": 1234.125,
+          "downloadBytesPerSecond": 4096.25
+        },
+        "disks": {
+          "status": "available",
+          "volumes": [
+            {
+              "name": "C:\\",
+              "totalBytes": 1000,
+              "usedBytes": 300,
+              "usagePercent": 30
+            }
+          ]
+        },
+        "gpu": {
+          "name": "RTX Test",
+          "status": "available",
+          "usageStatus": "unsupported",
+          "memoryStatus": "available",
+          "memoryUsedBytes": 123,
+          "memoryTotalBytes": 789,
+          "temperatureStatus": "available",
+          "temperatureC": 62
+        }
+      }
+    },
+    {
+      "id": "event-0",
+      "kind": "system_events",
+      "createdAt": "2026-10-05T02:09:00.000Z",
+      "payload": {
+        "provenance": {
+          "schemaVersion": 1,
+          "mode": "live",
+          "providerId": "windows-health"
+        },
+        "timestamp": "2026-10-05T02:09:00.000Z",
+        "eventId": 1000,
+        "source": "Display",
+        "severity": "error",
+        "message": "Fixture event: no real crash or system change."
+      }
+    },
+    {
+      "id": "event-1",
+      "kind": "system_events",
+      "createdAt": "2026-10-05T02:09:01.000Z",
+      "payload": {
+        "provenance": {
+          "schemaVersion": 1,
+          "mode": "live",
+          "providerId": "windows-health"
+        },
+        "timestamp": "2026-10-05T02:09:01.000Z",
+        "eventId": 1001,
+        "source": "Application Error",
+        "severity": "error",
+        "message": "Fixture event: no real crash or system change."
+      }
+    },
+    {
+      "id": "vps",
+      "kind": "vps_history",
+      "createdAt": "2026-10-05T02:09:30.000Z",
+      "payload": {
+        "provenance": {
+          "schemaVersion": 1,
+          "mode": "live",
+          "providerId": "vps-status"
+        },
+        "serverId": "fixture-id",
+        "hubUrl": "https://fixture.example.com/",
+        "snapshot": {
+          "state": "online",
+          "lastUpdated": "2026-10-05T02:09:30.000Z",
+          "gauges": [
+            {
+              "label": "CPU",
+              "value": 12
+            },
+            {
+              "label": "内存",
+              "value": 40
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "api-deepseek",
+      "kind": "usage_history",
+      "createdAt": "2026-10-05T02:09:40.000Z",
+      "payload": {
+        "schemaVersion": 1,
+        "simulation": false,
+        "source": "deepseek",
+        "accounts": [
+          {
+            "id": "fixture",
+            "currency": "CNY",
+            "state": "normal",
+            "observedAt": "2026-10-05T02:09:40.000Z",
+            "balance": 123.45,
+            "todayPeriodStart": "2026-10-05T00:00:00.000Z",
+            "todayPeriodEnd": "2026-10-06T00:00:00.000Z",
+            "periodStart": "2026-10-01T00:00:00.000Z",
+            "periodEnd": "2026-11-01T00:00:00.000Z"
+          }
+        ]
+      }
+    },
+    {
+      "id": "api-anthropic",
+      "kind": "usage_history",
+      "createdAt": "2026-10-05T02:09:40.000Z",
+      "payload": {
+        "schemaVersion": 1,
+        "simulation": false,
+        "source": "anthropic",
+        "accounts": [
+          {
+            "id": "fixture",
+            "currency": "USD",
+            "state": "normal",
+            "observedAt": "2026-10-05T02:09:40.000Z",
+            "todayCost": 1.25,
+            "monthCost": 10.25,
+            "todayPeriodStart": "2026-10-05T00:00:00.000Z",
+            "todayPeriodEnd": "2026-10-06T00:00:00.000Z",
+            "periodStart": "2026-10-01T00:00:00.000Z",
+            "periodEnd": "2026-11-01T00:00:00.000Z"
+          }
+        ]
+      }
+    }
+  ]
+}

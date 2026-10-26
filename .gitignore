@@ -1,0 +1,70 @@
+# Dependencies and build output
+node_modules/
+target/
+dist/
+/src-tauri/gen/
+coverage/
+.vite/
+*.tsbuildinfo
+*.map
+
+# Local acceptance artifacts, screenshots, backups and external service data
+/artifacts/
+
+# Local environment and editor configuration
+.env
+.env.*
+.npmrc
+/.cargo/
+/.codex/
+.vscode/
+.idea/
+*.local
+*.local.*
+
+# Application data and databases (never source or test fixtures)
+applications.json
+history.json
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+*.db
+*.db-*
+EBWebView/
+beszel_data/
+
+# Credentials and private keys
+credentials.json
+secrets.json
+*.pem
+*.key
+*.pfx
+*.p12
+id_rsa
+id_dsa
+id_ecdsa
+id_ed25519
+
+# Compiled binaries, installers and diagnostic dumps
+*.exe
+*.dll
+*.msi
+*.pdb
+*.rlib
+*.rmeta
+*.obj
+*.o
+*.dmp
+
+# Logs, temporary files and OS metadata
+*.log
+*.tmp
+*.tmp.*
+.tmp-*
+*.bak
+*.swp
+*~
+.DS_Store
+Thumbs.db
+Desktop.ini
