@@ -97,7 +97,8 @@ button, input, select, textarea { font-family: var(--font-ui); }
 .dock-window .quick-launch-preview .dock-item .app-icon { width: 34px; height: 34px; border-radius: 12px; font-size: 15px; transform: none; background: linear-gradient(145deg, color-mix(in srgb, var(--app-color), white 10%), color-mix(in srgb, var(--app-color), black 24%)); box-shadow: 0 5px 15px color-mix(in srgb, var(--app-color), transparent 75%); }
 .dock-window .quick-launch-preview .dock-item small { position: static; width: 100%; max-width: 100%; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; color: var(--glass-text-secondary); font-size: 13px; line-height: 1.5; transform: none; opacity: 1; }
 .dock-window .quick-launch-preview .dock-manage { display: none; }
-.dock-window .quick-launch-preview .dock-drop-active { outline: 1px dashed var(--accent); outline-offset: 3px; }
+.dock-window .quick-launch-preview .dock-drop-active { outline: none; }
+.dock-window .quick-launch-preview:has(.dock-drop-active) { border-color: rgba(var(--theme-accent-rgb,194,38,63),.55); box-shadow: var(--surface-shine),var(--surface-depth),inset 0 0 0 1px rgba(var(--theme-accent-rgb,194,38,63),.25),0 0 16px rgba(var(--theme-accent-rgb,194,38,63),.16); }
 .dock-window .dock-drop-message, .dock-window .dock-window-message { bottom: 70px; }
 .dock-window .app-context-menu { bottom: 160px; max-height: calc(100vh - 176px); }
 .dock-window.reduce-motion .quick-launch-preview .dock-item:hover { transform: none; }

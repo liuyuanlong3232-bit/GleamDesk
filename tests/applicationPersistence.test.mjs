@@ -253,3 +253,19 @@ test("Dock 拖入网址保存失败不提示已添加", async () => {
   const message = elements(tree, "div").find(item => item.props.role === "status").props.children;
   assert.match(message, /保存失败/); assert.doesNotMatch(message, /已添加/);
 });
+
+test("Dock 拖入提示在结束、取消或失焦后消失，内部排序不显示添加提示", async () => {
+  const f = fixture({ native: false });
+  const { ApplicationDock } = f.load("src/components/ApplicationDock.tsx");
+  const props = { applications: [], onLaunch() {}, onManage() {}, onApplicationsChange() {} };
+  const renderDock = () => elements(f.render(() => ApplicationDock(props)), "div").find(item => item.props["aria-label"] === "应用 Dock");
+  renderDock(); await f.effects();
+  for (const [event, payload] of [["dragend", {}], ["drop", {}], ["blur", {}], ["keydown", { key: "Escape" }]]) {
+    renderDock().props.onDragOver({ preventDefault() {}, dataTransfer: { types: ["Files"] } });
+    assert.match(renderDock().props.className, /dock-drop-active/);
+    f.dispatch(event, payload);
+    assert.doesNotMatch(renderDock().props.className, /dock-drop-active/, event);
+  }
+  renderDock().props.onDragOver({ preventDefault() {}, dataTransfer: { types: ["application/x-codex-dock"] } });
+  assert.doesNotMatch(renderDock().props.className, /dock-drop-active/);
+});

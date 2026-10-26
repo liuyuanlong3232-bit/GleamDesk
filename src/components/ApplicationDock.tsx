@@ -71,6 +71,21 @@ export function ApplicationDock({ applications, presentation = "shelf", onLaunch
   useEffect(()=>{if(!dropMessage)return;const timer=window.setTimeout(()=>setDropMessage(""),4500);return()=>window.clearTimeout(timer);},[dropMessage]);
 
   useEffect(() => {
+    const clearDropHint = () => setDragOver(false);
+    const cancelDrop = (event: KeyboardEvent) => { if (event.key === "Escape") clearDropHint(); };
+    window.addEventListener("dragend", clearDropHint);
+    window.addEventListener("drop", clearDropHint);
+    window.addEventListener("blur", clearDropHint);
+    window.addEventListener("keydown", cancelDrop);
+    return () => {
+      window.removeEventListener("dragend", clearDropHint);
+      window.removeEventListener("drop", clearDropHint);
+      window.removeEventListener("blur", clearDropHint);
+      window.removeEventListener("keydown", cancelDrop);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!menu) return;
     const close = () => setMenu(null);
     const keydown = (event: KeyboardEvent) => { if (event.key === "Escape") close(); };
@@ -126,7 +141,7 @@ export function ApplicationDock({ applications, presentation = "shelf", onLaunch
       onPointerMove={event => magnify(event.clientX)}
       onPointerLeave={() => magnify(null)}
       onContextMenu={event=>{if((event.target as HTMLElement).closest(".dock-item"))return;event.preventDefault();setMenu({id:null,x:Math.max(8,Math.min(event.clientX,window.innerWidth-220)),y:Math.max(8,Math.min(event.clientY,window.innerHeight-100))});}}
-      onDragOver={event=>{event.preventDefault();setDragOver(true);}}
+      onDragOver={event=>{event.preventDefault();setDragOver(!Array.from(event.dataTransfer.types).includes("application/x-codex-dock"));}}
       onDragLeave={event=>{if(!event.currentTarget.contains(event.relatedTarget as Node))setDragOver(false);}}
       onDrop={async event=>{
         event.preventDefault();setDragOver(false);
