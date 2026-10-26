@@ -2,13 +2,33 @@
 
 **让状态常驻，让工作更轻。**
 
-[English](README.md) · [使用指南](docs/USAGE.md) · [编译说明](docs/BUILDING.md) · [问题反馈](https://github.com/liuyuanlong3232-bit/GleamDesk/issues)
+[English](README.md) · [Windows 下载](https://github.com/liuyuanlong3232-bit/GleamDesk/releases/tag/v0.1.0) · [使用指南](docs/USAGE.md) · [编译说明](docs/BUILDING.md) · [问题反馈](https://github.com/liuyuanlong3232-bit/GleamDesk/issues)
 
 基于 Tauri、React、TypeScript 和 Rust 的 Windows 桌面工作台，将顶部 HUD、Dock、系统资源、公开数据和 Agent Room 放在一起。
 
-![工作台界面预览](docs/images/overview.png)
+## 为什么做栖光桌面
 
-> 截图来自独立的干净浏览器预览。首页金额为标明的开发模拟数据；其他页面未连接私人账户、服务器或模型。截图不是实际账户、投资收益或服务连接成功的证明。Windows 原生功能需在桌面版使用。
+把常看的状态与常用入口留在桌面，需要时再展开完整工作台。
+
+- **启动不占满屏幕**：默认只显示 Dock 和顶部 HUD，工作台按需打开。
+- **状态随手看**：HUD 汇集受支持的 AI 客户端额度、API 账户、系统与可选服务器状态，悬停或点击查看详情。各来源支持程度不同，未获取到的数据会标记未知。
+- **入口自己安排**：Dock 支持应用、网址与本地 AI 入口；拖入添加、拖动排序，并可修改图标。
+- **桌面风格统一**：酒红、雾紫、苔绿、标准白四种主题，搭配圆角玻璃面板与可调整布局。
+- **电脑直连数据**：新闻、市场与农业公开数据不依赖作者服务器，可再添加自己的 HTTP 行情接口。
+
+### Dock：收起时是头像，展开后是启动栏
+
+![Dock 收起与展开对照](docs/images/dock.png)
+
+靠近或点击头像展开；离开后自动收起。可以固定常用应用和网址；内置图标只是初始入口，首次使用仍需配置本机应用路径。点击头像可打开工作台，显示名字和头像可在工作台左上角修改。
+
+### 顶部 HUD：常驻状态，按需展开
+
+![顶部 HUD 与展开的额度详情](docs/images/hud.png)
+
+圆形图标和状态环减少桌面占用，点击可固定详情。拖动 HUD 可贴到屏幕四边；企鹅按钮打开工作台，并可选择主屏或副屏。**退出整个软件在 HUD 右键菜单中**；关闭工作台只隐藏工作台。
+
+> 以上为真实 React 组件的独立浏览器预览，HUD 数值是开发模拟数据，Dock 使用通用头像及内置入口。未读取私人账户、服务器或聊天。预览不代表真实额度、已安装应用或连接成功；窗口穿透、跨屏与系统启动行为以 Windows 桌面版为准。[截图说明](docs/images/README.md)
 
 ## 功能
 
@@ -26,7 +46,17 @@
 
 ## 开始使用
 
-当前为早期源码发布，应用版本 `0.1.0`，尚未发布签名安装包或预编译下载。使用源码构建需 Windows、Node.js 22、Rust stable、Visual Studio C++ 构建工具和 WebView2 Runtime。
+从 [GitHub Release v0.1.0](https://github.com/liuyuanlong3232-bit/GleamDesk/releases/tag/v0.1.0) 下载 Windows x64 版本：
+
+| 文件 | 使用方式 |
+| --- | --- |
+| `GleamDesk_0.1.0_x64-setup.exe` | 安装版，仅为当前用户安装 |
+| `GleamDesk_0.1.0_windows_x64_portable.zip` | 免安装版，解压后运行 `GleamDesk.exe` |
+| `SHA256SUMS.txt` | 下载文件的 SHA-256 校验值 |
+
+**0.1.0 是早期版本，尚未数字签名**，Windows 可能提示“未知发布者”。SHA-256 用于核对文件完整性，不能替代发布者签名。两种版本均需要 WebView2 Runtime；安装版在缺失时下载官方运行库。免安装版仍将个人设置和历史保存在本机 AppData，不是随文件夹携带的独立配置。详见 [Windows 安装说明](docs/WINDOWS_PACKAGES.md)。
+
+需要自行编译时，准备 Windows、Node.js 22、Rust stable、Visual Studio C++ 构建工具和 WebView2 Runtime：
 
 ```powershell
 git clone https://github.com/liuyuanlong3232-bit/GleamDesk.git
@@ -38,6 +68,12 @@ npm.cmd run tauri -- dev
 详细命令与构建输出见 [编译说明](docs/BUILDING.md)。本项目以 Windows 为目标；未提供或验证 macOS/Linux 发行版本。
 
 ## 更多截图
+
+### 按需打开的工作台
+
+![工作台界面预览](docs/images/overview.png)
+
+首页金额为标明的开发模拟数据，不代表实际账户或投资收益。
 
 ### Agent Room
 

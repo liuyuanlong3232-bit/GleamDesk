@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-26
+
 ### Added
 
 - Public source release under the name **GleamDesk · 栖光桌面**.
@@ -12,6 +14,8 @@
 - Optional read-only Beszel, 3x-ui, sing-box and Tailscale connections.
 - Optional startup of an already-installed local Beszel Hub using its existing database.
 - Bilingual README, user/developer documentation and clean UI preview screenshots.
+- Windows x64 portable ZIP and current-user NSIS installer, with SHA-256 checksums.
+- Dedicated Dock and HUD previews, interaction guides and feature descriptions.
 
 ### Fixed
 
@@ -20,4 +24,4 @@
 
 ### Release status
 
-The app version in source is `0.1.0`. No signed installer or downloadable binary release is published yet. This is an initial source release; historical development commits and author-specific runtime data are excluded.
+Initial public Windows release. Both binaries are unsigned; no publisher-signature or SmartScreen reputation claim is made. Portable startup and current-user installation/startup/uninstall were checked on the development computer; clean-machine, WebView2 first-install and upgrade testing remain unverified. Historical development commits and author-specific runtime data are excluded.

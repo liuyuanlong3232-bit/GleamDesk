@@ -6,18 +6,38 @@
 
 A Windows workspace for HUD, Dock, system status, public data and Agent Room.
 
-[简体中文](README.zh-CN.md) · [User guide](docs/USAGE.md) · [Build](docs/BUILDING.md) · [Report an issue](https://github.com/liuyuanlong3232-bit/GleamDesk/issues)
+[简体中文](README.zh-CN.md) · [Download for Windows](https://github.com/liuyuanlong3232-bit/GleamDesk/releases/tag/v0.1.0) · [User guide](docs/USAGE.md) · [Build](docs/BUILDING.md) · [Report an issue](https://github.com/liuyuanlong3232-bit/GleamDesk/issues)
 
 ![Windows](https://img.shields.io/badge/platform-Windows-3165bb)
 ![Tauri 2](https://img.shields.io/badge/Tauri-2-24c8db)
 ![MIT](https://img.shields.io/badge/license-MIT-477657)
-![Early source release](https://img.shields.io/badge/status-early_source_release-c2263f)
+![Early release](https://img.shields.io/badge/status-early_release-c2263f)
 
 </div>
 
-![GleamDesk workbench preview](docs/images/overview.png)
+## Why GleamDesk
 
-> Clean browser-preview screenshots. The overview uses explicitly labeled built-in simulation values. No personal accounts, server connections, model calls or private chats are used. These previews do not demonstrate native Windows behavior or live data connectivity.
+Keep frequently checked status and everyday shortcuts on your desktop. Open the full workbench when you need it.
+
+- **Start small:** startup shows only the Dock and HUD by default.
+- **Check status at a glance:** supported AI-client quotas, API accounts, system health and optional server status share one HUD. Coverage varies by source; unavailable values remain unknown.
+- **Choose your shortcuts:** add apps, URLs and local AI entries, reorder them by dragging and choose your own icons.
+- **Match your desktop:** burgundy, lavender, moss and white themes, rounded glass surfaces and adjustable layouts.
+- **Connect directly:** public news, market and agricultural sources run from your own computer, with optional custom HTTP quote mappings.
+
+### Dock — compact until you need it
+
+![Collapsed and expanded Dock](docs/images/dock.png)
+
+Hover over or click the avatar to expand the launcher; move away to collapse it. Pin applications and URLs, or open the workbench from the avatar. Built-in app icons are starter entries and require your own executable paths. Change the display name and avatar at the top left of the workbench.
+
+### HUD — persistent status with expandable details
+
+![Top HUD and expanded quota details](docs/images/hud.png)
+
+Compact icons and status rings keep the desktop clear. Click to pin details, drag the HUD to a screen edge, and use the penguin button to open the workbench on the main or secondary display. **Exit the whole app from the HUD context menu**; closing the workbench only hides it.
+
+> These are isolated browser previews of the actual React components. HUD values are developer simulation data; Dock entries and the avatar are generic defaults. No personal accounts, servers or chats were read. Previews do not prove live quotas, installed applications, connectivity or native Windows window behavior. [Capture details](docs/images/README.md).
 
 ## Features
 
@@ -35,7 +55,15 @@ A Windows workspace for HUD, Dock, system status, public data and Agent Room.
 
 ## Get started
 
-This is an early **source release**, version `0.1.0`. No signed installer or prebuilt release download has been published yet.
+Download the Windows x64 packages from [GitHub Release v0.1.0](https://github.com/liuyuanlong3232-bit/GleamDesk/releases/tag/v0.1.0):
+
+| File | Use |
+| --- | --- |
+| `GleamDesk_0.1.0_x64-setup.exe` | Installer for the current Windows user |
+| `GleamDesk_0.1.0_windows_x64_portable.zip` | Extract and run `GleamDesk.exe` without app installation |
+| `SHA256SUMS.txt` | SHA-256 checksums for downloaded files |
+
+**0.1.0 is an early, unsigned release.** Windows may show an unknown-publisher warning. Checksums verify file integrity and do not replace publisher signatures. Both packages require WebView2 Runtime; setup downloads Microsoft's runtime installer if missing. Portable means installation-free: settings and history still use local AppData, rather than a self-contained profile beside the executable. Read [Windows package notes](docs/WINDOWS_PACKAGES.md).
 
 Build requirements: Windows 10/11, Node.js 22+, Rust stable, Visual Studio C++ Build Tools, Windows SDK and WebView2 Runtime. Native integrations target Windows; macOS and Linux releases are not provided or verified.
 
@@ -49,6 +77,12 @@ npm.cmd run tauri -- dev
 See [Build from source](docs/BUILDING.md) for validation and executable build commands. See the [user guide](docs/USAGE.md) for startup, watchlists and optional connections.
 
 ## Screenshots
+
+### On-demand workbench
+
+![GleamDesk workbench preview](docs/images/overview.png)
+
+Overview balances are explicitly labeled simulation values, not real accounts or investment results.
 
 ### Agent Room
 
