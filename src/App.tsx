@@ -30,6 +30,7 @@ import {agentClients,readAgentRuntime,unavailableAgentRuntime,runningAgentClient
 import { AgentConnectionsSettings } from "./components/AgentConnectionsSettings";
 import { PrivacyNotice } from "./components/PrivacyNotice";
 import { AppUpdateIndicator, AppUpdateSettings } from "./components/AppUpdates";
+import { DesktopSystemSettings } from "./components/DesktopSystemSettings";
 import type { SettingsModuleId } from "./components/settingsModules";
 import { ProviderRequestDiagnostics } from "./components/ProviderRequestDiagnostics";
 import type { ProviderRequestDiagnostics as RequestDiagnosticsSnapshot } from "./ports/providerDiagnostics";
@@ -997,6 +998,7 @@ function Dashboard({
           </div>),
           applications: (<div className="settings-section applications-settings" id="application-management"><ApplicationManager applications={applications} onApplicationsChange={setApplications} /></div>),
           desktop: (<div className="settings-section">
+            <DesktopSystemSettings simulationEnabled={settings.simulationEnabled}/>
             <label>启动时显示<select value={settings.startupMode} onChange={(event) => onSettingsChange({ startupMode: event.target.value as AppSettings["startupMode"] })}><option value="desktop">Dock 和顶部 HUD（默认）</option><option value="dashboard">工作台</option><option value="custom">自定义</option></select></label>
             {settings.startupMode === "custom" && <>
               <label className="settings-toggle">显示 Dock 和顶部 HUD<input type="checkbox" checked={settings.showMainOnStartup} onChange={(event) => onSettingsChange({ showMainOnStartup: event.target.checked })} /></label>
@@ -1007,7 +1009,6 @@ function Dashboard({
               <label className="settings-toggle">保持在其他窗口下方<input type="checkbox" checked={settings.desktopMode} onChange={(event) => onSettingsChange({ desktopMode: event.target.checked })} /></label>
               <label className="settings-toggle">整窗鼠标穿透<input type="checkbox" checked={settings.mousePassthrough} onChange={(event) => onSettingsChange({ mousePassthrough: event.target.checked })} /></label>
               <small>开启后 HUD 和推荐也无法点击；Ctrl + Shift + Space 退出。空白区域已支持穿透。</small>
-              <small>开机启动、隐藏 Windows 桌面图标暂未支持。</small>
             </details>
           </div>),
           simulation: (<div className="settings-section">

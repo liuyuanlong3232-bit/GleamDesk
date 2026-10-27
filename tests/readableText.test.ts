@@ -48,11 +48,12 @@ test("API settings start collapsed and keep billing permissions, consent and sta
  assert.match(markup,/settings-help/);
 });
 
-test("startup settings expose real controls and keep inactive Windows preferences out of the form",async()=>{
+test("startup settings expose native Windows controls without applying legacy preferences",async()=>{
  const {readFileSync}=await import("node:fs");const source=readFileSync("src/App.tsx","utf8");
  const section=source.split('desktop: (<div className="settings-section">')[1].split('simulation:')[0];
  assert.match(section,/Dock 和顶部 HUD（默认）/);assert.doesNotMatch(section,/双屏时打开控制台/);
  assert.match(section,/高级与帮助/);assert.match(section,/Ctrl \+ Shift \+ Space/);
  assert.doesNotMatch(section,/checked=\{settings.autoStart\}|value=\{settings.desktopSurfaceMode\}/);
- assert.match(section,/暂未支持/);
+ assert.match(section,/DesktopSystemSettings simulationEnabled=\{settings.simulationEnabled\}/);
+ assert.doesNotMatch(section,/暂未支持/);
 });
