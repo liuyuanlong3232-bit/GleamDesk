@@ -156,6 +156,10 @@ pub async fn install_app_update(app: tauri::AppHandle, state: tauri::State<'_, A
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(windows)]
+    mod installer_acceptance {
+        include!(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/updater_acceptance.rs"));
+    }
     fn fixture(version: &str, signed: bool) -> Value {
         let tag = format!("v{version}");
         let names = if signed { vec!["latest.json".into(), format!("GleamDesk_{version}_x64-setup.exe"), format!("GleamDesk_{version}_x64-setup.exe.sig")] } else { vec![] };

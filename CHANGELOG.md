@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [0.1.3] - Unreleased candidate
+
+- Add optional startup update notifications and a Version & Updates settings page. Downloads and installation require explicit confirmation; portable builds retain manual downloads.
+- Verify version-bound update signatures before the official Tauri NSIS upgrade flow; preserve the existing application identity and local data paths.
+- Document third-party data and asset rights, and require consent before local AI tools read selected application data.
+- Validate the installer upgrade using a separate synthetic product: official SDK signature verification, NSIS 0.1.2 to 0.1.3 upgrade, automatic relaunch and unchanged settings/avatar/watchlist/history/WebView-style files. This does not establish clean-Windows or full-business-application upgrade acceptance.
+
 ## [0.1.2] - 2026-10-27
 
 - Isolate GleamDesk credentials from legacy AgentRoom accounts. Offer explicit local import only when supported legacy credentials are detected; preserve originals and existing GleamDesk accounts.

@@ -37,4 +37,24 @@ NSIS 的默认维护页面对旧版本显示“推荐先卸载当前版本后再
 
 没有 `.sig` 或 `latest.json` 的旧 Release 仍可手动下载；客户端不因此跳过校验。当前 `requireSignedVersion=true`、`allowDowngrades=false`，不要关闭这些条件来迁就错误或缺失的签名。
 
+## 安装器隔离验收
+
+开发者在已生成本版 NSIS 安装器后，可复用其模板建立独立的 `GleamDesk Upgrade Acceptance` 测试产品。它有独立的安装登记、目录和应用标识；载荷仅是无联网、无凭据功能的合成窗口，不调用真实应用初始化。一次性测试密钥与正式更新信任分开。
+
+```powershell
+# CARGO_TARGET_DIR 指向开发构建目录；不指向 artifacts。
+./scripts/test-windows-upgrade.ps1 -Stage Prepare
+./scripts/test-windows-upgrade.ps1 -Stage InstallOld
+# 仅显式启动忽略测试；Windows SDK 成功派发后会退出该测试进程。
+$env:GLEAMDESK_UPGRADE_ACCEPTANCE = Join-Path (Get-Location) 'node_modules/.cache/upgrade-acceptance'
+cargo test --manifest-path src-tauri/Cargo.toml --lib --offline --locked app_updates::tests::installer_acceptance::isolated_nsis_upgrade_through_sdk -- --ignored --exact
+./scripts/test-windows-upgrade.ps1 -Stage Verify
+# 测试窗口自动关闭后，仅卸载独立测试产品，保留合成文件和证据。
+./scripts/test-windows-upgrade.ps1 -Stage Cleanup
+```
+
+完整测试名为 `app_updates::tests::installer_acceptance::isolated_nsis_upgrade_through_sdk`，请勿省略其命名空间配合 `--exact`。准备脚本遇到已有测试安装或数据会停止；不覆盖陌生文件，也不删除个人数据。
+
+2026-10-27 的开发机验收通过了实际 SDK 验签、内容篡改和版本替换拒绝、独立 NSIS 0.1.2 → 0.1.3 覆盖安装、重启测试窗口及五份合成文件逐字节保留。未访问 Windows 凭据管理器。**这只是安装器链路验收，不代表真实应用在干净 Windows、全新 WebView2、断电或完整凭据迁移场景均已通过。**
+
 参考：[Tauri updater](https://v2.tauri.app/plugin/updater/)。

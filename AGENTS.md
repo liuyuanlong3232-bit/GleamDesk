@@ -28,3 +28,5 @@ Tauri 更新包使用 signer sign --app-version 绑定版本，客户端 require
 Tauri 增量缓存若提示硬链接失败会回退复制，构建仍可能通过但 target 占用增大；复用固定开发 target，不把缓存复制到 artifacts。
 
 Windows 透明 HUD 的 Computer Use 可能同时返回 14×14 小区域与完整窗口截图；必须选完整图的 screenshotId 再点击，不能默认使用 screenshot-0。原生预览在沙箱内无窗口时，核对进程并按已获授权范围在正常用户环境启动。
+
+复制并修改生成的 NSIS 测试脚本时保留 UTF-8 BOM；否则 NSIS 可能将中文路径按 ANSI 解码并报 LicenseData 文件不存在。隔离升级测试使用独立产品登记和一次性测试密钥，不使用正式更新密钥签署合成可执行文件。
