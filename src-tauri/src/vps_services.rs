@@ -106,7 +106,7 @@ fn save_file(directory:&Path, connections:Vec<Connection>)->Result<Vec<Connectio
 fn credential_target(c:&Connection)->Result<String,String>{
     if c.kind==Kind::Tailscale {return Err("Tailscale 复用已有 SSH，不保存 API 令牌".into());}
     http_endpoint(&c.endpoint)?;
-    Ok(format!("CodexDesktop.VpsService.{}.{}",c.kind.name(),c.endpoint.as_bytes().iter().map(|b|format!("{b:02x}")).collect::<String>()))
+    Ok(format!("GleamDesk.VpsService.{}.{}",c.kind.name(),c.endpoint.as_bytes().iter().map(|b|format!("{b:02x}")).collect::<String>()))
 }
 fn configured(app:&AppHandle,kind:Kind)->Result<Connection,String>{load(app)?.into_iter().find(|c|c.kind==kind).ok_or("服务未配置".into())}
 #[tauri::command]pub fn vps_service_token(app:AppHandle,view:Webview,kind:Kind,endpoint:String,action:String,token:Option<String>)->Result<bool,String>{

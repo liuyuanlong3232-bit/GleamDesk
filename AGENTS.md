@@ -19,3 +19,5 @@ Tauri 打包结束时可能重写主 EXE，使其修改时间晚于刚生成的 
 参与证据批次摘要的排序必须固定为 UTF-16 序号顺序，不能使用默认 localeCompare；原生端使用 encode_utf16 比较，以免中文/英文 Windows 的批次校验值不同。
 
 提交作者使用当前提交者自己的 GitHub 账号及对应 noreply 邮箱；不要用共享的 contributors@users.noreply.github.com 冒充脱敏身份，它可能关联到其他账号。保持其他贡献者各自署名，不为修正显示而改写已发布历史。
+
+隔离 AppData 或 WebView 不会隔离 Windows 凭据管理器。GleamDesk 仅使用 GleamDesk.* 凭据；CodexDesktop.* 只允许在用户确认的旧版导入中读取，首次使用验收也要核对这一层。正常升级保留应用标识和数据目录。

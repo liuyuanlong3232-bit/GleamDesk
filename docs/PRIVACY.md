@@ -8,6 +8,8 @@ The default illustrated avatar is intentionally distributed as the creator-autho
 
 Preferences, selected instruments, layouts, avatar media, message/history data and configured connections are stored locally. Supported secret values use Windows Credential Manager. Normal source publication does not export these runtime stores or erase an existing user's installation.
 
+GleamDesk credentials use their own `GleamDesk.*` names. Legacy AgentRoom credentials are not used automatically. If detected, Settings → API balances and costs offers an explicit local import. Import copies supported API, chat, mail and VPS credentials without deleting the originals or replacing existing GleamDesk accounts. It does not test connections or enable automatic paid recommendations. Normal updates retain GleamDesk credentials, preferences, watchlists and history; the first transition to the separate credential store turns off automatic paid recommendations once, requiring renewed consent. No old application-data folders or browser profiles are imported by this action.
+
 Some optional local-agent integrations inspect local application status and usage sources. Enable and use only integrations you want. Do not share those local source files in issues.
 
 ## Network requests

@@ -7,6 +7,7 @@ import { normalizeRemoteAnalysisSettings } from "../domain/analysis/remoteSettin
 const storageKey = "codex-desktop.settings.v1";
 
 export const defaultSettings: AppSettings = {
+  credentialNamespaceVersion: 1,
   displayName: "",
   theme: "burgundy",
   opacity: 82,
@@ -43,6 +44,7 @@ export function loadSettings(): AppSettings {
     const value = JSON.parse(localStorage.getItem(storageKey) ?? "null") as Partial<AppSettings> | null;
     if (!value) return { ...defaultSettings };
     return {
+      credentialNamespaceVersion: 1,
       displayName: typeof value.displayName==="string"?value.displayName.replace(/[\u0000-\u001f\u007f]/g,"").trim().slice(0,32):"",
       theme: normalizeTheme(value.theme),
       opacity: clamp(value.opacity, 55, 96, defaultSettings.opacity),
@@ -76,7 +78,8 @@ export function loadSettings(): AppSettings {
         anthropicEnabled: value.apiConnections?.anthropicEnabled === true,
         mimoEnabled: value.apiConnections?.mimoEnabled === true,
         openaiEnabled: value.apiConnections?.openaiEnabled === true,
-        mimoDailyAuto: value.apiConnections?.mimoDailyAuto === true,
+        // Only the namespace transition requires renewed paid consent; subsequent upgrades keep it.
+        mimoDailyAuto: value.credentialNamespaceVersion === 1 && value.apiConnections?.mimoDailyAuto === true,
         credentialRevision: clamp(value.apiConnections?.credentialRevision, 0, Number.MAX_SAFE_INTEGER, 0),
       },
     };

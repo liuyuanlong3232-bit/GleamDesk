@@ -33,9 +33,9 @@ pub fn begin_operation(provider:MailProvider)->Result<MailOperation,String>{
     ACTIVE[index].compare_exchange(false,true,std::sync::atomic::Ordering::AcqRel,std::sync::atomic::Ordering::Acquire)
         .map(|_|MailOperation(index)).map_err(|_|"此邮箱操作正在进行，请完成后重试".into())
 }
-static CREDENTIAL_LOCK:std::sync::Mutex<()>=std::sync::Mutex::new(());
-fn bank_key(provider:MailProvider,bank:usize,index:usize)->String{format!("CodexDesktop.Mail.{}.Bank{bank}.Part{index}",provider.id())}
-fn key(provider:MailProvider,index:usize)->String{format!("CodexDesktop.Mail.{}.Part{index}",provider.id())}
+pub(crate) static CREDENTIAL_LOCK:std::sync::Mutex<()>=std::sync::Mutex::new(());
+fn bank_key(provider:MailProvider,bank:usize,index:usize)->String{format!("GleamDesk.Mail.{}.Bank{bank}.Part{index}",provider.id())}
+fn key(provider:MailProvider,index:usize)->String{format!("GleamDesk.Mail.{}.Part{index}",provider.id())}
 #[cfg(windows)]pub fn save_secret(provider:MailProvider,value:&MailSecret)->Result<(),String>{
     let _lock=CREDENTIAL_LOCK.lock().map_err(|_|"邮箱凭据锁不可用")?;
     let old=crate::credentials::read_named(&key(provider,0)).ok();

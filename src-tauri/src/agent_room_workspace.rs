@@ -73,13 +73,13 @@ fn validate_config(c:&ModelConfig)->Result<(),String>{
         ||!matches!(c.pricing.as_str(),"official"|"manual")||!matches!(c.quota_source.as_str(),"cash"|"gift"|"local")||(c.provider!="Ollama"&&c.quota_source=="local")
         ||[c.input_yuan,c.output_yuan].iter().flatten().any(|v|!v.is_finite()||*v<=0.||*v>10000.){return Err("模型 ID、额度来源或价格无效，价格单位为元/百万 token".into())}if c.price_confirmation.is_some()&&!price_confirmed(c){return Err("模型或价格已变化，请重新确认使用".into())}Ok(())
 }
-fn named_key(provider:&str)->String{format!("CodexDesktop.AgentRoom.{provider}.ApiKey")}
+fn named_key(provider:&str)->String{format!("GleamDesk.AgentRoom.{provider}.ApiKey")}
 #[cfg(windows)]
 fn credential(provider:&str)->Result<Option<String>,String>{
     let own=named_key(provider);if crate::credentials::exists_named(&own)?{return Ok(Some(own))}
     let fallback=match provider{"DeepSeek"=>Some(crate::credentials::CredentialSource::AgentDeepseek),"Claude"=>Some(crate::credentials::CredentialSource::AnalysisAnthropic),"MiMo"=>Some(crate::credentials::CredentialSource::Mimo),_=>None};
-    if let Some(source)=fallback{if crate::credentials::exists(source)?{return Ok(Some(match provider{"DeepSeek"=>"CodexDesktop.DeepSeek.AgentRoomKey","Claude"=>"CodexDesktop.Anthropic.InferenceKey",_=>"CodexDesktop.MiMo.ApiKey"}.into()))}}
-    if provider=="DeepSeek"&&crate::credentials::exists(crate::credentials::CredentialSource::Deepseek)?{return Ok(Some("CodexDesktop.DeepSeek.ApiKey".into()))}Ok(None)
+    if let Some(source)=fallback{if crate::credentials::exists(source)?{return Ok(Some(match provider{"DeepSeek"=>"GleamDesk.DeepSeek.AgentRoomKey","Claude"=>"GleamDesk.Anthropic.InferenceKey",_=>"GleamDesk.MiMo.ApiKey"}.into()))}}
+    if provider=="DeepSeek"&&crate::credentials::exists(crate::credentials::CredentialSource::Deepseek)?{return Ok(Some("GleamDesk.DeepSeek.ApiKey".into()))}Ok(None)
 }
 #[cfg(not(windows))] fn credential(_: &str)->Result<Option<String>,String>{Ok(None)}
 fn scope_valid(db:&rusqlite::Connection,scope:&str,provider:Option<&str>)->Result<Option<WorkspaceRoom>,String>{

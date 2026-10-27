@@ -461,6 +461,8 @@ pub fn run() {
             credentials::credential_save,
             credentials::credential_exists,
             credentials::credential_clear,
+            credentials::credential_legacy_available,
+            credentials::credential_import_legacy,
             api_usage::read_api_usage,
             agent_usage::read_agent_usage,
             agent_usage::read_codex_activity,

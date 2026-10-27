@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import type { ApiConnectionSettings } from "../types";
-import { clearCredential, hasCredential, saveCredential } from "../services/credentials";
+import { clearCredential, hasCredential, saveCredential, hasLegacyCredentials, importLegacyCredentials } from "../services/credentials";
 import { readApiUsage, type ApiSource } from "../providers/api/apiUsageProvider";
 import { formatMoney } from "../services/formatMoney";
 import { openDailyLink } from "./DailyOpenSource";
@@ -63,6 +63,7 @@ function Connection({ source, connections, onChange,simulationEnabled=false }: {
 
 export function ApiConnectionsSettings({ connections, onChange,simulationEnabled=false }: { connections: ApiConnectionSettings; onChange: (next: ApiConnectionSettings) => void;simulationEnabled?:boolean }) {
   return <div className="settings-section api-settings">
+    <LegacyCredentialImport simulationEnabled={simulationEnabled} onImported={() => onChange({...connections,mimoDailyAuto:false,credentialRevision:Date.now()})}/>
     {simulationEnabled&&<p role="status">模拟模式：真实生成和读取验证已暂停。</p>}
     {!isTauri()&&<small>账户连接需要 Windows 桌面程序。</small>}
     <Connection source="deepseek" connections={connections} onChange={onChange} simulationEnabled={simulationEnabled} />
@@ -71,6 +72,31 @@ export function ApiConnectionsSettings({ connections, onChange,simulationEnabled
     <Connection source="openai" connections={connections} onChange={onChange} simulationEnabled={simulationEnabled} />
     <details className="settings-help"><summary>接入帮助</summary><p>这里管理余额与费用读取。聊天室的模型和聊天密钥，在 Agent Room 的成员设置中配置。</p><p>密钥保存在 Windows Credential Manager；应用配置和历史只保存读取结果。</p><p>尚未配置的服务保持停用；保存密钥或读取验证成功后启用。AI 客户端订阅在“AI 客户端状态”中查看。</p></details>
   </div>;
+}
+
+const legacyChoiceKey="gleamdesk.legacy-credentials.choice.v1";
+export function LegacyCredentialImport({simulationEnabled=false,onImported}:{simulationEnabled?:boolean;onImported:()=>void}){
+  const [available,setAvailable]=useState(false),[consent,setConsent]=useState(false),[busy,setBusy]=useState(false),[message,setMessage]=useState("");
+  const [choice,setChoice]=useState(()=>{try{return localStorage.getItem(legacyChoiceKey)??""}catch{return ""}});
+  useEffect(()=>{let active=true;void hasLegacyCredentials().then(value=>{if(active)setAvailable(value)}).catch(()=>{if(active)setMessage("旧版账号检查失败，可稍后重试打开设置")});return()=>{active=false}},[]);
+  const choose=(next:string)=>{try{localStorage.setItem(legacyChoiceKey,next);setChoice(next)}catch{setMessage("选择未能保存，请稍后重试")}};
+  const importAccounts=async()=>{
+    if(!consent||busy||simulationEnabled)return;
+    setBusy(true);setMessage("");
+    try{const count=await importLegacyCredentials(true);choose("imported");setConsent(false);setMessage(`已导入 ${count} 项；已有 GleamDesk 账号和旧版账号均保留。`)}
+    catch(error){setMessage(typeof error==="string"?error:"导入未完成，旧版账号仍保留，可重试")}
+    finally{onImported();setBusy(false)}
+  };
+  if(!available)return message?<small role="status">{message}</small>:null;
+  return <section className="connection-purpose" aria-label="旧版账号导入">
+    {choice?<><div className="settings-actions"><button className="text-button" disabled={busy} onClick={()=>{setChoice("");setMessage("")}}>导入旧版账号…</button></div>{message&&<p role="status">{message}</p>}</>:<>
+      <h4>发现本机旧版账号</h4><p>是否将 AgentRoom 的账号复制到 GleamDesk？已有账号不覆盖，旧版账号不删除。</p>
+      <details className="settings-help"><summary>导入范围</summary><p>请先退出旧 AgentRoom。导入 API、聊天、邮箱和 VPS 服务凭据；仅在本机复制，不测试连接、不启用自动付费推荐。设置、自选和历史记录继续保留。</p></details>
+      <label className="settings-toggle">同意导入旧版账号<input type="checkbox" checked={consent} disabled={busy||simulationEnabled} onChange={event=>setConsent(event.target.checked)}/></label>
+      <div className="settings-actions"><button disabled={!consent||busy||simulationEnabled} onClick={()=>void importAccounts()}>{busy?"正在导入…":"导入账号"}</button><button disabled={busy} onClick={()=>{setConsent(false);choose("skipped")}}>暂不导入</button></div>
+      {message&&<small role="status">{message}</small>}
+    </>}
+  </section>;
 }
 
 
