@@ -145,6 +145,20 @@ test('IBGE 缺值不补零，真实零保留',()=>{const rows=ibgeProducts.map(p
 test('IBGE 全国范围、吨单位、变量和时期必须一致',()=>{for(const patch of [{D1C:'2'},{NC:'2'},{MC:'999'},{MN:'kg'},{D2C:'99'},{D3C:'299901'}])assert.throws(()=>parsePublicIbge(ibge([ibgeRow('39443','10',patch)])));});
 test('IBGE 多月份与同品种重复不得拼接',()=>{assert.throws(()=>parsePublicIbge(ibge([ibgeRow('39443'),ibgeRow('39443')])));assert.throws(()=>parsePublicIbge(ibge([ibgeRow('39443'),ibgeRow('39441','100',{D3C:'202608'})])));});
 test('出口检验只读首张全美表，合计不以三品种代替',()=>{const s=parsePublicInspections(inspections());assert.equal(s.items[3].current,9);assert.equal(s.items[2].current,0);assert.equal(s.items[0].current,1);assert.equal(s.weekEnding,'2026-10-15');assert.equal(s.publishedDate,'2026-10-19');});
+test('出口检验兼容十二个月份全称和缩写，但不按前三个字母猜测未知月份',()=>{
+ const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
+ for(const [index,month]of months.entries())for(const name of [month,month.slice(0,3)]){
+  const mm=String(index+1).padStart(2,'0');
+  const body=inspectionBody.replace('Oct 19, 2026',`${name} 19, 2025`).replace('OCT 15, 2026',`${month.slice(0,3).toUpperCase()} 15, 2025`).replace('10/15/2026',`${mm}/15/2025`).replace('10/08/2026',`${mm}/08/2025`).replace('10/16/2025',`${mm}/16/2024`);
+  const s=parsePublicInspections(inspections(body));assert.equal(s.publishedDate,`2025-${mm}-19`);assert.equal(s.weekEnding,`2025-${mm}-15`);
+ }
+ for(const month of ['Octopus','Januar','Septober'])assert.throws(()=>parsePublicInspections(inspections(inspectionBody.replace('Oct 19',`${month} 19`))));
+});
+test('出口检验全称日期配合前置明细仍只读取全国汇总，保留无效日期及单位拦截',()=>{
+ const body=inspectionBody.replace('Oct 19','October 19').replace('\nGRAINS INSPECTED','\nGrains Inspected and/or Weighed for Export\nDetailed Listing\nREPORTED IN WEEK ENDING OCT 15, 2026\nPORT AREA STATE MTS\nSYNTHETIC PORT 999\n\nGRAINS INSPECTED');
+ const s=parsePublicInspections(inspections(body));assert.equal(s.publishedDate,'2026-10-19');assert.equal(s.items[3].current,9);assert.equal(s.items[0].current,1);
+ for(const bad of [body.replace('October 19','October 32'),body.replace('October 19','November 19'),body.replace('-- METRIC TONS --','-- BUSHELS --'),body.replace('10/08/2026','10/07/2026')])assert.throws(()=>parsePublicInspections(inspections(bad)));
+});
 test('出口检验错误编号、单位、错列和重复不能继续',()=>{for(const body of [inspectionBody.replace('WA_GR101','WA_OTHER'),inspectionBody.replace('METRIC TONS','BUSHELS'),inspectionBody.replace('CORN 1 2 3 4 5','CORN 1 2 3 4'),inspectionBody.replace('WHEAT 0 1 2 3 4','CORN 0 1 2 3 4'),inspectionBody.replace('10/08/2026','10/07/2026')])assert.throws(()=>parsePublicInspections(inspections(body)));});
 test('出口检验缺品种不借后续港口表或补零',()=>{const s=parsePublicInspections(inspections(inspectionBody.replace('SOYBEANS 2 3 4 5 6\n','')));assert.equal(s.items[1].current,null);assert.equal(s.items[3].current,9);assert.equal(inspectionsState(s,true,now),'数据未更新');});
 test('所有新来源拒绝伪造时间、错误来源及超大响应',()=>{for(const [parse,raw] of [[parsePublicNoaa,noaa()],[parseNassAnnual,annual()],[parseCropProgress,progress()],[parsePublicMonthly,monthly()],[parsePublicIbge,ibge()],[parsePublicInspections,inspections()]] as const){for(const patch of [{key:'wrong'},{collectedAt:'2026-02-30T00:00:00Z'},{collectedAt:'2999-01-01T00:00:00Z'},{body:'x'.repeat(1024*1024+1)}])assert.throws(()=>parse({...raw,...patch}));}});

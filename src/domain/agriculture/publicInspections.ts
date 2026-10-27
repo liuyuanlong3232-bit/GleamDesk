@@ -4,12 +4,17 @@ export const inspectionsUrl="https://www.ams.usda.gov/mnreports/wa_gr101.txt";
 export interface InspectionRow {commodity:string;name:string;current:number|null;previous:number|null;yearAgo:number|null;warning?:string}
 export interface PublicInspectionsSnapshot {publishedDate:string;weekEnding:string;previousWeekEnding:string;yearAgoWeekEnding:string;collectedAt:string;unit:"吨";items:InspectionRow[]}
 const months=["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+const fullMonths=["JANUARY","FEBRUARY","MARCH","APRIL","MAY","JUNE","JULY","AUGUST","SEPTEMBER","OCTOBER","NOVEMBER","DECEMBER"];
 function date(year:number,month:number,day:number):string {
  const value=`${year}-${String(month).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
  if(year<2000||year>2100||!Number.isFinite(Date.parse(value))||new Date(value).toISOString().slice(0,10)!==value)throw Error("出口检验日期无效");
  return value;
 }
-function namedDate(month:string,day:string,year:string):string{return date(Number(year),months.indexOf(month.toUpperCase())+1,Number(day));}
+function namedDate(month:string,day:string,year:string):string {
+ const name=month.toUpperCase(),index=months.findIndex((short,i)=>name===short||name===fullMonths[i]);
+ if(index<0)throw Error("出口检验月份无效");
+ return date(Number(year),index+1,Number(day));
+}
 function numericDate(value:string):string {const [month,day,year]=value.split("/").map(Number);return date(year,month,day);}
 function number(value:string):number|null {
  if(!/^(?:\d+|\d{1,3}(?:,\d{3})+)$/.test(value))return null;
@@ -18,7 +23,7 @@ function number(value:string):number|null {
 export function parsePublicInspections(raw:unknown):PublicInspectionsSnapshot {
  const r=receipt(raw,"usda-inspections"),lines=r.body.replace(/^\uFEFF/,"").split(/\r*\n/).map(line=>line.trim());
  if(lines[0]!=="WA_GR101")throw Error("出口检验报告编号变化");
- const publication=/^Washington, DC\s+(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+([A-Za-z]{3})\s+(\d{1,2}),\s+(\d{4})\s+USDA Market News$/.exec(lines[1]??"");
+ const publication=/^Washington, DC\s+(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+([A-Za-z]{3,9})\s+(\d{1,2}),\s+(\d{4})\s+USDA Market News$/.exec(lines[1]??"");
  const title=lines.indexOf("GRAINS INSPECTED AND/OR WEIGHED FOR EXPORT");
  const ending=/^REPORTED IN WEEK ENDING ([A-Z]{3}) (\d{1,2}), (\d{4})$/.exec(lines[title+1]??"");
  if(!publication||title<2||!ending||lines[title+2]!=="-- METRIC TONS --")throw Error("出口检验报告结构或单位变化");
