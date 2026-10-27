@@ -21,3 +21,5 @@ Tauri 打包结束时可能重写主 EXE，使其修改时间晚于刚生成的 
 提交作者使用当前提交者自己的 GitHub 账号及对应 noreply 邮箱；不要用共享的 contributors@users.noreply.github.com 冒充脱敏身份，它可能关联到其他账号。保持其他贡献者各自署名，不为修正显示而改写已发布历史。
 
 隔离 AppData 或 WebView 不会隔离 Windows 凭据管理器。GleamDesk 仅使用 GleamDesk.* 凭据；CodexDesktop.* 只允许在用户确认的旧版导入中读取，首次使用验收也要核对这一层。正常升级保留应用标识和数据目录。
+
+PowerShell 核对 package-lock.json 的根包版本时，使用 ConvertFrom-Json -AsHashtable；packages 的根包键为空字符串，普通对象解析会失败。

@@ -6,7 +6,7 @@
 
 A Windows workspace for HUD, Dock, system status, public data and Agent Room.
 
-[简体中文](README.zh-CN.md) · [Download for Windows](https://github.com/liuyuanlong3232-bit/GleamDesk/releases/tag/v0.1.0) · [User guide](docs/USAGE.md) · [Build](docs/BUILDING.md) · [Report an issue](https://github.com/liuyuanlong3232-bit/GleamDesk/issues)
+[简体中文](README.zh-CN.md) · [Download for Windows](https://github.com/liuyuanlong3232-bit/GleamDesk/releases/tag/v0.1.2) · [User guide](docs/USAGE.md) · [Build](docs/BUILDING.md) · [Report an issue](https://github.com/liuyuanlong3232-bit/GleamDesk/issues)
 
 ![Windows](https://img.shields.io/badge/platform-Windows-3165bb)
 ![Tauri 2](https://img.shields.io/badge/Tauri-2-24c8db)
@@ -55,17 +55,17 @@ Compact icons and status rings keep the desktop clear. Click to pin details, dra
 
 ## Get started
 
-The source and screenshots now reflect the 0.1.1 candidate. Published downloads below remain 0.1.0 until the next release.
+Version 0.1.2 adds isolated credentials with optional legacy-account import, plus Dock icon and native-launch fixes.
 
-Download the Windows x64 packages from [GitHub Release v0.1.0](https://github.com/liuyuanlong3232-bit/GleamDesk/releases/tag/v0.1.0):
+Download the Windows x64 packages from [GitHub Release v0.1.2](https://github.com/liuyuanlong3232-bit/GleamDesk/releases/tag/v0.1.2):
 
 | File | Use |
 | --- | --- |
-| `GleamDesk_0.1.0_x64-setup.exe` | Installer for the current Windows user |
-| `GleamDesk_0.1.0_windows_x64_portable.zip` | Extract and run `GleamDesk.exe` without app installation |
+| `GleamDesk_0.1.2_x64-setup.exe` | Installer for the current Windows user |
+| `GleamDesk_0.1.2_windows_x64_portable.zip` | Extract and run `GleamDesk.exe` without app installation |
 | `SHA256SUMS.txt` | SHA-256 checksums for downloaded files |
 
-**0.1.0 is an early, unsigned release.** Windows may show an unknown-publisher warning. Checksums verify file integrity and do not replace publisher signatures. Both packages require WebView2 Runtime; setup downloads Microsoft's runtime installer if missing. Portable means installation-free: settings and history still use local AppData, rather than a self-contained profile beside the executable. Read [Windows package notes](docs/WINDOWS_PACKAGES.md).
+**0.1.2 is an early, unsigned release.** Windows may show an unknown-publisher warning. Checksums verify file integrity and do not replace publisher signatures. Both packages require WebView2 Runtime; setup downloads Microsoft's runtime installer if missing. Portable means installation-free: settings and history still use local AppData, rather than a self-contained profile beside the executable. Read [Windows package notes](docs/WINDOWS_PACKAGES.md).
 
 Build requirements: Windows 10/11, Node.js 22+, Rust stable, Visual Studio C++ Build Tools, Windows SDK and WebView2 Runtime. Native integrations target Windows; macOS and Linux releases are not provided or verified.
 

@@ -2,7 +2,11 @@
 
 ## [Unreleased]
 
-### 0.1.1 candidate
+## [0.1.2] - 2026-10-27
+
+- Isolate GleamDesk credentials from legacy AgentRoom accounts. Offer explicit local import only when supported legacy credentials are detected; preserve originals and existing GleamDesk accounts.
+- Preserve GleamDesk preferences, watchlists and history on update. Disable automatic paid recommendations once during the credential-store transition; retain renewed consent on subsequent updates.
+- Document maintainer and AI-assistance roles and use the maintainer's GitHub noreply identity for new commits.
 
 - Hide unconfigured API cards and the VPS polling interval from the first-use overview; configured account failures remain visible.
 - Normalize transparent padding for all extracted Windows app icons, fall back from empty jumbo slots, refresh old automatic icons once, and preserve explicitly selected custom icons on re-drop.

@@ -2,7 +2,7 @@
 
 **让状态常驻，让工作更轻。**
 
-[English](README.md) · [Windows 下载](https://github.com/liuyuanlong3232-bit/GleamDesk/releases/tag/v0.1.0) · [使用指南](docs/USAGE.md) · [编译说明](docs/BUILDING.md) · [问题反馈](https://github.com/liuyuanlong3232-bit/GleamDesk/issues)
+[English](README.md) · [Windows 下载](https://github.com/liuyuanlong3232-bit/GleamDesk/releases/tag/v0.1.2) · [使用指南](docs/USAGE.md) · [编译说明](docs/BUILDING.md) · [问题反馈](https://github.com/liuyuanlong3232-bit/GleamDesk/issues)
 
 基于 Tauri、React、TypeScript 和 Rust 的 Windows 桌面工作台，将顶部 HUD、Dock、系统资源、公开数据和 Agent Room 放在一起。
 
@@ -46,17 +46,17 @@
 
 ## 开始使用
 
-当前源码与截图为 0.1.1 候选；下方下载入口仍是已发布的 0.1.0，待新版发布后更新。
+0.1.2 新增账号凭据隔离与旧版手动导入，并修复 Dock 图标和原生启动问题。
 
-从 [GitHub Release v0.1.0](https://github.com/liuyuanlong3232-bit/GleamDesk/releases/tag/v0.1.0) 下载 Windows x64 版本：
+从 [GitHub Release v0.1.2](https://github.com/liuyuanlong3232-bit/GleamDesk/releases/tag/v0.1.2) 下载 Windows x64 版本：
 
 | 文件 | 使用方式 |
 | --- | --- |
-| `GleamDesk_0.1.0_x64-setup.exe` | 安装版，仅为当前用户安装 |
-| `GleamDesk_0.1.0_windows_x64_portable.zip` | 免安装版，解压后运行 `GleamDesk.exe` |
+| `GleamDesk_0.1.2_x64-setup.exe` | 安装版，仅为当前用户安装 |
+| `GleamDesk_0.1.2_windows_x64_portable.zip` | 免安装版，解压后运行 `GleamDesk.exe` |
 | `SHA256SUMS.txt` | 下载文件的 SHA-256 校验值 |
 
-**0.1.0 是早期版本，尚未数字签名**，Windows 可能提示“未知发布者”。SHA-256 用于核对文件完整性，不能替代发布者签名。两种版本均需要 WebView2 Runtime；安装版在缺失时下载官方运行库。免安装版仍将个人设置和历史保存在本机 AppData，不是随文件夹携带的独立配置。详见 [Windows 安装说明](docs/WINDOWS_PACKAGES.md)。
+**0.1.2 是早期版本，尚未数字签名**，Windows 可能提示“未知发布者”。SHA-256 用于核对文件完整性，不能替代发布者签名。两种版本均需要 WebView2 Runtime；安装版在缺失时下载官方运行库。免安装版仍将个人设置和历史保存在本机 AppData，不是随文件夹携带的独立配置。详见 [Windows 安装说明](docs/WINDOWS_PACKAGES.md)。
 
 需要自行编译时，准备 Windows、Node.js 22、Rust stable、Visual Studio C++ 构建工具和 WebView2 Runtime：
 
