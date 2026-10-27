@@ -171,7 +171,8 @@ pub(crate) fn verify_batch(connection: &mut Connection, batch: &Value, now: i64)
         }
         evidence.extend(accepted);
     }
-    evidence.sort_by(|a,b| string(&a["observedAt"]).cmp(string(&b["observedAt"])).then(string(&a["id"]).cmp(string(&b["id"]))));
+    // Match JavaScript's fixed UTF-16 ordinal ordering, including supplementary Unicode IDs.
+    evidence.sort_by(|a,b| string(&a["observedAt"]).cmp(string(&b["observedAt"])).then_with(|| string(&a["id"]).encode_utf16().cmp(string(&b["id"]).encode_utf16())));
     // JSON numeric values compare with a tiny floating point tolerance, never an absolute rounding tolerance.
     if evidence.len() != submitted.len() || evidence.iter().zip(submitted).any(|(a,b)| !same(a,b)) || batch["actualFrom"] != evidence[0]["observedAt"] || batch["actualTo"] != evidence.last().unwrap()["observedAt"] { return Err(invalid()); }
     let hardware: Vec<i64> = evidence.iter().filter(|e| e["source"] == "hardware" && e["metrics"].as_array().unwrap().iter().any(|m| m["key"] == "hardware.cpu"))

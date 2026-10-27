@@ -22,6 +22,19 @@ function range(records: HistoryRecord[], truncated = false): HistoryRangeResult 
 }
 const stable = () => buildHistoryAnalysis(request, { hardware: range(Array.from({ length: 20 }, (_, index) => hardware(index))) }, request.to);
 
+test("evidence and metric keys use the same fixed order on Chinese and English machines", () => {
+  const ids = ["\ue000", "😀", "内存", "a", "A"];
+  const entries = ids.map(id => ({ ...hardware(0), id }));
+  const report = buildHistoryAnalysis(request, { hardware: range(entries) }, request.to);
+  assert.deepEqual(report.evidence.map(item => item.recordId), ["A", "a", "内存", "😀", "\ue000"]);
+  const vps = { id: "vps", kind: "vps_history" as const, createdAt: request.from, payload: {
+    provenance: liveProvenance("vps-status"), serverId: "fixture-id", hubUrl: "https://fixture.example.com",
+    snapshot: { state: "online", lastUpdated: request.from, gauges: [{ label: "内存", value: 40 }, { label: "CPU", value: 12 }] },
+  } };
+  const metrics = buildHistoryAnalysis({ ...request, sources: ["vps"] }, { vps: range([vps]) }, request.to).metrics;
+  assert.deepEqual(metrics.map(item => item.key.split(".").at(-1)), ["CPU", "内存"]);
+});
+
 test("remote readiness expires with source samples before the report age deadline", () => {
   const report = stable();
   const latest = Date.parse(report.sources[0].lastAt!);

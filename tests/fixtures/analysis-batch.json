@@ -1,6 +1,6 @@
 {
   "generatedAt": "2026-10-05T02:10:00.000Z",
-  "batchId": "bbef20eb83f7e8ca36e335a79d9f2d38168b412f58d365de2a9c2ceea8e01c5b",
+  "batchId": "81a92c6f6295252b61efd4394a77dfc8688ce82ea14a9df731c3e6b4aab2f682",
   "batch": {
     "schemaVersion": 1,
     "request": {
@@ -1381,19 +1381,19 @@
         ]
       },
       {
-        "id": "metric:vps.[\"https://fixture.example.com\",\"fixture-id\"].内存",
+        "id": "metric:vps.[\"https://fixture.example.com\",\"fixture-id\"].CPU",
         "kind": "metric-summary",
-        "title": "fixture-id · https://fixture.example.com 内存",
-        "detail": "1 个有效样本，最小 40.00、最大 40.00、样本均值 40.00 %",
+        "title": "fixture-id · https://fixture.example.com CPU",
+        "detail": "1 个有效样本，最小 12.00、最大 12.00、样本均值 12.00 %",
         "evidenceIds": [
           "vps_history:vps"
         ]
       },
       {
-        "id": "metric:vps.[\"https://fixture.example.com\",\"fixture-id\"].CPU",
+        "id": "metric:vps.[\"https://fixture.example.com\",\"fixture-id\"].内存",
         "kind": "metric-summary",
-        "title": "fixture-id · https://fixture.example.com CPU",
-        "detail": "1 个有效样本，最小 12.00、最大 12.00、样本均值 12.00 %",
+        "title": "fixture-id · https://fixture.example.com 内存",
+        "detail": "1 个有效样本，最小 40.00、最大 40.00、样本均值 40.00 %",
         "evidenceIds": [
           "vps_history:vps"
         ]

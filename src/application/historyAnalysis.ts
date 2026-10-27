@@ -8,6 +8,8 @@ const kinds: Record<AnalysisSource, HistoryKind> = {
   hardware: "hardware_history", system: "system_events", vps: "vps_history", api: "usage_history",
 };
 const freshness: Record<AnalysisSource, number> = { hardware: 120_000, system: 7 * 86_400_000, vps: 600_000, api: 600_000 };
+// Evidence participates in a signed body digest: use UTF-16 ordinal order, never the machine's locale.
+const evidenceOrder = (left: string, right: string) => left < right ? -1 : left > right ? 1 : 0;
 export function isHistoryReportFresh(report: HistoryAnalysisReport, now: number): boolean {
   const generated = Date.parse(report.generatedAt);
   if (!Number.isFinite(now) || !Number.isFinite(generated) || generated > now + 1_000 || now - generated > 120_000) return false;
@@ -166,7 +168,7 @@ function summarizeMetrics(evidence: AnalysisEvidence[]): MetricSummary[] {
     sampleMean: group.points.reduce((mean, point) => mean + point.value / group.points.length, 0),
     evidenceIds: group.points.map((point) => point.id),
     ...(group.metric.periodStart ? { periodStart: group.metric.periodStart, periodEnd: group.metric.periodEnd } : {}),
-  })).sort((a, b) => a.key.localeCompare(b.key));
+  })).sort((a, b) => evidenceOrder(a.key, b.key));
 }
 
 export function buildHistoryAnalysis(request: AnalysisRequest, queried: Partial<Record<AnalysisSource, HistoryRangeResult | Error>>,
@@ -197,7 +199,7 @@ export function buildHistoryAnalysis(request: AnalysisRequest, queried: Partial<
       seen.add(normalized.id);
       accepted.push(normalized);
     }
-    accepted.sort((a, b) => a.observedAt.localeCompare(b.observedAt));
+    accepted.sort((a, b) => evidenceOrder(a.observedAt, b.observedAt));
     const firstAt = accepted[0]?.observedAt ?? null, lastAt = accepted.at(-1)?.observedAt ?? null;
     const stale = lastAt !== null && now - Date.parse(lastAt) > freshness[source];
     const truncated = !!response && !(response instanceof Error) && response.truncated;
@@ -210,7 +212,7 @@ export function buildHistoryAnalysis(request: AnalysisRequest, queried: Partial<
       excludedCount, truncated, firstAt, lastAt, stale, issues });
     evidence.push(...accepted);
   }
-  evidence.sort((a, b) => a.observedAt.localeCompare(b.observedAt) || a.id.localeCompare(b.id));
+  evidence.sort((a, b) => evidenceOrder(a.observedAt, b.observedAt) || evidenceOrder(a.id, b.id));
   const metrics = summarizeMetrics(evidence);
   const candidates: AnalysisCandidate[] = metrics.map((metric) => ({ id: `metric:${metric.key}`, kind: "metric-summary",
     title: metric.label, detail: `${metric.sampleCount} 个有效样本，最小 ${metric.minimum.toFixed(2)}、最大 ${metric.maximum.toFixed(2)}、样本均值 ${metric.sampleMean.toFixed(2)} ${metric.unit}`,

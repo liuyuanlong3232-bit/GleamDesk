@@ -15,3 +15,5 @@ Windows Jumbo 图标可能只有大画布中的小块内容，也可能完全透
 Dock 普通应用、快捷方式和网址使用 Windows 原生 Shell 启动；不要恢复编码 PowerShell 启动链。只有明确配置的 command 入口会调用终端。原生验收使用 `src-tauri/tests/fixtures/launcher-gui.cs` 编译的一次性 GUI，在含空格/中文的临时目录命名为 `launch fixture.exe`，设置 `GLEAMDESK_LAUNCH_FIXTURE` 后显式运行忽略测试 `launcher::tests::native_launch_acceptance`；不启动用户工作应用。
 
 Tauri 打包结束时可能重写主 EXE，使其修改时间晚于刚生成的 NSIS 安装包；不能用文件时间先后判断二者是否配套。发布包应在同一干净构建任务中生成，并记录版本、源码提交和校验值。
+
+参与证据批次摘要的排序必须固定为 UTF-16 序号顺序，不能使用默认 localeCompare；原生端使用 encode_utf16 比较，以免中文/英文 Windows 的批次校验值不同。

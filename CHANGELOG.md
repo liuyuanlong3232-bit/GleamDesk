@@ -10,6 +10,7 @@
 - Launch normal Dock apps, shortcuts and URLs through the native Windows Shell instead of an encoded PowerShell helper.
 - Match the Dock drop highlight to its rounded surface and clear the hint after cancellation or completion.
 - Add unsigned Windows x64 package builds in GitHub Actions, with portable ZIP, NSIS installer, SHA-256 checksums and source metadata.
+- Use locale-independent evidence ordering so Chinese and English Windows installations produce the same analysis batch digest.
 
 ## [0.1.0] - 2026-10-26
 
