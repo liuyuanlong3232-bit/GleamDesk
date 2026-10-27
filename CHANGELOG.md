@@ -7,6 +7,9 @@
 - Hide unconfigured API cards and the VPS polling interval from the first-use overview; configured account failures remain visible.
 - Normalize transparent padding for all extracted Windows app icons, fall back from empty jumbo slots, refresh old automatic icons once, and preserve explicitly selected custom icons on re-drop.
 - Ship the creator-authorized brand avatar as the theme-aware default; local avatar replacement remains available.
+- Launch normal Dock apps, shortcuts and URLs through the native Windows Shell instead of an encoded PowerShell helper.
+- Match the Dock drop highlight to its rounded surface and clear the hint after cancellation or completion.
+- Add unsigned Windows x64 package builds in GitHub Actions, with portable ZIP, NSIS installer, SHA-256 checksums and source metadata.
 
 ## [0.1.0] - 2026-10-26
 

@@ -13,3 +13,5 @@ Windows NSIS 工具解压若被沙箱拒绝，可在已有授权范围内于沙�
 Windows Jumbo 图标可能只有大画布中的小块内容，也可能完全透明；统一裁剪透明边距并对空白结果回退，旧系统图标按版本刷新，不能按应用名称写死或覆盖手动图标。Windows PowerShell 5.1 的中文临时脚本使用带 BOM 的 UTF-8。
 
 Dock 普通应用、快捷方式和网址使用 Windows 原生 Shell 启动；不要恢复编码 PowerShell 启动链。只有明确配置的 command 入口会调用终端。原生验收使用 `src-tauri/tests/fixtures/launcher-gui.cs` 编译的一次性 GUI，在含空格/中文的临时目录命名为 `launch fixture.exe`，设置 `GLEAMDESK_LAUNCH_FIXTURE` 后显式运行忽略测试 `launcher::tests::native_launch_acceptance`；不启动用户工作应用。
+
+Tauri 打包结束时可能重写主 EXE，使其修改时间晚于刚生成的 NSIS 安装包；不能用文件时间先后判断二者是否配套。发布包应在同一干净构建任务中生成，并记录版本、源码提交和校验值。

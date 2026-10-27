@@ -30,6 +30,22 @@ The remapping prevents developer machine paths from being retained in Rust sourc
 
 Outputs are `src-tauri/target/release/GleamDesk.exe` and the installer in `src-tauri/target/release/bundle/nsis`. Tauri can download its NSIS build tools on first use. Package the executable together with the project and third-party license files; do not copy app-data folders, credentials, development caches or configuration from your own installation.
 
+Use the shared packaging script after a successful NSIS build:
+
+```powershell
+./scripts/package-windows.ps1 -OutputDirectory ./artifacts/windows-packages
+```
+
+Choose an empty output directory. The script includes only the executable and public Tauri bundle resources, creates a portable ZIP, copies the installer, and writes `SHA256SUMS.txt` and `BUILD-METADATA.json`. It requires matching product versions and does not overwrite existing packages. Always build both outputs from the intended source revision first; version equality alone does not prove they came from the same revision. CI uses a fresh checkout and builds both in the same job.
+
+## GitHub Actions builds
+
+The [Windows build workflow](../.github/workflows/windows-build.yml) runs on GitHub-hosted `windows-2022` machines for relevant pushes to `main` or `codex/**`, and can also be started manually from the repository's Actions tab. It installs Node.js 22 and Rust 1.98.1, uses both dependency lockfiles, runs frontend tests, and builds the native executable plus NSIS installer. Build caches remain under the checkout's `src-tauri/target`; only final packages, checksums and metadata are uploaded.
+
+Each run stores an **unsigned** Windows x64 artifact for seven days. It does not publish a GitHub Release, request signing, use service credentials or connect to the maintainer's VPS. Download the artifact from the completed run, unzip the Actions archive, and then extract the portable ZIP before running the app. The source commit and workflow run are recorded in the metadata. Successful CI means the tests and packaging completed; it does not verify GUI interaction, installation, upgrade or uninstallation.
+
+SignPath integration is not enabled. Its OSS GitHub integration requires GitHub-hosted build jobs and verified build artifacts; see [SignPath's GitHub documentation](https://docs.signpath.io/trusted-build-systems/github). A signing policy, account verification and Foundation approval are separate steps.
+
 ## Verify and run
 
 - Compare the downloaded package's SHA-256 with the distributed checksums.
