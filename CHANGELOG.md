@@ -2,7 +2,7 @@
 
 ## [Unreleased]
 
-## [0.1.3] - Unreleased candidate
+## [0.1.3] - 2026-10-27
 
 - Add optional startup update notifications and a Version & Updates settings page. Downloads and installation require explicit confirmation; portable builds retain manual downloads.
 - Verify version-bound update signatures before the official Tauri NSIS upgrade flow; preserve the existing application identity and local data paths.

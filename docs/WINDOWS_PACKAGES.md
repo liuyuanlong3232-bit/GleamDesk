@@ -42,7 +42,7 @@ Choose an empty output directory. The script includes only the executable and pu
 
 The [Windows build workflow](../.github/workflows/windows-build.yml) runs on GitHub-hosted `windows-2022` machines for relevant pushes to `main` or `codex/**`, and can also be started manually from the repository's Actions tab. It installs Node.js 22 and Rust 1.98.1, uses both dependency lockfiles, runs frontend tests, and builds the native executable plus NSIS installer. Build caches remain under the checkout's `src-tauri/target`; only final packages, checksums and metadata are uploaded.
 
-Each run stores an **unsigned** Windows x64 artifact for seven days. It does not publish a GitHub Release, request signing, use service credentials or connect to the maintainer's VPS. Download the artifact from the completed run, unzip the Actions archive, and then extract the portable ZIP before running the app. The source commit and workflow run are recorded in the metadata. Successful CI means the tests and packaging completed; it does not verify GUI interaction, installation, upgrade or uninstallation.
+Each run stores a Windows x64 artifact without a Windows publisher signature for seven days. It does not publish a GitHub Release or connect to the maintainer's VPS. Optional updater signing uses a separately configured repository secret; it remains unconfigured when the maintainer signs locally. User downloads belong in GitHub Releases, where packages do not have this seven-day Actions retention limit. Download an Actions artifact only when testing a specific build, unzip the Actions archive, and then extract the portable ZIP before running the app. The source commit and workflow run are recorded in the metadata. Successful CI means the tests and packaging completed; it does not verify GUI interaction, installation, upgrade or uninstallation.
 
 SignPath integration is not enabled. Its OSS GitHub integration requires GitHub-hosted build jobs and verified build artifacts; see [SignPath's GitHub documentation](https://docs.signpath.io/trusted-build-systems/github). A signing policy, account verification and Foundation approval are separate steps.
 
@@ -55,7 +55,7 @@ For update checks, confirmed in-app installation and the first manual installati
 - Start the workbench from the top HUD. Closing the workbench hides it; use the HUD menu to exit the entire app.
 - Do not enable optional paid, SSH or service connections until you have configured your own account and endpoint.
 
-Current packages are unsigned; Windows may identify an unknown publisher. No signed-publisher identity or reputation is claimed. Building a valid installer is separate from verifying installation, upgrade and removal on a clean Windows machine; release notes must state which checks were actually performed.
+Current packages have no Windows publisher signature; Windows may identify an unknown publisher. The separate updater signature is used by GleamDesk to verify future in-app upgrades, and does not establish a Windows publisher identity or reputation. Building a valid installer is separate from verifying installation, upgrade and removal on a clean Windows machine; release notes must state which checks were actually performed.
 
 ### 0.1.0 local verification
 
