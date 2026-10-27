@@ -99,3 +99,7 @@ npm.cmd run tauri -- dev
 [使用指南](docs/USAGE.md) · [架构](docs/ARCHITECTURE.md) · [贡献指南](CONTRIBUTING.md) · [行为准则](CODE_OF_CONDUCT.md) · [安全反馈](SECURITY.md) · [变更记录](CHANGELOG.md) · [致谢](ACKNOWLEDGMENTS.md)
 
 原创代码采用 [MIT](LICENSE)。第三方代码与素材保留各自许可证。使用 OpenAI Codex 辅助开发，不代表 OpenAI 官方项目或背书。
+
+## Code signing policy / 数字签名
+
+Windows 安装包目前仍未签名。[签名政策与申请准备情况](docs/CODE_SIGNING.md)列出了计划中的构建、人工审批和发布流程；尚未获得 SignPath Foundation 批准，也未配置签名凭据。

@@ -116,3 +116,7 @@ Developed with assistance from OpenAI Codex. This is an independent project, not
 ## License
 
 Original project contributions are [MIT licensed](LICENSE). Third-party code and assets retain their own notices, including [vendored wry](vendor/wry), [HUD sources](docs/licenses/agent-hud-THIRD-PARTY-NOTICES.txt) and [service adapters](licenses/vps-services/README.md). Names, logos, data and services belong to their respective owners.
+
+## Code signing policy
+
+Windows packages are currently unsigned. The [code signing policy and application readiness](docs/CODE_SIGNING.md) describe the proposed process; SignPath Foundation approval and trusted-publisher signing are not yet in place.
