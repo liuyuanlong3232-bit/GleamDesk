@@ -35,7 +35,7 @@ export const defaultSettings: AppSettings = {
   beszelRefreshIntervalSeconds: 30,
   beszelCredentialRevision: 0,
   notificationPreferences: normalizeNotificationPreferences(null),
-  apiConnections: { deepseekEnabled: false, anthropicEnabled: false, openaiEnabled: false, mimoEnabled: false, mimoDailyAuto: false, credentialRevision: 0 },
+  apiConnections: { localAgentUsageEnabled: false, deepseekEnabled: false, anthropicEnabled: false, openaiEnabled: false, mimoEnabled: false, mimoDailyAuto: false, credentialRevision: 0 },
   remoteAnalysis: normalizeRemoteAnalysisSettings(null),
 };
 
@@ -74,6 +74,7 @@ export function loadSettings(): AppSettings {
       notificationPreferences: normalizeNotificationPreferences(value.notificationPreferences),
       remoteAnalysis: normalizeRemoteAnalysisSettings(value.remoteAnalysis),
       apiConnections: {
+        localAgentUsageEnabled: value.apiConnections?.localAgentUsageEnabled === true,
         deepseekEnabled: value.apiConnections?.deepseekEnabled === true,
         anthropicEnabled: value.apiConnections?.anthropicEnabled === true,
         mimoEnabled: value.apiConnections?.mimoEnabled === true,

@@ -22,7 +22,8 @@ export function DataSourceConnectionsSettings(){
     finally{setBusy(false);}
   };
   return <div className="settings-section">
-    <strong>免费直连</strong>
+    <strong>公开直连来源</strong>
+    <details className="settings-help"><summary>来源与使用范围</summary><p>接口可访问不等于数据可任意再分发。Open-Meteo 免费接口限非商业用途；腾讯、新浪、Yahoo 与东方财富行情的再分发范围仍待核实。各来源可分别关闭。</p><p>FRED 数据还有逐序列版权及 AI 用途限制。商业使用、再发布数据或用于 AI 前，请核对来源条款；本项目 MIT 许可不授予这些权利。</p></details>
     <label className="settings-toggle"><span>阿根廷农业部全国估产</span><input aria-label="阿根廷官方估产" type="checkbox" disabled={!loaded||busy} checked={draft.argentinaEnabled??false} onChange={e=>setDraft({...draft,argentinaEnabled:e.target.checked})}/></label>
     <label className="settings-toggle"><span>巴西 CONAB 作物年度估产</span><input aria-label="CONAB 官方估产" type="checkbox" disabled={!loaded||busy} checked={draft.conabEnabled??false} onChange={e=>setDraft({...draft,conabEnabled:e.target.checked})}/></label>
     <label className="settings-toggle"><span>海外期货 / 美元指数（Yahoo、东方财富）</span><input aria-label="海外期货公开快照" type="checkbox" disabled={!loaded||busy} checked={draft.overseasFuturesEnabled??false} onChange={e=>setDraft({...draft,overseasFuturesEnabled:e.target.checked})}/></label>

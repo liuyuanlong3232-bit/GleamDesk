@@ -807,7 +807,7 @@ test("agriculture map positions only known regions or valid supplied coordinates
 test("agriculture map distinguishes snapshot time from missing forecast time without network maps",async()=>{
  const {AgricultureWeatherMap}=await import("../src/components/AgricultureWorkspace");const {renderToStaticMarkup}=await import("react-dom/server");const {createElement}=await import("react");
  const markup=renderToStaticMarkup(createElement(AgricultureWeatherMap,{weather:[{name:"美国玉米带",crop:"玉米",maximum:32.8,precip:74.5,source:"fixture",generatedAt:"2020-01-01",sourceHint:""}]}));
- assert.match(markup,/32.8°C/);assert.match(markup,/74.5 mm/);assert.match(markup,/快照保存/);assert.match(markup,/起止日期未提供/);assert.match(markup,/天气时效待确认/);assert.match(markup,/已过期/);assert.match(markup,/代表位置不等同/);assert.doesNotMatch(markup,/(?:href|src)="https?:\/\//);
+ assert.match(markup,/32.8°C/);assert.match(markup,/74.5 mm/);assert.match(markup,/快照保存/);assert.match(markup,/起止日期未提供/);assert.match(markup,/天气时效待确认/);assert.match(markup,/已过期/);assert.match(markup,/代表位置不等同/);assert.doesNotMatch(markup,/<(?:img|image|script)[^>]+(?:href|src)="https?:\/\//);assert.match(markup,/href="https:\/\/www.naturalearthdata.com\/about\/terms-of-use\//);
  const empty=renderToStaticMarkup(createElement(AgricultureWeatherMap,{weather:[]}));assert.match(empty,/尚无天气记录/);assert.doesNotMatch(empty,/NaN|Infinity/);
  const fs=await import("node:fs/promises");const svg=await fs.readFile("src/assets/agriculture-world.svg","utf8");assert.match(svg,/Natural Earth/);assert.match(svg,/viewBox="0 0 800 340"/);
 });

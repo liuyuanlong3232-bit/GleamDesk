@@ -273,13 +273,13 @@ test("fresh Agent metadata with unknown quotas replaces cached verified login fa
     Object.defineProperty(globalThis,"isTauri",{configurable:true,value:true});
     for (const reason of ["read-failed","not-logged-in"] as const) {
       let clock=Date.now(), calls=0;
-      Object.defineProperty(globalThis,"window",{configurable:true,value:{__TAURI_INTERNALS__:{invoke:async(command:string)=>{
-        assert.equal(command,"read_agent_usage");calls++;
+      Object.defineProperty(globalThis,"window",{configurable:true,value:{__TAURI_INTERNALS__:{invoke:async(command:string,args:unknown)=>{
+        assert.equal(command,"read_agent_usage");assert.deepEqual(args,{consent:true});calls++;
         return {observedAtUnixMs:clock,accounts:[{id:"codex",name:"Codex",state:calls===1?"normal":"unknown",installed:true,running:calls===1,loginStatus:calls===1?"verified":reason==="not-logged-in"?"not-logged-in":"unknown",plan:calls===1?"plus":null,usageType:"subscription",source:"codex-cli",confidence:calls===1?"verified":"unknown",reason:calls===1?"":reason,observedAtUnixMs:clock,ordinaryUsageAllowed:null,windows:calls===1?[{id:"primary",usedPercent:20,windowDurationMins:300,resetsAtUnixMs:null}]:[]}]};
       }}}});
       const cache=new Map<string,string>();
       const runtime=createProviderRuntime({now:()=>clock,cache:{get:key=>cache.get(key),set:(key,value)=>{cache.set(key,value);}}});
-      const provider=createAgentUsageProvider();
+      const provider=createAgentUsageProvider(true);
       const verified=await runtime.refresh(provider);
       assert.equal(verified.data?.accounts[0].confidence,"verified");
       clock+=300_001;
@@ -295,6 +295,20 @@ test("fresh Agent metadata with unknown quotas replaces cached verified login fa
     if(originalTauri)Object.defineProperty(globalThis,"isTauri",originalTauri);else Reflect.deleteProperty(globalThis,"isTauri");
     if(originalWindow)Object.defineProperty(globalThis,"window",originalWindow);else Reflect.deleteProperty(globalThis,"window");
   }
+});
+
+test("local Agent usage is off by default with no polling, IPC or history writes",async()=>{
+  const originalWindow=Object.getOwnPropertyDescriptor(globalThis,"window");
+  let calls=0;
+  try{
+    Object.defineProperty(globalThis,"window",{configurable:true,value:{__TAURI_INTERNALS__:{invoke:async()=>{calls++;throw Error("must not read")}}}});
+    for(const provider of [createAgentUsageProvider(),createAgentUsageProvider(false)]){
+      assert.equal(provider.refreshIntervalMs,null);assert.equal(provider.backgroundRefreshIntervalMs,null);
+      const result=await provider.load(new AbortController().signal);assert.equal(result.status,"unavailable");assert.equal(result.data?.accounts[0].availabilityReason,"permission-required");
+      assert.notEqual(provider.cacheKey,createAgentUsageProvider(true).cacheKey);
+    }
+    assert.equal(calls,0);
+  }finally{if(originalWindow)Object.defineProperty(globalThis,"window",originalWindow);else Reflect.deleteProperty(globalThis,"window");}
 });
 
 test("Ollama remote-only and truncated lists do not claim a local model is Ready", () => {

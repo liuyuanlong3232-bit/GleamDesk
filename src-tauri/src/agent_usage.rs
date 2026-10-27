@@ -42,7 +42,11 @@ fn local_codex_activity()->CodexActivity{
 }
 /// Metadata-only observation. No transcript text, paths, tokens or credentials leave this reader.
 #[tauri::command]
-pub async fn read_codex_activity()->Result<CodexActivity,String>{tauri::async_runtime::spawn_blocking(local_codex_activity).await.map_err(|_|"本机 Codex 任务状态暂时不可用".into())}
+pub async fn read_codex_activity(consent:Option<bool>)->Result<CodexActivity,String>{require_usage_consent(consent)?;tauri::async_runtime::spawn_blocking(local_codex_activity).await.map_err(|_|"本机 Codex 任务状态暂时不可用".into())}
+
+fn require_usage_consent(consent:Option<bool>)->Result<(),String>{
+    if consent==Some(true){Ok(())}else{Err("未允许读取本机 AI 客户端账号和用量，请在设置中开启".into())}
+}
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -261,7 +265,8 @@ fn load(app:Option<&tauri::AppHandle>) -> AgentSnapshot {
     AgentSnapshot { accounts: vec![codex, claude, antigravity, doubao, account("gemini", "Gemini（预留）")], observed_at_unix_ms: observed_unix_ms() }
 }
 #[tauri::command]
-pub async fn read_agent_usage(app:tauri::AppHandle,state: tauri::State<'_, AgentUsageState>,force:Option<bool>) -> Result<AgentSnapshot, String> {
+pub async fn read_agent_usage(app:tauri::AppHandle,state: tauri::State<'_, AgentUsageState>,force:Option<bool>,consent:Option<bool>) -> Result<AgentSnapshot, String> {
+    require_usage_consent(consent)?;
     let cache = state.cache.clone();
     tauri::async_runtime::spawn_blocking(move || cache.read((), if force==Some(true){Duration::ZERO}else{Duration::from_secs(300)}, Duration::from_secs(10), || Ok(load(Some(&app)))))
         .await.map_err(|_| "Agent 状态读取任务失败".to_string())?
@@ -270,6 +275,12 @@ pub async fn read_agent_usage(app:tauri::AppHandle,state: tauri::State<'_, Agent
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn usage_and_task_reads_require_explicit_consent(){
+        assert!(require_usage_consent(None).is_err());
+        assert!(require_usage_consent(Some(false)).is_err());
+        assert!(require_usage_consent(Some(true)).is_ok());
+    }
     #[test]
     fn runtime_catalog_is_shared_and_runtime_output_has_no_process_arguments(){
         let catalog:Vec<Value>=serde_json::from_str(CLIENT_CATALOG).unwrap();

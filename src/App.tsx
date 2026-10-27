@@ -28,6 +28,7 @@ import { StatusHud,HudLogo,HudQuotaDetails,HudWorkbenchButton } from "./componen
 import { hudQuotaUsed,apiHudSummary } from "./presentation/quotaAdapter";
 import {agentClients,readAgentRuntime,unavailableAgentRuntime,runningAgentClients} from "./providers/agents/agentUsageProvider";
 import { AgentConnectionsSettings } from "./components/AgentConnectionsSettings";
+import { PrivacyNotice } from "./components/PrivacyNotice";
 import type { SettingsModuleId } from "./components/settingsModules";
 import { ProviderRequestDiagnostics } from "./components/ProviderRequestDiagnostics";
 import type { ProviderRequestDiagnostics as RequestDiagnosticsSnapshot } from "./ports/providerDiagnostics";
@@ -368,7 +369,7 @@ function MainScreen({
     return()=>{active=false;window.clearInterval(timer);stop()};
   },[settings.simulationEnabled]);
   const [codexActivity,setCodexActivity]=useState<{state:string;activeTasks:number;source:string}>({state:"unknown",activeTasks:0,source:"none"});
-  useEffect(()=>{if(!isTauri()||settings.simulationEnabled)return;let active=true,pending=false;const refresh=async()=>{if(!active||pending||!isWindowVisible())return;pending=true;try{const value=await invoke<{state:string;activeTasks:number;source:string}>("read_codex_activity");if(active)setCodexActivity(value)}catch{if(active)setCodexActivity({state:"unknown",activeTasks:0,source:"read-failed"})}finally{pending=false}};void refresh();const timer=window.setInterval(()=>void refresh(),3000);return()=>{active=false;window.clearInterval(timer)}},[settings.simulationEnabled]);
+  useEffect(()=>{if(!isTauri()||settings.simulationEnabled||settings.apiConnections.localAgentUsageEnabled!==true){setCodexActivity({state:"unknown",activeTasks:0,source:"permission-required"});return;}let active=true,pending=false;const refresh=async()=>{if(!active||pending||!isWindowVisible())return;pending=true;try{const value=await invoke<{state:string;activeTasks:number;source:string}>("read_codex_activity",{consent:true});if(active)setCodexActivity(value)}catch{if(active)setCodexActivity({state:"unknown",activeTasks:0,source:"read-failed"})}finally{pending=false}};void refresh();const timer=window.setInterval(()=>void refresh(),3000);return()=>{active=false;window.clearInterval(timer)}},[settings.simulationEnabled,settings.apiConnections.localAgentUsageEnabled]);
   const [managerOpen, setManagerOpen] = useState(false);
   const [selectedApp, setSelectedApp] = useState<string | null>(null);
   const [applications, setApplications] = useApplications(setSelectedApp);
@@ -1011,7 +1012,7 @@ function Dashboard({
             <label>模拟场景<select value={settings.simulationScenario} disabled={!settings.simulationEnabled} onChange={(event) => onSettingsChange({ simulationScenario: event.target.value as SimulationScenario })}><option value="normal">正常消耗</option><option value="warning">系统警告</option><option value="error">VPS 离线 / 系统异常</option><option value="high-load">高负载</option></select></label>
             <small>仅模拟界面和通知，不写入真实历史；开启后暂停真实 Provider。</small>
           </div>),
-          agents:(<AgentConnectionsSettings/>),
+          agents:(<AgentConnectionsSettings enabled={settings.apiConnections.localAgentUsageEnabled===true} onEnabledChange={enabled=>onSettingsChange({apiConnections:{...settings.apiConnections,localAgentUsageEnabled:enabled}})}/>),
           api: (<ApiConnectionsSettings connections={settings.apiConnections} simulationEnabled={settings.simulationEnabled} onChange={(apiConnections) => onSettingsChange({ apiConnections })} />),
           analysis: (<><AnalysisConnectionsSettings settings={settings.remoteAnalysis} onChange={(remoteAnalysis) => onSettingsChange({ remoteAnalysis })} /><button className="action-button" onClick={()=>window.dispatchEvent(new Event("codex-desktop.open-history-analysis"))}>打开历史分析</button></>),
           mail: (<MailConnections/>),
@@ -1045,7 +1046,7 @@ function Dashboard({
             {beszelMessage && <small role="status">{beszelMessage}</small>}
             <VpsServiceSettings/>
           </div>),
-          diagnostics: (<div className="settings-section"><WebAppDiagnostics/><button className="diagnostics-toggle" aria-expanded={diagnosticsOpen} onClick={() => setDiagnosticsOpen((open) => !open)}>系统诊断 <span>{diagnosticsOpen ? "收起" : "查看"}</span></button>
+          diagnostics: (<div className="settings-section"><PrivacyNotice/><WebAppDiagnostics/><button className="diagnostics-toggle" aria-expanded={diagnosticsOpen} onClick={() => setDiagnosticsOpen((open) => !open)}>系统诊断 <span>{diagnosticsOpen ? "收起" : "查看"}</span></button>
             {diagnosticsOpen && <>
               <ProviderRequestDiagnostics snapshot={diagnostics?.requestMetrics ?? null} checking={checkingWindowRefresh} onCheck={(scope) => void checkWindowRefresh(scope)} />
               <div className="diagnostics-grid">

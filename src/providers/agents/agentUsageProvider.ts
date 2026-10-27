@@ -60,13 +60,14 @@ export function normalizeAgentUsage(snapshot: NativeSnapshot): AgentQuotaData {
   });
   return { type: "agent-quotas", mode: "live", accounts };
 }
-export function createAgentUsageProvider(): Provider<AgentQuotaData> {
-  return { id: "agent-quotas", name: "AI Agent Usage", kind: "agent", refreshIntervalMs: isTauri() ? 300_000 : null,
-    backgroundRefreshIntervalMs: null, timeoutMs: 70_000, retryPolicy: { maxRetries: 0 }, cacheKey: "native-agents-v4",
+export function createAgentUsageProvider(consent=false): Provider<AgentQuotaData> {
+  return { id: "agent-quotas", name: "AI Agent Usage", kind: "agent", refreshIntervalMs: isTauri() && consent ? 300_000 : null,
+    backgroundRefreshIntervalMs: null, timeoutMs: 70_000, retryPolicy: { maxRetries: 0 }, cacheKey: `native-agents-v5:${consent}`,
     load: async () => {
+      if (!consent) return {status:"unavailable",data:unknownAgentUsage("permission-required"),retryable:false};
       if (!isTauri()) return { status: "unavailable", data: unknownAgentUsage("unsupported-runtime"), retryable: false };
       try {
-        const snapshot = await invoke<NativeSnapshot>("read_agent_usage");
+        const snapshot = await invoke<NativeSnapshot>("read_agent_usage", {consent:true});
         const data = normalizeAgentUsage(snapshot);
         await recordCodexQuotaChange(data.accounts).catch(()=>logEvent("warn","history.codex_quota_write_failed"));
         return { status: data.accounts.some(account => account.availabilityReason === "read-failed") ? "degraded" : "normal", data,

@@ -92,7 +92,7 @@ npm.cmd run tauri -- dev
 - 用户配置、头像和历史保存在本机；支持的凭据通过 Windows 凭据管理器保存。模型、邮箱和服务连接使用用户自己的账户。
 - 本项目不提供投资建议。第三方数据、商标和服务权利不由项目许可证授予。
 
-详见 [数据来源](docs/open-source-data-connections.md)与[隐私说明](docs/PRIVACY.md)。
+详见 [数据来源](docs/open-source-data-connections.md)、[隐私说明](docs/PRIVACY.md)与[数据和素材使用记录](docs/DATA_AND_ASSET_RIGHTS.md)。本机 AI 账号与用量默认关闭，在设置 → AI 客户端状态中开启；普通运行状态识别保留。公开端点不等于已获再分发许可，尚未确认的范围在使用记录中逐项列明。
 
 ## 文档与参与
 

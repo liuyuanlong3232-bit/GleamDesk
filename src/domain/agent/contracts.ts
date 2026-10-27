@@ -7,7 +7,7 @@ export interface AgentRuntimeSnapshot {
   observedAtUnixMs: number;
   clients: Array<{id: string; processCount: number}>;
 }
-export type AgentAvailabilityReason = "no-source" | "not-logged-in" | "unsupported-account" | "quota-unavailable" | "no-quota-source" | "read-failed" | "unsupported-runtime";
+export type AgentAvailabilityReason = "no-source" | "not-logged-in" | "unsupported-account" | "quota-unavailable" | "no-quota-source" | "read-failed" | "unsupported-runtime" | "permission-required";
 export interface AgentUsageWindow {
   id: string;
   usedPercent: number;

@@ -70,8 +70,9 @@ function agentReason(account: AgentQuotaAccount): string | undefined {
   const reasons = {
     "no-source": "没有可靠额度来源；客户端检测不代表登录或额度", "not-logged-in": "本地 CLI 未登录，额度未知",
     "unsupported-account": "当前 CLI 账户类型不提供 ChatGPT 订阅额度", "quota-unavailable": "CLI 未返回可核实的额度窗口",
-    "no-quota-source": "CLI 登录状态可读取，尚未取得订阅额度；可以在 AI 连接中检查登录",
+    "no-quota-source": "CLI 登录状态可读取，尚未取得订阅额度；可以在 AI 客户端状态中检查登录",
     "read-failed": "CLI 状态读取失败，未保留为真实额度", "unsupported-runtime": "浏览器预览不能读取本地 CLI 或客户端状态",
+    "permission-required": "本机 AI 账号读取已关闭；可在设置的 AI 客户端状态中开启",
   };
   return account.availabilityReason ? reasons[account.availabilityReason] : account.ordinaryUsageAllowed === false ? "服务端当前不允许普通用量，百分比不表示已恢复权限" : "本地 Codex CLI 官方额度接口";
 }

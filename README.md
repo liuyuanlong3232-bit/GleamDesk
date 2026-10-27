@@ -102,7 +102,7 @@ Public sources may be delayed, rate-limited, changed or inaccessible on some net
 
 Settings, avatars and history stay on the running computer. Supported secrets use Windows Credential Manager. Optional AI, mail, SSH and service connections use your own accounts. This project does not provide financial advice or third-party data redistribution rights.
 
-Read [data sources](docs/open-source-data-connections.md), [privacy](docs/PRIVACY.md) and [optional services](docs/vps-services.md).
+Read [data sources](docs/open-source-data-connections.md), [privacy](docs/PRIVACY.md), [data and asset rights](docs/DATA_AND_ASSET_RIGHTS.md) and [optional services](docs/vps-services.md). Local AI account/usage reads require opt-in in Settings → AI connections; ordinary running-app detection remains available. Public endpoints are not blanket redistribution licenses; unresolved permissions are listed in the rights record.
 
 ## Documentation and community
 

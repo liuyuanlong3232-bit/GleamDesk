@@ -40,7 +40,7 @@ export function providersFor(
     selected.push(...demoProviderRegistry.filter((provider) => requested.has(provider.id)));
   }
   if (includeLiveProviders && !includeDemoProviders) {
-    if (requested.has("agent-quotas")) selected.push(createAgentUsageProvider());
+    if (requested.has("agent-quotas")) selected.push(createAgentUsageProvider(options.apiConfig?.localAgentUsageEnabled === true));
     if (requested.has("api-balances") || requested.has("api-deepseek")) selected.push(createApiUsageProvider("deepseek", options.apiConfig ?? defaultApiConnections));
     if (requested.has("api-balances") || requested.has("api-mimo")) selected.push(createApiUsageProvider("mimo", options.apiConfig ?? defaultApiConnections));
     if (requested.has("api-balances") || requested.has("api-anthropic")) selected.push(createApiUsageProvider("anthropic", options.apiConfig ?? defaultApiConnections));

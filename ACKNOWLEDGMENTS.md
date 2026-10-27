@@ -10,3 +10,5 @@ Thanks to the Tauri, React, TypeScript and Rust communities, the public-data pro
 - [HUD icons](src/assets/hud/README.md) and their [license](src/assets/hud/LobeIcons-LICENSE.txt).
 
 Third-party names, logos, data and services belong to their respective owners. Their availability or inclusion does not imply affiliation with GleamDesk.
+
+See the [data and asset rights record](docs/DATA_AND_ASSET_RIGHTS.md) for source-specific conditions, creator-authorized brand artwork and permissions that are still unverified. MIT applies to the project's original code; it is not a blanket license for third-party feeds, trademarks or reference images.

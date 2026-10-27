@@ -128,6 +128,7 @@ export interface AppSettings {
 }
 
 export interface ApiConnectionSettings {
+  localAgentUsageEnabled?: boolean;
   deepseekEnabled: boolean;
   anthropicEnabled: boolean;
   mimoEnabled?: boolean;
