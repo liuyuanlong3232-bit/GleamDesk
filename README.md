@@ -113,6 +113,15 @@ Read [data sources](docs/open-source-data-connections.md), [privacy](docs/PRIVAC
 
 Developed with assistance from OpenAI Codex. This is an independent project, not an official OpenAI product.
 
+## Contributors
+
+| Contributor | Role |
+| --- | --- |
+| [liuyuanlong3232-bit](https://github.com/liuyuanlong3232-bit) | Project author and maintainer; product decisions, review and releases |
+| OpenAI Codex | AI assistance with implementation, testing and documentation |
+
+This section describes project roles. GitHub's automatically generated contributor statistics are based on commit attribution and may differ.
+
 ## License
 
 Original project contributions are [MIT licensed](LICENSE). Third-party code and assets retain their own notices, including [vendored wry](vendor/wry), [HUD sources](docs/licenses/agent-hud-THIRD-PARTY-NOTICES.txt) and [service adapters](licenses/vps-services/README.md). Names, logos, data and services belong to their respective owners.

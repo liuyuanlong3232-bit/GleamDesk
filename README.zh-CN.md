@@ -100,6 +100,15 @@ npm.cmd run tauri -- dev
 
 原创代码采用 [MIT](LICENSE)。第三方代码与素材保留各自许可证。使用 OpenAI Codex 辅助开发，不代表 OpenAI 官方项目或背书。
 
+## 贡献者
+
+| 贡献者 | 角色 |
+| --- | --- |
+| [liuyuanlong3232-bit](https://github.com/liuyuanlong3232-bit) | 项目作者与维护者，负责产品决策、审核和发布 |
+| OpenAI Codex | AI 开发协助，参与实现、测试和文档整理 |
+
+此处说明项目角色；GitHub 自动统计的贡献者列表基于提交署名，可能与本表不同。
+
 ## Code signing policy / 数字签名
 
 Windows 安装包目前仍未签名。[签名政策与申请准备情况](docs/CODE_SIGNING.md)列出了计划中的构建、人工审批和发布流程；尚未获得 SignPath Foundation 批准，也未配置签名凭据。
