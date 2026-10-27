@@ -23,3 +23,8 @@ Tauri 打包结束时可能重写主 EXE，使其修改时间晚于刚生成的 
 隔离 AppData 或 WebView 不会隔离 Windows 凭据管理器。GleamDesk 仅使用 GleamDesk.* 凭据；CodexDesktop.* 只允许在用户确认的旧版导入中读取，首次使用验收也要核对这一层。正常升级保留应用标识和数据目录。
 
 PowerShell 核对 package-lock.json 的根包版本时，使用 ConvertFrom-Json -AsHashtable；packages 的根包键为空字符串，普通对象解析会失败。
+
+Tauri 更新包使用 signer sign --app-version 绑定版本，客户端 requireSignedVersion=true；只有公钥进入源码，私钥不进入包、日志或 artifacts。原生升级验收必须单独使用测试安装，不能对日常使用实例执行更新。
+Tauri 增量缓存若提示硬链接失败会回退复制，构建仍可能通过但 target 占用增大；复用固定开发 target，不把缓存复制到 artifacts。
+
+Windows 透明 HUD 的 Computer Use 可能同时返回 14×14 小区域与完整窗口截图；必须选完整图的 screenshotId 再点击，不能默认使用 screenshot-0。原生预览在沙箱内无窗口时，核对进程并按已获授权范围在正常用户环境启动。

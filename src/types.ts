@@ -96,6 +96,7 @@ export interface ApplicationConfig {
 
 export interface AppSettings {
   credentialNamespaceVersion?: 1;
+  checkUpdatesOnStartup?: boolean;
   displayName: string;
   theme: AppTheme;
   opacity: number;

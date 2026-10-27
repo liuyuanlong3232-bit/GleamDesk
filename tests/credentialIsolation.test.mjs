@@ -32,6 +32,7 @@ test('fresh profiles remain unconfigured; existing watchlist and history storage
   const before=JSON.stringify([...f.values]);const settings=store.loadSettings();
   assert.equal(settings.credentialNamespaceVersion,1);assert.equal(settings.apiConnections.deepseekEnabled,false);assert.equal(settings.apiConnections.mimoDailyAuto,false);
   assert.equal(settings.apiConnections.localAgentUsageEnabled,false);
+  assert.equal(settings.checkUpdatesOnStartup,true);
   assert.equal(JSON.stringify([...f.values]),before);
 });
 
@@ -41,6 +42,13 @@ test('existing profiles need a separate local AI read choice without erasing pre
   assert.equal(settings.apiConnections.localAgentUsageEnabled,false);
   assert.equal(settings.apiConnections.deepseekEnabled,true);assert.equal(settings.apiConnections.mimoDailyAuto,true);assert.equal(settings.displayName,'fixture user');
   for(const enabled of [true,false]){settings.apiConnections.localAgentUsageEnabled=enabled;store.saveSettings(settings);assert.equal(store.loadSettings().apiConnections.localAgentUsageEnabled,enabled);}
+});
+
+test('startup update checking preserves a saved opt-out and defaults on for older profiles',()=>{
+  for(const preference of [undefined,true,false]){
+    const f=fixture({settings:{credentialNamespaceVersion:1,checkUpdatesOnStartup:preference,displayName:'fixture user'}}),store=f.load('src/providers/settingsStore.ts'),settings=store.loadSettings();
+    assert.equal(settings.checkUpdatesOnStartup,preference!==false);store.saveSettings(settings);assert.equal(store.loadSettings().checkUpdatesOnStartup,preference!==false);assert.equal(settings.displayName,'fixture user');
+  }
 });
 test('namespace transition keeps preferences and connections but requires renewed automatic-paid consent',()=>{
   const f=fixture({settings:{displayName:'fixture user',theme:'ocean',beszelUrl:'http://127.0.0.1:8090',apiConnections:{deepseekEnabled:true,mimoEnabled:true,mimoDailyAuto:true}}});

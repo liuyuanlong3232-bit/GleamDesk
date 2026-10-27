@@ -1,6 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod storage;
+mod app_updates;
 mod wallpaper;
 mod beszel;
 mod vps_services;
@@ -342,6 +343,8 @@ fn quit_app(app:AppHandle,view:tauri::Webview,confirmed:bool)->Result<(),String>
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .manage(app_updates::AppUpdateState::default())
         .manage(DesktopMode::default())
         .manage(PassthroughEscapeReady::default())
         .manage(WindowOperations::default())
@@ -434,6 +437,8 @@ pub fn run() {
             set_mouse_passthrough,
             apply_startup_preferences,
             runtime_status,
+            app_updates::check_app_update,
+            app_updates::install_app_update,
             application_runtime::read_application_statuses,
             provider_diagnostics::provider_request_diagnostics,
             provider_diagnostics::check_hidden_window_refresh,

@@ -28,6 +28,8 @@ Do not share local client source files in issues. This preference controls norma
 
 Enabled data providers contact their listed public sources directly. Those services can see normal request metadata, including the connecting IP address and requested instrument. Optional model, mail, SSH and service connections contact endpoints selected by the user. Their operators' terms and privacy policies apply.
 
+Startup update checking is enabled by default and can be disabled in Settings → Version and updates. It reads public GitHub Release metadata without a GitHub account token or user configuration. GitHub receives normal request metadata, including IP address. Update packages are downloaded only after the user's explicit installation confirmation; HTTPS and an embedded updater verification key are used. See [updates](UPDATES.md). Simulation mode does not check or install real updates.
+
 AI prompts or attachments sent through configured models are transmitted to those providers. A free data source does not make a configured AI model free. Simulation mode is separate from live data.
 
 Embedded websites maintain cookies, sessions and site storage in the local WebView profile and make normal requests to those sites. Public news links open their publisher's website. A website's own collection policy is separate from GleamDesk's local storage. Optional automatic model recommendations can send the selected context when explicitly enabled; keep them disabled if you do not want those requests.

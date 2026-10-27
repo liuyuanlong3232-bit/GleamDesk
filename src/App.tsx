@@ -29,6 +29,7 @@ import { hudQuotaUsed,apiHudSummary } from "./presentation/quotaAdapter";
 import {agentClients,readAgentRuntime,unavailableAgentRuntime,runningAgentClients} from "./providers/agents/agentUsageProvider";
 import { AgentConnectionsSettings } from "./components/AgentConnectionsSettings";
 import { PrivacyNotice } from "./components/PrivacyNotice";
+import { AppUpdateIndicator, AppUpdateSettings } from "./components/AppUpdates";
 import type { SettingsModuleId } from "./components/settingsModules";
 import { ProviderRequestDiagnostics } from "./components/ProviderRequestDiagnostics";
 import type { ProviderRequestDiagnostics as RequestDiagnosticsSnapshot } from "./ports/providerDiagnostics";
@@ -439,6 +440,7 @@ function MainScreen({
               </button>
             ))}
             <HudWorkbenchButton expanded={islandOpen&&hudPinned&&islandPanel==="workbench"} busy={workbenchScreens.loading} onEnter={()=>{if(islandPanel!=="workbench"){setIslandOpen(false);setHudPinned(false);}}} onOpen={()=>void chooseWorkbenchScreen()}/>
+            <AppUpdateIndicator enabled={settings.checkUpdatesOnStartup!==false&&!settings.simulationEnabled} onOpen={()=>onDashboardAt("settings:updates")}/>
           </div>
             <div className={`island-popover glass${hudPinned?"":" hud-peek"}${hudPinned&&islandPanel==="daily"?" hud-daily-panel":""}`} hidden={!islandOpen} data-main-hit-region>
               {!hudPinned&&<><strong className="popover-title">{islandItems.find(item=>item.id===islandPanel)?.label}</strong><p className="hud-source-note">{[islandItems.find(item=>item.id===islandPanel)?.value,islandItems.find(item=>item.id===islandPanel)?.meta].filter(Boolean).join(" · ")}</p></>}
@@ -601,6 +603,7 @@ function Dashboard({
           setSettingsModule("applications");
           setSettingsOpen(true);
         }
+        else if(intent.target==="settings:updates") {setSettingsModule("updates");setSettingsOpen(true);}
         else if(intent.target==="profile-avatar") {setPersonalAvatarOpen(true);}
         else if(intent.target?.startsWith("local-ai:")) {
           window.setTimeout(()=>window.dispatchEvent(new CustomEvent("codex-desktop.local-ai-request",{detail:{id:intent.target!.slice(9)}})),200);
@@ -1046,6 +1049,7 @@ function Dashboard({
             {beszelMessage && <small role="status">{beszelMessage}</small>}
             <VpsServiceSettings/>
           </div>),
+          updates:(<AppUpdateSettings automatic={settings.checkUpdatesOnStartup!==false} onAutomaticChange={checkUpdatesOnStartup=>onSettingsChange({checkUpdatesOnStartup})} simulationEnabled={settings.simulationEnabled}/>),
           diagnostics: (<div className="settings-section"><PrivacyNotice/><WebAppDiagnostics/><button className="diagnostics-toggle" aria-expanded={diagnosticsOpen} onClick={() => setDiagnosticsOpen((open) => !open)}>系统诊断 <span>{diagnosticsOpen ? "收起" : "查看"}</span></button>
             {diagnosticsOpen && <>
               <ProviderRequestDiagnostics snapshot={diagnostics?.requestMetrics ?? null} checking={checkingWindowRefresh} onCheck={(scope) => void checkWindowRefresh(scope)} />

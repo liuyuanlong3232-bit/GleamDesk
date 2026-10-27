@@ -8,6 +8,7 @@ const storageKey = "codex-desktop.settings.v1";
 
 export const defaultSettings: AppSettings = {
   credentialNamespaceVersion: 1,
+  checkUpdatesOnStartup: true,
   displayName: "",
   theme: "burgundy",
   opacity: 82,
@@ -55,6 +56,7 @@ export function loadSettings(): AppSettings {
       glassShadowStrength: clamp(value.glassShadowStrength, 0, 100, defaultSettings.glassShadowStrength),
       animations: typeof value.animations === "boolean" ? value.animations : defaultSettings.animations,
       autoStart: typeof value.autoStart === "boolean" ? value.autoStart : defaultSettings.autoStart,
+      checkUpdatesOnStartup: value.checkUpdatesOnStartup !== false,
       desktopMode: typeof value.desktopMode === "boolean" ? value.desktopMode : defaultSettings.desktopMode,
       mousePassthrough: typeof value.mousePassthrough === "boolean" ? value.mousePassthrough : defaultSettings.mousePassthrough,
       desktopSurfaceMode: value.desktopSurfaceMode === "hide-icons" ? "hide-icons" : "keep",

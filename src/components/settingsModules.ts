@@ -5,6 +5,7 @@ export const settingsModules = [
   { id: "applications", label: "应用管理", icon: "⊞", group: "界面", description: "管理 Dock 应用、启动目标与图标" },
   { id: "webapps", label: "网站与工具", icon: "◉", group: "界面", description: "管理工作区网站、Web工具、分类与显示顺序" },
   { id: "desktop", label: "桌面与启动", icon: "⌂", group: "系统", description: "桌面模式、鼠标穿透与启动窗口" },
+  { id: "updates", label: "版本与更新", icon: "↑", group: "系统", description: "检查并安装正式版本更新" },
   { id: "agents", label: "AI 客户端状态", icon: "◈", group: "数据连接", description: "订阅额度、运行状态与本地模型" },
   { id: "api", label: "API 余额与费用", icon: "↔", group: "数据连接", description: "查看连接状态，按需配置账户余额与费用读取" },
   { id: "mail", label: "邮箱账户", icon: "✉", group: "数据连接", description: "连接邮箱、检查授权状态并管理邮件读取" },

@@ -104,6 +104,8 @@ Settings, avatars and history stay on the running computer. Supported secrets us
 
 Read [data sources](docs/open-source-data-connections.md), [privacy](docs/PRIVACY.md), [data and asset rights](docs/DATA_AND_ASSET_RIGHTS.md) and [optional services](docs/vps-services.md). Local AI account/usage reads require opt-in in Settings → AI connections; ordinary running-app detection remains available. Public endpoints are not blanket redistribution licenses; unresolved permissions are listed in the rights record.
 
+Settings → Version and updates supports manual checks and an optional startup check. In-app installation requires explicit confirmation and version-bound updater signatures; portable builds use manual downloads. Older releases need one manual installation of a build containing the updater. See [updates](docs/UPDATES.md) for publishing prerequisites and current limits.
+
 ## Documentation and community
 
 - [Build](docs/BUILDING.md) and [architecture](docs/ARCHITECTURE.md)

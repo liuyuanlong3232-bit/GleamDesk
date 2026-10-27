@@ -48,6 +48,8 @@ SignPath integration is not enabled. Its OSS GitHub integration requires GitHub-
 
 ## Verify and run
 
+For update checks, confirmed in-app installation and the first manual installation needed by older releases, see [Version and updates](UPDATES.md). Do not manually delete application data when replacing an older program version.
+
 - Compare the downloaded package's SHA-256 with the distributed checksums.
 - Extract the ZIP before running the portable executable.
 - Start the workbench from the top HUD. Closing the workbench hides it; use the HUD menu to exit the entire app.

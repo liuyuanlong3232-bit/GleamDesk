@@ -94,6 +94,8 @@ npm.cmd run tauri -- dev
 
 详见 [数据来源](docs/open-source-data-connections.md)、[隐私说明](docs/PRIVACY.md)与[数据和素材使用记录](docs/DATA_AND_ASSET_RIGHTS.md)。本机 AI 账号与用量默认关闭，在设置 → AI 客户端状态中开启；普通运行状态识别保留。公开端点不等于已获再分发许可，尚未确认的范围在使用记录中逐项列明。
 
+设置 → **版本与更新** 提供手动检查和启动检查开关；发现新版时 HUD 显示入口。安装版仅在完整签名附件就绪、用户保存并确认后更新，便携版使用手动下载。旧版需先手动安装一次带此功能的版本，详见[更新说明](docs/UPDATES.md)。
+
 ## 文档与参与
 
 [使用指南](docs/USAGE.md) · [架构](docs/ARCHITECTURE.md) · [贡献指南](CONTRIBUTING.md) · [行为准则](CODE_OF_CONDUCT.md) · [安全反馈](SECURITY.md) · [变更记录](CHANGELOG.md) · [致谢](ACKNOWLEDGMENTS.md)

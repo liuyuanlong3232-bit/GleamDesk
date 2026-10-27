@@ -4,6 +4,8 @@
 
 GleamDesk's Windows downloads and Actions packages are **unsigned**. SignPath Foundation has not approved this project, and no signing certificate, signing token or signing service is configured. SHA-256 checksums establish file integrity; they do not establish a trusted publisher.
 
+The local implementation now supports a separate Tauri updater verification key and optional version-bound update signatures. These are not Windows publisher signatures and do not change the unsigned-publisher status above. Local key generation does not mean that GitHub Secrets or signed Release artifacts have been configured; see [updates](UPDATES.md).
+
 ## Proposed release process
 
 The following is preparation for an application, subject to Foundation review:
