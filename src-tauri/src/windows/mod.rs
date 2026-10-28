@@ -167,6 +167,7 @@ mod desktop_tests {
         let status = desktop_status();
         assert!(status.startup_error.is_none(), "startup read failed");
         assert!(status.icons_error.is_none(), "{:?}", status.icons_error);
+        println!("DESKTOP_READONLY:{}", serde_json::to_string(&status).unwrap());
         println!("Read-only desktop status: registration readable; icon visibility readable. No changes.");
     }
 }
