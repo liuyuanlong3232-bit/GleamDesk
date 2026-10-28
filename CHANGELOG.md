@@ -7,7 +7,7 @@
 - Add confirmed, current-user Windows login startup through a GleamDesk shortcut, with working-directory validation, legacy-entry migration, failure recovery and targeted uninstall cleanup.
 - Add Windows desktop icon visibility controls with independent status reporting; simulation mode does not read or change these Windows settings.
 - Accept full English month names in USDA export-inspection publication dates while preserving strict date validation.
-- The startup-shortcut fix passed a user-reported reboot on the development computer using the earlier 0.1.3 preview. The new 0.1.4 package still requires its own runtime and upgrade acceptance.
+- The 0.1.4 package passed local runtime, current-user installation and independently checked startup registration; the user then reported successful launch after a real reboot. The official SDK verified its version-bound update signature and rejected tampered content and a substituted version. This does not establish a complete registered-old-version upgrade or clean-Windows acceptance.
 
 ## [0.1.3] - 2026-10-27
 
