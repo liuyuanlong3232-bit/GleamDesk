@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {createContext,runInContext} from 'node:vm';
 import {transformSync} from 'esbuild';
 
-const initial={startupRegistered:false,startupMatchesCurrent:false,startupRevision:'fixture-revision',startupError:null,iconsHidden:false,iconsError:null};
+const initial={startupRegistered:false,startupMatchesCurrent:false,startupLegacyPresent:false,startupRevision:'fixture-revision',startupError:null,iconsHidden:false,iconsError:null};
 function fixture({status=initial,native=true,readFailure=false,writeFailure=false,deferRead=false,deferWrite=false}={}){
  const slots=[],effects=[],calls=[];let cursor=0,resolveRead,resolveWrite;
  const react={useState(value){const i=cursor++;if(!(i in slots))slots[i]=typeof value==='function'?value():value;return[slots[i],next=>{slots[i]=typeof next==='function'?next(slots[i]):next}]},useRef(value){const i=cursor++;return slots[i]??(slots[i]={current:value})},useEffect(fn,deps){const i=cursor++,old=slots[i];if(!old||deps.some((v,j)=>v!==old.deps[j])){slots[i]={deps};effects.push(()=>{old?.cleanup?.();slots[i].cleanup=fn()})}}};
@@ -57,4 +57,12 @@ test('late reads cannot reactivate controls after entering simulation',async()=>
 });
 test('rapid duplicate confirmations dispatch only one native mutation',async()=>{
  const f=fixture({deferWrite:true});let tree=await ready(f);input(tree,startup).props.onChange({target:{checked:true}});const click=button(f.render(),'确认更改').props.onClick;click();click();await f.flush();assert.equal(f.calls.filter(c=>c.command==='set_windows_autostart').length,1);f.resolveWrite();await f.flush();assert.equal(input(f.render(),startup).props.checked,true);
+});
+
+test('legacy Run entry is explained before migration and requires explicit confirmation',async()=>{
+ const f=fixture({status:{...initial,startupLegacyPresent:true}});let tree=await ready(f);
+ assert.equal(input(tree,startup).props.checked,false);assert.match(text(tree),/旧版注册表启动项/);
+ input(tree,startup).props.onChange({target:{checked:true}});tree=f.render();
+ assert.match(text(tree),/启动文件夹创建/);assert.match(text(tree),/避免重复启动/);assert.equal(f.calls.length,1);
+ button(tree,'取消').props.onClick();assert.equal(f.calls.length,1);
 });

@@ -3,7 +3,7 @@ import {isTauri} from "@tauri-apps/api/core";
 import {invokeLive} from "../services/simulationSafety";
 
 interface DesktopStatus {
- startupRegistered:boolean|null;startupMatchesCurrent:boolean;startupRevision:string;startupError:string|null;
+ startupRegistered:boolean|null;startupMatchesCurrent:boolean;startupLegacyPresent?:boolean;startupRevision:string;startupError:string|null;
  iconsHidden:boolean|null;iconsError:string|null;
 }
 type Change={kind:"startup"|"icons";enabled:boolean};
@@ -40,9 +40,10 @@ export function DesktopSystemSettings({simulationEnabled=false}:{simulationEnabl
   <label className="settings-toggle"><span>登录 Windows 时启动</span><input aria-label="登录 Windows 时启动" type="checkbox" checked={status?.startupRegistered===true} disabled={disabled||status?.startupRegistered==null} onChange={event=>setPending({kind:"startup",enabled:event.target.checked})}/></label>
   <label className="settings-toggle"><span>隐藏 Windows 桌面图标</span><input aria-label="隐藏 Windows 桌面图标" type="checkbox" checked={status?.iconsHidden===true} disabled={disabled||status?.iconsHidden==null} onChange={event=>setPending({kind:"icons",enabled:event.target.checked})}/></label>
   <div className="settings-actions"><button disabled={disabled} onClick={()=>void read()}>{working?"处理中…":"刷新系统状态"}</button></div>
-  {pending&&<section className="app-update-confirm" aria-label="确认 Windows 设置更改"><p>{pending.kind==="startup"?(pending.enabled?"为当前用户添加 GleamDesk 登录启动项，指向当前程序。移动程序后需重新设置。":"只移除当前用户的 GleamDesk 登录启动项。"):pending.enabled?"隐藏桌面图标，保留全部文件。不会随退出自动恢复，可在桌面右键→查看中重新显示。":"重新显示 Windows 桌面图标。"}</p><div className="settings-actions"><button disabled={working||simulationEnabled} onClick={()=>void apply()}>确认更改</button><button disabled={working} onClick={()=>setPending(null)}>取消</button></div></section>}
+  {pending&&<section className="app-update-confirm" aria-label="确认 Windows 设置更改"><p>{pending.kind==="startup"?(pending.enabled?"在当前用户启动文件夹创建 GleamDesk 快捷方式，指向当前程序并设置工作目录；移除旧版同名注册表启动项，避免重复启动。移动程序后需重新设置。":"只移除当前用户的 GleamDesk 启动快捷方式及旧版同名启动项。"):pending.enabled?"隐藏桌面图标，保留全部文件。不会随退出自动恢复，可在桌面右键→查看中重新显示。":"重新显示 Windows 桌面图标。"}</p><div className="settings-actions"><button disabled={working||simulationEnabled} onClick={()=>void apply()}>确认更改</button><button disabled={working} onClick={()=>setPending(null)}>取消</button></div></section>}
   {simulationEnabled?<p role="status">模拟模式不读取或修改 Windows 设置。</p>:!isTauri()?<p role="status">请在 Windows 桌面程序中设置。</p>:<>
    {status?.startupRegistered&&!status.startupMatchesCurrent&&<p role="status">登录启动项指向另一份 GleamDesk；关闭后再开启可切换到当前程序。</p>}
+   {status?.startupLegacyPresent&&<p role="status">检测到旧版注册表启动项；开启此开关可迁移到启动文件夹。</p>}
    {status?.startupError&&<p role="status">{status.startupError}</p>}{status?.iconsError&&<p role="status">{status.iconsError}</p>}
   </>}
   {message&&<p role="status">{message}</p>}

@@ -71,6 +71,7 @@
         "type": "downloadBootstrapper"
       },
       "nsis": {
+        "installerHooks": "nsis-hooks.nsh",
         "installMode": "currentUser",
         "languages": [
           "English",
