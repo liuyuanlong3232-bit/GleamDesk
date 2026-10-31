@@ -34,3 +34,23 @@
 .ar-shortcuts section button{max-width:100%;padding:8px 12px;border:1px solid rgba(var(--theme-line-rgb,255,255,255),0.141176);border-radius:12px;background:rgba(var(--theme-line-rgb,255,255,255),0.023529);font-size:14px;overflow-wrap:anywhere}
 .ar-shortcuts button:hover{border-color:#d795b480;background:#b3618720}
 .ar-shortcuts .ar-shortcuts-error{font-size:13px;color:#e8b5c5;line-height:1.6}
+.ar-task-refresh{display:block;margin:-8px 0 14px auto;padding:7px 11px;border:1px solid #76516a;border-radius:9px;background:var(--theme-surface,#30232d);color:var(--theme-muted,#d8c6d7);font:13px var(--font-ui,'Segoe UI','Microsoft YaHei',sans-serif)}
+.ar-task-progress{width:min(100%,900px);margin:14px auto 0;color:#f0c8d9;font-size:14px;line-height:1.6}
+.ar-task-approval,.ar-task-command-results{width:min(100%,1100px);margin:14px auto 0;padding:16px;border:1px solid #a66b82;border-radius:14px;background:linear-gradient(135deg,rgba(76,39,58,.62),rgba(31,27,37,.96));color:var(--theme-fg,#efe7f1);box-shadow:0 8px 26px rgba(13,8,14,.24)}
+.ar-task-approval h3,.ar-task-command-results h3{margin:0 0 10px;font-size:17px}
+.ar-task-approval p,.ar-task-command-results p{color:var(--theme-muted,#c7b3cc);font-size:13px;line-height:1.6}
+.ar-task-approval-path{overflow-wrap:anywhere;font-family:Consolas,'Cascadia Mono',monospace}
+.ar-task-diff{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.ar-task-diff section{min-width:0;border:1px solid #594452;border-radius:10px;background:rgba(16,14,20,.56)}
+.ar-task-diff h4{margin:0;padding:9px 12px;border-bottom:1px solid #493340;font-size:13px;color:#e8ccda}
+.ar-task-diff pre,.ar-task-command,.ar-task-command-results pre{max-height:260px;overflow:auto;margin:0;padding:12px;color:#eee4ef;font:12px/1.6 Consolas,'Cascadia Mono',monospace;white-space:pre-wrap;overflow-wrap:anywhere}
+.ar-task-command{max-height:220px;border:1px solid #594452;border-radius:9px;background:rgba(12,10,15,.8)}
+.ar-task-warning{padding:8px 10px;border-left:3px solid #d69a60;border-radius:4px;background:rgba(86,53,31,.2);color:#f1d2ad!important}
+.ar-task-approval-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:12px}
+.ar-task-approval-actions button{padding:9px 14px;border:1px solid #795969;border-radius:9px;background:#312631;color:#eee4ef;font:14px var(--font-ui,'Segoe UI','Microsoft YaHei',sans-serif)}
+.ar-task-approval-actions button.is-approve{border-color:#a95d77;background:#8d344f;color:#fff}
+.ar-task-approval-actions button:disabled{opacity:.55}
+.ar-task-command-results details{margin-top:8px;border:1px solid #594452;border-radius:9px;background:rgba(12,10,15,.42)}
+.ar-task-command-results summary{padding:9px 11px;cursor:pointer;color:#e8ccda;font-size:13px}
+.ar-task-command-results pre{max-height:200px}
+@media(max-width:720px){.ar-task-diff{grid-template-columns:1fr}.ar-task-approval-actions{flex-wrap:wrap}.ar-task-approval-actions button{flex:1}}

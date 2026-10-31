@@ -29,6 +29,7 @@ mod webapps;
 #[cfg(windows)]
 mod webapp_metadata;
 mod agent_room;
+mod agent_local_tools;
 mod agent_task;
 mod simulation;
 mod network_tools;
@@ -423,6 +424,7 @@ pub fn run() {
             agent_task::agent_task_list,
             agent_task::agent_task_pick_directory,
             agent_task::agent_task_run,
+            agent_task::agent_task_resolve,
             agent_task::agent_task_cancel,
             webapps::webapp_release,
             webapps::webapp_discard,
