@@ -27,6 +27,7 @@ PowerShell 核对 package-lock.json 的根包版本时，使用 ConvertFrom-Json
 Tauri 更新包使用 signer sign --app-version 绑定版本，客户端 requireSignedVersion=true；只有公钥进入源码，私钥不进入包、日志或 artifacts。原生升级验收必须单独使用测试安装，不能对日常使用实例执行更新。
 Tauri 增量缓存若提示硬链接失败会回退复制，构建仍可能通过但 target 占用增大；复用固定开发 target，不把缓存复制到 artifacts。
 沙箱内 Get-Process 可能漏掉正常用户环境启动的预览；EXE 替换被拒绝时，应在正常用户环境按完整路径核对占用，不能以沙箱未枚举判定已退出。
+工作台使用 Windows 原生标题栏和任务栏；重新打开先取消最小化，同屏保留大小位置，不得复用 HUD/Dock 的整屏复位逻辑。窗口验收须覆盖最小化后的入口恢复及普通大小与最大化之间的切换。
 
 Windows 透明 HUD 的 Computer Use 可能同时返回 14×14 小区域与完整窗口截图；必须选完整图的 screenshotId 再点击，不能默认使用 screenshot-0。原生预览在沙箱内无窗口时，核对进程并按已获授权范围在正常用户环境启动。
 

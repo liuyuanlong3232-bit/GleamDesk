@@ -134,7 +134,7 @@ fn place_on_monitor(window: &Window, monitor: &Monitor) -> Result<(), String> {
 }
 
 fn restore_window_positions(app: &AppHandle) -> Result<(), String> {
-    let (_, primary, secondary) = target_monitors(app)?;
+    let (_, primary, _) = target_monitors(app)?;
     if let Some(dock) = app.get_window("dock") {
         let size = dock.inner_size().map_err(|error| error.to_string())?;
         let scale = dock.scale_factor().map_err(|error| error.to_string())?;
@@ -143,12 +143,6 @@ fn restore_window_positions(app: &AppHandle) -> Result<(), String> {
     if let Some(monitor) = primary.as_ref() {
         if let Some(main) = app.get_window("main") {
             place_on_monitor(&main, monitor)?;
-        }
-    }
-    if let Some(dashboard) = app.get_window("dashboard") {
-        let on_primary = app.state::<DashboardOnPrimary>().0.load(Ordering::Relaxed);
-        if let Some(monitor) = if on_primary { primary.as_ref() } else { secondary.as_ref().or(primary.as_ref()) } {
-            place_on_monitor(&dashboard, monitor)?;
         }
     }
     Ok(())
@@ -220,6 +214,27 @@ fn configure_workbench_text_input(view: tauri::Webview) -> Result<(), String> {
     Ok(())
 }
 
+fn workbench_geometry(x:f64,y:f64,width:f64,height:f64)->(f64,f64,f64,f64){
+    let w=(width*0.84).min(1440.0);let h=(height*0.84).min(900.0);
+    (x+(width-w)/2.0,y+(height-h)/2.0,w,h)
+}
+
+fn workbench_monitor_geometry(monitor:&Monitor)->(f64,f64,f64,f64){
+    let area=monitor.work_area();let scale=monitor.scale_factor();
+    workbench_geometry(area.position.x as f64/scale,area.position.y as f64/scale,area.size.width as f64/scale,area.size.height as f64/scale)
+}
+
+#[cfg(test)]mod workbench_window_tests {
+    #[test]fn restored_bounds_are_smaller_and_centered_inside_each_monitor_work_area(){
+        for (x,y,width,height) in [(0.0,0.0,1920.0,1040.0),(-1536.0,40.0,1536.0,824.0),(0.0,0.0,800.0,560.0)] {
+            let(left,top,w,h)=super::workbench_geometry(x,y,width,height);
+            assert!(w>0.0&&h>0.0&&w<width&&h<height);
+            assert!(left>x&&top>y&&left+w<x+width&&top+h<y+height);
+            assert!(((left-x)-(x+width-left-w)).abs()<0.01);
+        }
+    }
+}
+
 fn create_dashboard(app: AppHandle) -> Result<(), String> {
     let operations = app.state::<WindowOperations>();
     let _guard = operations.0.lock().map_err(|_| "窗口创建状态不可用".to_string())?;
@@ -227,7 +242,18 @@ fn create_dashboard(app: AppHandle) -> Result<(), String> {
     let on_primary = app.state::<DashboardOnPrimary>().0.load(Ordering::Relaxed);
     let target = if on_primary { primary.as_ref() } else { secondary.as_ref().or(primary.as_ref()) };
     if let Some(window) = app.get_window("dashboard") {
-        if let Some(monitor) = target { place_on_monitor(&window, monitor)?; }
+        if window.is_minimized().map_err(|error|error.to_string())? { window.unminimize().map_err(|error|error.to_string())?; }
+        if let Some(monitor)=target {
+            let same_monitor=window.current_monitor().map_err(|error|error.to_string())?.is_some_and(|current|current.position()==monitor.position());
+            if !same_monitor {
+                let maximized=window.is_maximized().map_err(|error|error.to_string())?;
+                if maximized { window.unmaximize().map_err(|error|error.to_string())?; }
+                let(x,y,w,h)=workbench_monitor_geometry(monitor);
+                window.set_position(tauri::LogicalPosition::new(x,y)).map_err(|error|error.to_string())?;
+                window.set_size(tauri::LogicalSize::new(w,h)).map_err(|error|error.to_string())?;
+                if maximized { window.maximize().map_err(|error|error.to_string())?; }
+            }
+        }
         window.show().map_err(|error| error.to_string())?;
         window.set_focus().map_err(|error| error.to_string())?;
         let _ = window.emit_to(window.label(), "window-visibility-changed", window_visible(window.clone()));
@@ -236,17 +262,21 @@ fn create_dashboard(app: AppHandle) -> Result<(), String> {
 
     let mut builder = WebviewWindowBuilder::new(&app, "dashboard", dashboard_url()?)
         .title("GleamDesk · 工作台")
-        .decorations(false)
-        .transparent(true)
-        .shadow(false)
+        .decorations(true)
+        .transparent(false)
+        .shadow(true)
+        .theme(Some(tauri::Theme::Dark))
         .maximizable(true)
+        .minimizable(true)
         .resizable(true)
-        .skip_taskbar(true);
+        .maximized(true)
+        .skip_taskbar(false);
     if let Some(monitor) = target {
-        let scale = monitor.scale_factor();
+        let(x,y,w,h)=workbench_monitor_geometry(monitor);
         builder = builder
-            .position(monitor.position().x as f64 / scale, monitor.position().y as f64 / scale)
-            .inner_size(monitor.size().width as f64 / scale, monitor.size().height as f64 / scale);
+            .position(x,y)
+            .inner_size(w,h)
+            .min_inner_size(w.min(640.0),h.min(480.0));
     }
     let window = builder.build().map_err(|error| format!("无法打开工作台：{error}"))?;
     if let Some(view) = app.get_webview("dashboard") {
@@ -498,6 +528,12 @@ pub fn run() {
             handler(invoke)
         })
         .on_window_event(|window, event| {
+            if window.label()=="dashboard" {
+                if let WindowEvent::CloseRequested { api, .. }=event {
+                    api.prevent_close();
+                    let _=show_main(window.app_handle().clone());
+                }
+            }
             if window.label() == "dock" && matches!(event, WindowEvent::Focused(true)) {
                 if let Some(dock) = window.app_handle().get_webview_window("dock") { let _ = dock_window::place_below_apps(&dock); }
             }

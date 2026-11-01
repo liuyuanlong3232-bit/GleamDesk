@@ -10,13 +10,6 @@
   color-scheme:dark;isolation:isolate;
 }
 .workbench-dashboard.scenic::before,.workbench-dashboard>.dashboard-glow{display:none}
-.workbench-window-actions{display:flex;align-items:center;justify-content:flex-end;gap:4px;flex:0 0 auto;position:relative;z-index:1}
-.workbench-window-actions>button{display:grid;place-items:center;width:32px;height:32px;padding:0;border:0;border-radius:8px;background:transparent;cursor:pointer}
-.workbench-window-control{color:var(--theme-muted,#d2c3ca);transition:background .15s ease,color .15s ease}
-.workbench-window-control svg{display:block;width:16px;height:16px;opacity:.88}
-.workbench-window-control:is(:hover,:focus-visible){background:rgba(255,255,255,.1);color:var(--theme-fg,#fff)}
-.workbench-window-control:active{background:rgba(255,255,255,.18)}
-.workbench-window-error{align-self:center;color:#ffc0cf;font-size:12px}
 .workbench-dashboard :is(button,input,textarea,select){color:inherit}
 .workbench-dashboard :is(button,input,textarea,select):focus-visible{outline:2px solid var(--theme-accent,#e0576d);outline-offset:3px}
 .workbench-dashboard small{color:var(--glass-text-muted)}
