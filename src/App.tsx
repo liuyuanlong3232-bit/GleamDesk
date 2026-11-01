@@ -927,7 +927,7 @@ function Dashboard({
       <WorkbenchRail blocked={Boolean(dragging)||settingsOpen||searchOpen||pageManagerOpen||personalAvatarOpen} items={navigationItems} onSelect={selectWorkbenchPage} onSettings={()=>setSettingsOpen(true)} onSearch={()=>setSearchOpen(true)} onAdd={()=>setPageManagerOpen(true)} onAvatar={()=>setPersonalAvatarOpen(true)}/>
       <header className="workbench-window-actions" aria-label="工作台窗口">
         <WorkbenchWindowControls />
-        <button className="ui-icon-button workbench-hide-button" type="button" aria-label="隐藏工作台" onClick={onReturnMain}><span className="workbench-hide-dot" aria-hidden="true"><CloseIcon/></span></button>
+        <button className="ui-icon-button workbench-window-control workbench-hide-button" type="button" aria-label="隐藏工作台" onClick={onReturnMain}><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" aria-hidden="true"><path d="m4 4 8 8M12 4 4 12"/></svg></button>
       </header>
       {personalAvatarOpen&&<PersonalAvatarDialog displayName={settings.displayName} onSaveName={displayName=>onSettingsChange({displayName})} onClose={()=>setPersonalAvatarOpen(false)}/>}
       <div className="dashboard-glow" />

@@ -576,14 +576,15 @@ test("workbench window actions provide minimize and maximize while preserving hi
  const action=app.slice(start,end);
  assert.match(action,/<WorkbenchWindowControls \/>/);
  assert.match(action,/type="button" aria-label="隐藏工作台" onClick=\{onReturnMain\}/);
- assert.match(action,/className="workbench-hide-dot" aria-hidden="true"/);
+ assert.match(action,/className="ui-icon-button workbench-window-control workbench-hide-button"/);
+ assert.match(action,/strokeWidth="1.4" strokeLinecap="round" aria-hidden="true"/);
  assert.doesNotMatch(action,/monitors|isPrimary|disabled|invoke|close\(/);
  assert.equal((app.match(/className="workbench-window-actions"/g)??[]).length,1);
  const controls=await readFile("src/components/WorkbenchWindowControls.tsx","utf8");
  assert.match(controls,/aria-label="最小化工作台"/);assert.match(controls,/\.minimize\(\)/);
  assert.match(controls,/最大化工作台/);assert.match(controls,/还原工作台/);assert.match(controls,/\.toggleMaximize\(\)/);
  const native=await readFile("src-tauri/src/lib.rs","utf8"),builder=native.slice(native.indexOf("fn create_dashboard"),native.indexOf("async fn open_dashboard"));
- assert.match(builder,/\.maximizable\(true\)/);assert.match(builder,/\.resizable\(false\)/);
+ assert.match(builder,/\.maximizable\(true\)/);assert.match(builder,/\.resizable\(true\)/);
 });
 
 test("close icons share symmetric SVG geometry and do not use a font baseline",async()=>{

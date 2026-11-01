@@ -240,7 +240,7 @@ fn create_dashboard(app: AppHandle) -> Result<(), String> {
         .transparent(true)
         .shadow(false)
         .maximizable(true)
-        .resizable(false)
+        .resizable(true)
         .skip_taskbar(true);
     if let Some(monitor) = target {
         let scale = monitor.scale_factor();
@@ -508,7 +508,9 @@ pub fn run() {
             if window.label() == "dock" && matches!(event, WindowEvent::ScaleFactorChanged { .. }) {
                 let _ = restore_window_positions(&window.app_handle());
             }
-            if ["main","dashboard"].contains(&window.label()) && matches!(event, WindowEvent::Moved(_) | WindowEvent::Resized(_) | WindowEvent::ScaleFactorChanged { .. }) {
+            // The workbench owns its resize/maximize state; snapping it back to
+            // the monitor here would immediately undo the window controls.
+            if window.label() == "main" && matches!(event, WindowEvent::Moved(_) | WindowEvent::Resized(_) | WindowEvent::ScaleFactorChanged { .. }) {
                 let _ = restore_window_positions(&window.app_handle());
             }
         })
