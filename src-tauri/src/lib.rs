@@ -239,6 +239,7 @@ fn create_dashboard(app: AppHandle) -> Result<(), String> {
         .decorations(false)
         .transparent(true)
         .shadow(false)
+        .maximizable(true)
         .resizable(false)
         .skip_taskbar(true);
     if let Some(monitor) = target {

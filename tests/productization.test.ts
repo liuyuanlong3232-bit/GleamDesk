@@ -569,16 +569,21 @@ test("hidden floating launchers keep the notification dialog and history module 
  const dialog=renderToStaticMarkup(React.createElement(NotificationCenter,{...props,opened:true}));assert.match(dialog,/aria-label="通知中心"/);assert.match(dialog,/当前没有待确认通知/);assert.doesNotMatch(dialog,/notification-launcher/);
  const history=renderToStaticMarkup(React.createElement(HistoryAnalysis,{simulationEnabled:false,remoteSettings:{provider:null,credentialRevision:0},showLauncher:false}));assert.doesNotMatch(history,/history-analysis-launcher/);
 });
-test("workbench hide button is global and reuses the existing return-to-desktop action",async()=>{
+test("workbench window actions provide minimize and maximize while preserving hide behavior",async()=>{
  const {readFile}=await import("node:fs/promises"),app=await readFile("src/App.tsx","utf8");
  const start=app.indexOf('<header className="workbench-window-actions"'),end=app.indexOf('</header>',start);
  assert.ok(start>=0);assert.ok(end>start);assert.ok(start<app.indexOf('<PagedViewport',start));
  const action=app.slice(start,end);
+ assert.match(action,/<WorkbenchWindowControls \/>/);
  assert.match(action,/type="button" aria-label="隐藏工作台" onClick=\{onReturnMain\}/);
  assert.match(action,/className="workbench-hide-dot" aria-hidden="true"/);
- assert.doesNotMatch(action,/>隐藏工作台</);
  assert.doesNotMatch(action,/monitors|isPrimary|disabled|invoke|close\(/);
  assert.equal((app.match(/className="workbench-window-actions"/g)??[]).length,1);
+ const controls=await readFile("src/components/WorkbenchWindowControls.tsx","utf8");
+ assert.match(controls,/aria-label="最小化工作台"/);assert.match(controls,/\.minimize\(\)/);
+ assert.match(controls,/最大化工作台/);assert.match(controls,/还原工作台/);assert.match(controls,/\.toggleMaximize\(\)/);
+ const native=await readFile("src-tauri/src/lib.rs","utf8"),builder=native.slice(native.indexOf("fn create_dashboard"),native.indexOf("async fn open_dashboard"));
+ assert.match(builder,/\.maximizable\(true\)/);assert.match(builder,/\.resizable\(false\)/);
 });
 
 test("close icons share symmetric SVG geometry and do not use a font baseline",async()=>{

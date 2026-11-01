@@ -24,6 +24,7 @@ import {DataSourceConnectionsSettings} from "./components/DataSourceConnectionsS
 import { ApplicationManager } from "./components/ApplicationManager";
 import { SettingsDialog } from "./components/SettingsDialog";
 import {PersonalAvatarDialog} from "./components/RoomPortrait";
+import {WorkbenchWindowControls} from "./components/WorkbenchWindowControls";
 import { StatusHud,HudLogo,HudQuotaDetails,HudWorkbenchButton } from "./components/StatusHud";
 import { hudQuotaUsed,apiHudSummary } from "./presentation/quotaAdapter";
 import {agentClients,readAgentRuntime,unavailableAgentRuntime,runningAgentClients} from "./providers/agents/agentUsageProvider";
@@ -925,7 +926,8 @@ function Dashboard({
     <main className="dashboard-screen scenic paged-dashboard avatar-dashboard workbench-dashboard">
       <WorkbenchRail blocked={Boolean(dragging)||settingsOpen||searchOpen||pageManagerOpen||personalAvatarOpen} items={navigationItems} onSelect={selectWorkbenchPage} onSettings={()=>setSettingsOpen(true)} onSearch={()=>setSearchOpen(true)} onAdd={()=>setPageManagerOpen(true)} onAvatar={()=>setPersonalAvatarOpen(true)}/>
       <header className="workbench-window-actions" aria-label="工作台窗口">
-        <button className="ui-icon-button" type="button" aria-label="隐藏工作台" onClick={onReturnMain}><span className="workbench-hide-dot" aria-hidden="true"><CloseIcon/></span></button>
+        <WorkbenchWindowControls />
+        <button className="ui-icon-button workbench-hide-button" type="button" aria-label="隐藏工作台" onClick={onReturnMain}><span className="workbench-hide-dot" aria-hidden="true"><CloseIcon/></span></button>
       </header>
       {personalAvatarOpen&&<PersonalAvatarDialog displayName={settings.displayName} onSaveName={displayName=>onSettingsChange({displayName})} onClose={()=>setPersonalAvatarOpen(false)}/>}
       <div className="dashboard-glow" />
