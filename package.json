@@ -5,13 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 1420",
-    "build": "tsc -b && vite build",
+    "build": "node scripts/prepare-offline-translation.mjs --check && tsc -b && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
     "typecheck": "tsc -b --pretty",
-    "test": "node scripts/run-tests.mjs"
+    "test": "node scripts/run-tests.mjs",
+    "prepare:translation": "node scripts/prepare-offline-translation.mjs"
   },
   "dependencies": {
+    "@huggingface/transformers": "3.8.1",
     "@tauri-apps/api": "^2.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

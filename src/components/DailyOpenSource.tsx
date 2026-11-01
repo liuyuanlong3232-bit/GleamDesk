@@ -1,3 +1,4 @@
+import {TranslateInline} from "./OfflineTranslation";
 import {CloseIcon} from "./CloseIcon";
 import {useEffect,useState,useRef} from "react";
 import {isTauri} from "@tauri-apps/api/core";
@@ -61,7 +62,7 @@ export function DailyOpenSourceView({connections,enabled=true,snapshot,busy,erro
     {section==="skills"?<SkillsLeaderboard enabled={enabled&&!hidden} onOpen={onOpen}/>:<><div className="daily-projects">{snapshot?.items.map((item,index)=><article key={item.repo}>
       <button className="daily-project-title" onClick={()=>onOpen(item.url,item.repo)}><span>{String(index+1).padStart(2,"0")}</span><strong>{item.titleZh||item.repo.split("/")[1]}</strong><b aria-hidden="true">↗</b></button>
       <p>{item.introZh||item.description||"来源未提供简介，用途待确认。"}</p>
-      <small>{item.language||"语言未标注"}{item.stars?` · ★ ${item.stars}`:""}{item.introZh?" · AI 中文介绍":" · 原文"}</small>
+      <TranslateInline text={item.description||""}/><small>{item.language||"语言未标注"}{item.stars?` · ★ ${item.stars}`:""}{item.introZh?" · AI 中文介绍":" · 原文"}</small>
       {item.introZh&&<details><summary>{item.repo} · 查看原文</summary><p>{item.description||"来源未提供简介"}</p></details>}
     </article>)??<p className="daily-empty">{isTauri()?busy?"正在读取公开榜单…":"等待首次榜单采集":"真实推荐需在桌面预览中读取"}</p>}</div>
     {error&&<p className="daily-message" role="status">{error}</p>}

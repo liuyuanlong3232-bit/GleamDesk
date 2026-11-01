@@ -13,10 +13,10 @@ impl MailProvider {
 #[serde(rename_all="camelCase",deny_unknown_fields)]
 pub struct MailSecret {pub email:String,pub authorization:String,pub refresh_token:Option<String>,pub client_id:Option<String>,pub client_secret:Option<String>,pub expires_at_unix_ms:Option<u64>}
 impl Drop for MailSecret {fn drop(&mut self){unsafe{self.authorization.as_bytes_mut().fill(0);if let Some(s)=self.refresh_token.as_mut(){s.as_bytes_mut().fill(0);}if let Some(s)=self.client_secret.as_mut(){s.as_bytes_mut().fill(0);}}}}
-#[derive(Serialize)]
+#[derive(Clone,Deserialize,Serialize)]
 #[serde(rename_all="camelCase")]
 pub struct MailMessage {pub id:String,pub subject:String,pub sender:String,pub received_at:String,pub unread:Option<bool>,pub important:bool}
-#[derive(Serialize)]
+#[derive(Clone,Deserialize,Serialize)]
 #[serde(rename_all="camelCase")]
 pub struct MailSnapshot {pub provider:MailProvider,pub account:String,pub unread_count:Option<u64>,pub messages:Vec<MailMessage>,pub observed_at_unix_ms:u64,pub source:String}
 pub fn now_ms()->u64{SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_millis() as u64}
@@ -69,8 +69,9 @@ fn key(provider:MailProvider,index:usize)->String{format!("GleamDesk.Mail.{}.Par
     #[cfg(windows)]{save_secret(provider,&secret)}
     #[cfg(not(windows))]{Err("安全保存需要Windows".into())}
 }
-#[tauri::command]pub fn mail_disconnect(provider:MailProvider)->Result<(),String>{
+#[tauri::command]pub fn mail_disconnect(app:tauri::AppHandle,provider:MailProvider)->Result<(),String>{
     let _operation=begin_operation(provider)?;
+    crate::mail_cache::clear(&crate::mail_cache::path(&app,provider)?)?;
     #[cfg(windows)]{let _lock=CREDENTIAL_LOCK.lock().map_err(|_|"邮箱凭据锁不可用")?;crate::credentials::clear_named(&key(provider,0))?;for bank in 0..=1{for index in 1..=5{crate::credentials::clear_named(&bank_key(provider,bank,index))?;}}Ok(())}
     #[cfg(not(windows))]{let _=provider;Err("安全凭据需要Windows".into())}
 }
@@ -102,10 +103,12 @@ pub fn gmail_message(value:&Value)->MailMessage{
             for item in list["messages"].as_array().unwrap_or(&Vec::new()).iter().take(12){if started.elapsed()>Duration::from_secs(40){return Err("邮箱读取达到时限，未将部分结果视为完整".into());}let id=item["id"].as_str().filter(|id|id.len()<=200&&id.bytes().all(|b|b.is_ascii_alphanumeric())).ok_or("Gmail邮件ID无效")?;let message=api_get_until("gmail.googleapis.com",&format!("/gmail/v1/users/me/messages/{id}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date"),&secret.authorization,deadline)?;messages.push(gmail_message(&message));}(label["messagesUnread"].as_u64(),"Gmail API")},_=>return Err("此账户使用IMAP读取".into())};
     Ok(MailSnapshot{provider,account:secret.email.clone(),unread_count:count,messages,observed_at_unix_ms:now_ms(),source:source.into()})
 }
-#[tauri::command]pub async fn mail_read_snapshot(provider:MailProvider)->Result<MailSnapshot,String>{
+#[tauri::command]pub async fn mail_read_snapshot(app:tauri::AppHandle,provider:MailProvider)->Result<MailSnapshot,String>{
     tauri::async_runtime::spawn_blocking(move||{
         let _operation=begin_operation(provider)?;
-        #[cfg(windows)]{let mut secret=load_secret(provider)?;if provider.imap_host().is_some(){crate::mail_imap::snapshot(provider,&secret)}else{crate::mail_oauth::refresh_if_needed(provider,&mut secret)?;api_snapshot(provider,&secret)}}
+        #[cfg(windows)]{let mut secret=load_secret(provider)?;let snapshot=if provider.imap_host().is_some(){crate::mail_imap::snapshot(provider,&secret)}else{crate::mail_oauth::refresh_if_needed(provider,&mut secret)?;api_snapshot(provider,&secret)}?;
+            let path=crate::mail_cache::path(&app,provider)?;let mut cache=crate::mail_cache::load(&path,&secret.email).unwrap_or_else(|_|crate::mail_cache::Cache::empty(&secret.email));
+            cache.details.retain(|detail|snapshot.messages.iter().any(|message|message.id==detail.id));cache.snapshot=Some(snapshot.clone());crate::mail_cache::save(&path,&cache)?;Ok(snapshot)}
         #[cfg(not(windows))]{let _=provider;Err("邮箱连接需要Windows".into())}
     }).await.map_err(|_|"邮箱读取任务失败".to_string())?
 }
@@ -118,24 +121,35 @@ pub fn gmail_message(value:&Value)->MailMessage{
     let value=match provider{MailProvider::Gmail=>api_get("gmail.googleapis.com","/gmail/v1/users/me/profile",token)?,MailProvider::Outlook=>api_get("graph.microsoft.com","/v1.0/me?$select=mail,userPrincipalName",token)?,_=>return Err("此账号不使用OAuth身份查询".into())};
     let email=if provider==MailProvider::Gmail{value["emailAddress"].as_str()}else{value["mail"].as_str().or_else(||value["userPrincipalName"].as_str())}.filter(|value|email_valid(value,provider)).ok_or("授权成功但邮箱身份无法确认")?;Ok(email.to_owned())
 }
-#[derive(Serialize)]#[serde(rename_all="camelCase")]
-pub struct MailDetail {id:String,body:String,truncated:bool,source:String}
+#[derive(Clone,Deserialize,Serialize)]#[serde(rename_all="camelCase")]
+pub struct MailDetail {pub id:String,pub body:String,pub truncated:bool,pub source:String,#[serde(default)]pub cached:bool,#[serde(default)]pub observed_at_unix_ms:u64}
+#[tauri::command]pub async fn mail_read_cached_snapshot(app:tauri::AppHandle,provider:MailProvider)->Result<Option<MailSnapshot>,String>{
+    tauri::async_runtime::spawn_blocking(move||{
+        let _operation=begin_operation(provider)?;
+        #[cfg(windows)]{let secret=load_secret(provider)?;let cache=crate::mail_cache::load(&crate::mail_cache::path(&app,provider)?,&secret.email)?;Ok(cache.snapshot)}
+        #[cfg(not(windows))]{Err("邮件缓存需要Windows".into())}
+    }).await.map_err(|_|"邮件缓存加载任务失败".to_string())?
+}
 fn message_id(provider:MailProvider,id:&str)->Result<(),String>{
     if id.is_empty()||id.len()>600||id.contains("..")||!id.bytes().all(|byte|byte.is_ascii_alphanumeric()||b"-_=+/.:".contains(&byte)){return Err("邮件ID无效".into());}
     if provider.imap_host().is_some(){let (validity,uid)=id.split_once(':').ok_or("IMAP邮件版本缺失")?;if validity.parse::<u64>().is_err()||uid.parse::<u64>().is_err(){return Err("IMAP邮件ID无效".into());}}Ok(())
 }
 fn encoded_id(id:&str)->String{id.bytes().map(|byte|if byte.is_ascii_alphanumeric()||b"-_".contains(&byte){char::from(byte).to_string()}else{format!("%{byte:02X}")}).collect()}
-#[tauri::command]pub async fn mail_read_detail(provider:MailProvider,id:String,expected_account:String)->Result<MailDetail,String>{
+#[tauri::command]pub async fn mail_read_detail(app:tauri::AppHandle,provider:MailProvider,id:String,expected_account:String)->Result<MailDetail,String>{
     message_id(provider,&id)?;
     tauri::async_runtime::spawn_blocking(move||{
         let _operation=begin_operation(provider)?;
         #[cfg(windows)]{
             let mut secret=load_secret(provider)?;if secret.email!=expected_account{return Err("邮箱账户已变化，请重新读取列表".into());}
-            if provider.imap_host().is_some(){let (body,truncated)=crate::mail_imap::detail(provider,&secret,&id)?;return Ok(MailDetail{id,body,truncated,source:"TLS IMAP / BODY.PEEK".into()});}
+            let path=crate::mail_cache::path(&app,provider)?;let mut cache=crate::mail_cache::load(&path,&secret.email).unwrap_or_else(|_|crate::mail_cache::Cache::empty(&secret.email));
+            if let Some(detail)=cache.details.iter().find(|detail|detail.id==id){let mut detail=detail.clone();detail.cached=true;return Ok(detail);}
+            if !cache.snapshot.as_ref().is_some_and(|snapshot|snapshot.messages.iter().any(|message|message.id==id)){return Err("邮件列表已变化，请刷新后重新选择".into());}
+            let detail=if provider.imap_host().is_some(){let (body,truncated)=crate::mail_imap::detail(provider,&secret,&id)?;MailDetail{id,body,truncated,source:"TLS IMAP / BODY.PEEK".into(),cached:false,observed_at_unix_ms:now_ms()}}else{
             crate::mail_oauth::refresh_if_needed(provider,&mut secret)?;
             let (body,truncated,source)=if provider==MailProvider::Gmail {let message=api_get("gmail.googleapis.com",&format!("/gmail/v1/users/me/messages/{}?format=full",encoded_id(&id)),&secret.authorization)?;let (body,truncated)=crate::mail_display::gmail_body(&message["payload"])?;(body,truncated,"Gmail API")}
                 else{let message=api_get("graph.microsoft.com",&format!("/v1.0/me/messages/{}?$select=body",encoded_id(&id)),&secret.authorization)?;let content=message.pointer("/body/content").and_then(Value::as_str).ok_or("邮件正文未知")?;let body=if message.pointer("/body/contentType").and_then(Value::as_str).is_some_and(|kind|kind.eq_ignore_ascii_case("html")){crate::mail_display::html_text(content)}else{content.to_owned()};let truncated=body.chars().count()>64000;(body.chars().take(64000).collect(),truncated,"Microsoft Graph")};
-            Ok(MailDetail{id,body,truncated,source:source.into()})
+            MailDetail{id,body,truncated,source:source.into(),cached:false,observed_at_unix_ms:now_ms()}};
+            cache.details.retain(|item|item.id!=detail.id);if cache.details.len()>=12{cache.details.remove(0);}cache.details.push(detail.clone());crate::mail_cache::save(&path,&cache)?;Ok(detail)
         }
         #[cfg(not(windows))]{Err("邮件正文读取需要Windows".into())}
     }).await.map_err(|_|"邮件正文读取任务失败".to_string())?

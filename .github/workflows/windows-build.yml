@@ -59,6 +59,8 @@ jobs:
         run: npm.cmd ci
       - name: Run offline frontend tests
         run: npm.cmd test
+      - name: Prepare pinned offline translation model
+        run: npm.cmd run prepare:translation
       - name: Build Windows executable and NSIS installer
         run: npm.cmd run tauri -- build --bundles nsis -- --locked
       - name: Assemble unsigned packages

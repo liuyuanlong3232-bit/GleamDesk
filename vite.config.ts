@@ -6,6 +6,7 @@ const runtimeEnv = (globalThis as typeof globalThis & { process?: { env: Record<
 export default defineConfig({
   plugins: [react()],
   clearScreen: false,
+  worker: {format: "es"},
   server: {
     host: "127.0.0.1",
     port: 1420,

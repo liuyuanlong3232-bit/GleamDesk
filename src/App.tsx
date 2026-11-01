@@ -1,3 +1,4 @@
+import {OfflineTranslator} from "./components/OfflineTranslation";
 import {appThemes,applyTheme} from "./presentation/theme";
 import {CloseIcon} from "./components/CloseIcon";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -426,6 +427,7 @@ function MainScreen({
 
   return (
     <main className="main-screen scenic">
+      <OfflineTranslator/>
       <div className="scenic-haze" />
       <header className="main-top">
         <StatusHud monitorId={monitors.find(monitor=>monitor.isPrimary)?.id??"primary"} open={islandOpen} animations={settings.animations} onDrag={()=>{setIslandOpen(false);setHudPinned(false)}} onLeave={()=>{if(!hudPinned)setIslandOpen(false)}}>
@@ -440,6 +442,7 @@ function MainScreen({
                 </span>
               </button>
             ))}
+            <button className="island-item" aria-label="打开离线翻译" title="离线翻译" onClick={()=>{setIslandOpen(false);setHudPinned(false);window.dispatchEvent(new Event("gleamdesk.open-translator"));}}><span className="island-symbol"><HudLogo id="translate" label="译"/></span></button>
             <HudWorkbenchButton expanded={islandOpen&&hudPinned&&islandPanel==="workbench"} busy={workbenchScreens.loading} onEnter={()=>{if(islandPanel!=="workbench"){setIslandOpen(false);setHudPinned(false);}}} onOpen={()=>void chooseWorkbenchScreen()}/>
             <AppUpdateIndicator enabled={settings.checkUpdatesOnStartup!==false&&!settings.simulationEnabled} onOpen={()=>onDashboardAt("settings:updates")}/>
           </div>

@@ -68,3 +68,7 @@ id_ed25519
 .DS_Store
 Thumbs.db
 Desktop.ini
+
+# Reproducible offline translation assets
+/public/translation-models/
+/public/translation-runtime/

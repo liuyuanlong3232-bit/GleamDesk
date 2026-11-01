@@ -44,6 +44,7 @@ mod argentina;
 mod custom_http;
 mod daily_recommendations;
 mod mail;
+mod mail_cache;
 #[cfg(windows)]
 mod mail_display;
 #[cfg(windows)]
@@ -434,6 +435,7 @@ pub fn run() {
             mail::mail_save_authorization,
             mail::mail_disconnect,
             mail::mail_read_snapshot,
+            mail::mail_read_cached_snapshot,
             mail::mail_read_detail,
             mail::mail_mark_read,
             mail_oauth::mail_oauth_connect,

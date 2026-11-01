@@ -302,3 +302,5 @@
 .workbench-dashboard .wb-inspections-warning{display:block;margin-top:4px;color:var(--theme-muted);font-size:12px;white-space:normal}
 
 .workbench-dashboard .wb-feature .wb-feature-source-note{display:block;margin-top:6px}
+
+.wb-mail-list-panel>header>button{flex-shrink:0;white-space:nowrap;min-width:64px}.wb-mail-list-panel>header>div{min-width:0}

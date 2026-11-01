@@ -1,0 +1,14 @@
+GleamDesk offline English to Simplified Chinese translation
+
+Transformers.js 3.8.1 - Hugging Face - Apache-2.0
+https://github.com/huggingface/transformers.js
+
+Xenova/opus-mt-en-zh - ONNX conversion of Helsinki-NLP/opus-mt-en-zh
+Revision: 046f55aec303cdee3e0318604406d4df20f1e8ea
+https://huggingface.co/Xenova/opus-mt-en-zh
+https://huggingface.co/Helsinki-NLP/opus-mt-en-zh
+Model license: Apache-2.0 (original model card).
+
+ONNX Runtime Web - Microsoft - MIT
+Exact version is pinned by package-lock.json.
+Runtime and model files are local build assets; no translation text is uploaded.
