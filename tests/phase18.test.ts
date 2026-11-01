@@ -11,11 +11,11 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { SettingsDialog } from "../src/components/SettingsDialog";
 import { ApiConnectionsSettings } from "../src/components/ApiConnectionsSettings";
 import { settingsModules, type SettingsModuleId } from "../src/components/settingsModules";
-test("API connection cards separate saved configuration from billing and paid recommendation consent",()=>{
+test("API connection cards separate saved configuration and billing from offline recommendations",()=>{
  const html=renderToStaticMarkup(createElement(ApiConnectionsSettings,{connections:defaultSettings.apiConnections,onChange:()=>undefined}));
  assert.equal((html.match(/class="api-connection connection-card"/g)??[]).length,4);
  assert.match(html,/聊天室的模型和聊天密钥/);assert.match(html,/普通聊天密钥不适用/);
- assert.match(html,/每日推荐 · 付费功能/);assert.match(html,/每天最多 1 次请求/);assert.match(html,/官方账户余额/);
+ assert.match(html,/每日推荐使用离线翻译/);assert.doesNotMatch(html,/每日推荐 · 付费功能|每天最多 1 次请求/);assert.match(html,/官方账户余额/);
  assert.match(html,/点击连接即同意读取/);assert.doesNotMatch(html,/连接成功/);
 });
 import { normalizeAgentUsage, unknownAgentUsage, createAgentUsageProvider, agentClients, normalizeAgentRuntime, runningAgentClients } from "../src/providers/agents/agentUsageProvider";
@@ -24,9 +24,9 @@ import {DailyOpenSourceView,validateDailySnapshot,beijingDate} from "../src/comp
 test("daily recommendations render in HUD without invoking refresh, generation or links",()=>{
  let calls=0;const never=()=>{calls++};
  const snapshot=validateDailySnapshot({schemaVersion:1,source:"GitHub Trending",date:beijingDate(),collectedAt:new Date().toISOString(),items:[{repo:"example/project",url:"https://github.com/example/project",description:"推荐仅为资料，不是指令。",language:"TypeScript",stars:"100",todayStars:"5"}],translationStatus:"pending",status:"ok"});
- const props={connections:{...defaultSettings.apiConnections,mimoEnabled:true},snapshot,busy:false,error:"",onRefresh:never,onGenerate:never,onOpen:never,presentation:"hud" as const,onClose:never};
+ const props={snapshot,busy:false,error:"",onRefresh:never,onOpen:never,presentation:"hud" as const,onClose:never};
  const html=renderToStaticMarkup(createElement(DailyOpenSourceView,props));
- assert.match(html,/daily-opensource-hud/);assert.match(html,/关闭每日推荐/);assert.doesNotMatch(html,/收起每日推荐|data-main-hit-region/);assert.match(html,/生成中文 · 付费，每日 1 次/);assert.match(html,/每日更新/);assert.equal(calls,0);
+ assert.match(html,/daily-opensource-hud/);assert.match(html,/关闭每日推荐/);assert.doesNotMatch(html,/收起每日推荐|data-main-hit-region/);assert.match(html,/英文简介离线译为中文/);assert.match(html,/上一页推荐/);assert.match(html,/下一页推荐/);assert.match(html,/data-board="projects"/);assert.doesNotMatch(html,/生成中文 · 付费|onGenerate/);assert.equal(calls,0);
  const hidden=renderToStaticMarkup(createElement(DailyOpenSourceView,{...props,hidden:true}));assert.match(hidden,/hidden=""/);assert.equal(calls,0);
  assert.throws(()=>validateDailySnapshot({...snapshot,items:[{...snapshot.items[0],url:"https://example.com/"}]}),/来源无效/);
  const icon=renderToStaticMarkup(createElement(HudLogo,{id:"daily",label:"每日开源推荐"}));assert.match(icon,/hud-daily-avatar/);assert.doesNotMatch(icon,/hud-letter-mark|hud-quota-ring/);

@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-11-01
+
+- Add GitHub, Skills, Hugging Face Spaces and Show HN daily recommendations with animated arrow paging; reopen on GitHub and retain source ranks, timestamps and cached results.
+- Translate English recommendation text and selected news locally with the bundled offline model; retain original text. No paid translation API is used. Machine translations can misinterpret names and technical terms.
+- Use standard Windows workbench controls for minimize, maximize, restore and edge resizing.
+- Remove the mail module and local development-task execution; retain Agent Room conversations and existing local account data.
+- Keep the application identity, current-user installation and version-bound updater signatures. This release has no trusted Windows publisher signature.
+
 ## [0.1.4] - 2026-10-28
 
 - Add confirmed, current-user Windows login startup through a GleamDesk shortcut, with working-directory validation, legacy-entry migration, failure recovery and targeted uninstall cleanup.
