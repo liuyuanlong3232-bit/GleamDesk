@@ -81,6 +81,7 @@ test("chat UI has one readable composer and member settings without fake connect
   assert.match(html,/aria-label="聊天室消息"/); assert.match(html,/role="log"/);
   assert.match(html,/添加模型、文件或照片/); assert.match(html,/收起模型/);
   assert.match(html,/未接入/); assert.match(html,/更多/);
+  assert.doesNotMatch(html,/本机任务|本机开发任务|agent_task_/);
   assert.doesNotMatch(html,/今日已用|每日上限|0 \/ 20|在线|已接入/);
   assert.doesNotMatch(html,/成员回复|录入回复|生成总结|继续讨论|打开.*订阅/);
 });

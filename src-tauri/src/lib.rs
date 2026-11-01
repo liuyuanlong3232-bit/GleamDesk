@@ -29,8 +29,6 @@ mod webapps;
 #[cfg(windows)]
 mod webapp_metadata;
 mod agent_room;
-mod agent_local_tools;
-mod agent_task;
 mod simulation;
 mod network_tools;
 mod dns_api;
@@ -364,7 +362,6 @@ pub fn run() {
         .manage(application_runtime::ApplicationRuntimeState::default())
         .manage(webapps::WebAppPool::default())
         .manage(agent_room::AgentRoomState::default())
-        .manage(agent_task::AgentTaskState::default())
         .manage(custom_http::CustomHttpState::default())
         .manage(public_sources::PublicSourceState::default())
         .manage(agriculture::AgricultureState::default())
@@ -421,11 +418,6 @@ pub fn run() {
             agent_room::agent_room_chat_enable_paid,
             agent_room::agent_room_reply,
             agent_room::agent_room_cancel,
-            agent_task::agent_task_list,
-            agent_task::agent_task_pick_directory,
-            agent_task::agent_task_run,
-            agent_task::agent_task_resolve,
-            agent_task::agent_task_cancel,
             webapps::webapp_release,
             webapps::webapp_discard,
             webapps::webapp_set_covered,
