@@ -43,14 +43,6 @@ mod conab;
 mod argentina;
 mod custom_http;
 mod daily_recommendations;
-mod mail;
-mod mail_cache;
-#[cfg(windows)]
-mod mail_display;
-#[cfg(windows)]
-mod mail_imap;
-#[cfg(windows)]
-mod mail_oauth;
 #[cfg(all(test, windows))]
 #[allow(dead_code, unexpected_cfgs)]
 #[path = "../../vendor/wry/src/webview2/drag_drop.rs"]
@@ -399,7 +391,6 @@ pub fn run() {
         .manage(agriculture::AgricultureState::default())
         .manage(agriculture::Jin10NewsState::default())
         .manage(daily_recommendations::DailyState::default())
-        .manage(mail_oauth::OAuthState::default())
         .invoke_handler(|invoke: tauri::ipc::Invoke| {
             let view=invoke.message.webview_ref();
             let trusted=["main","dashboard","dock"].contains(&view.label()) && view.url().map(|url|webapps::trusted_local_origin(view.label(),&url,cfg!(debug_assertions))).unwrap_or(false);
@@ -424,22 +415,12 @@ pub fn run() {
             agriculture::save_snapshot_connection,
             agriculture::read_jin10_news,
             daily_recommendations::read_daily_recommendations,
-            daily_recommendations::generate_daily_recommendations,
             daily_recommendations::read_mimo_usage,
             daily_recommendations::mimo_connection_status,
             daily_recommendations::mimo_balance_open,
             daily_recommendations::mimo_balance_connect,
             doubao_membership::doubao_membership_open,
             doubao_membership::read_doubao_membership,
-            mail::mail_configured,
-            mail::mail_save_authorization,
-            mail::mail_disconnect,
-            mail::mail_read_snapshot,
-            mail::mail_read_cached_snapshot,
-            mail::mail_read_detail,
-            mail::mail_mark_read,
-            mail_oauth::mail_oauth_connect,
-            mail_oauth::mail_oauth_cancel,
             agent_room::agent_room_chat_load,
             agent_room::workspace::agent_room_workspace_load,
             agent_room::workspace::agent_room_workspace_save_room,

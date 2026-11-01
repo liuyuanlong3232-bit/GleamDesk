@@ -292,29 +292,12 @@
         if body.len()>64*1024{return Err("本地讨论请求超过上限".into());}
         post_request_json("127.0.0.1",11434,false,"/api/chat","Content-Type: application/json\r\n",body,deadline,check)
     }
-    pub(crate) fn post_mail_oauth(host:&str,path:&str,body:&[u8],deadline:std::time::Instant)->Result<(u32,Vec<u8>),String>{
-        if !matches!((host,path),("oauth2.googleapis.com","/token")|("login.microsoftonline.com","/common/oauth2/v2.0/token"))||body.len()>32768{return Err("邮箱OAuth目标或大小无效".into());}
-        post_request_json(host,443,true,path,"Content-Type: application/x-www-form-urlencoded\r\nAccept: application/json\r\n",body,deadline,&||Ok(()))
-    }
-    pub(crate) fn mail_get_http(host:&str,path:&str,headers:&str,deadline:std::time::Instant)->Result<(u32,Vec<u8>),String>{
-        if !matches!(host,"gmail.googleapis.com"|"graph.microsoft.com")||path.len()>3000||path.contains("..")||path.contains('\r')||path.contains('\n'){return Err("邮箱读取目标无效".into());}
-        post_request_json(host,443,true,path,headers,b"",deadline,&||Ok(()))
-    }
-    pub(crate) fn mail_mark_read_http(host:&str,path:&str,method:&str,headers:&str,body:&[u8],deadline:std::time::Instant)->Result<(u32,Vec<u8>),String>{
-        let allowed=match (host,method){
-            ("gmail.googleapis.com","POST")=>path.starts_with("/gmail/v1/users/me/messages/")&&path.ends_with("/modify")&&body==b"{\"removeLabelIds\":[\"UNREAD\"]}",
-            ("graph.microsoft.com","PATCH")=>path.starts_with("/v1.0/me/messages/")&&body==b"{\"isRead\":true}",
-            _=>false,
-        };
-        if !allowed||path.contains("..")||path.contains('?')||path.len()>1800{return Err("邮箱状态操作不在允许范围内".into());}
-        post_request_json(host,443,true,path,headers,body,deadline,&||Ok(()))
-    }
     fn post_request_json(host_name: &str, port: u16, secure: bool, path: &str, header_text: &str, body: &[u8],
         deadline: std::time::Instant, check: &impl Fn() -> Result<(),String>) -> Result<(u32,Vec<u8>),String> {
         struct Headers(Vec<u16>);
         impl Drop for Headers { fn drop(&mut self) { self.0.fill(0); } }
         let mut headers = Headers(wide(header_text));
-        let agent = wide("AgentRoom/0.1"); let host = wide(host_name); let verb = wide(if host_name=="graph.microsoft.com"{if body.is_empty(){"GET"}else{"PATCH"}}else if host_name=="gmail.googleapis.com"&&body.is_empty(){"GET"}else{"POST"}); let target = wide(path);
+        let agent = wide("AgentRoom/0.1"); let host = wide(host_name); let verb = wide("POST"); let target = wide(path);
         let remaining = || -> Result<i32,String> {
             check()?;
             let millis = deadline.checked_duration_since(std::time::Instant::now()).ok_or("推理请求达到 60 秒总超时；未自动重试")?.as_millis();

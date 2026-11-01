@@ -134,7 +134,6 @@ export interface ApiConnectionSettings {
   anthropicEnabled: boolean;
   mimoEnabled?: boolean;
   openaiEnabled?: boolean;
-  mimoDailyAuto?: boolean;
   credentialRevision: number;
 }
 

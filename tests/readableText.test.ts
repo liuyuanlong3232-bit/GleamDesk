@@ -5,7 +5,6 @@ import {renderToStaticMarkup} from "react-dom/server";
 import {metricState, PcOverview, PcGpu, PcTrends} from "../src/widgets/ResourcePanels";
 import {emptyDashboardData} from "../src/providers/dashboardAdapter";
 import {DailyOpenSourceView, beijingDate} from "../src/components/DailyOpenSource";
-import {defaultSettings} from "../src/providers/settingsStore";
 
 test("resource states use distinct Chinese labels without guessing an unknown state",()=>{
   for(const [state,label] of Object.entries({available:"可用",sampling:"采样中",unsupported:"不支持",unavailable:"暂不可用"})){
@@ -30,21 +29,22 @@ test("resource simulation remains visibly separate from real history",()=>{
   assert.doesNotMatch(html,/<svg|Simulation/);
 });
 
-test("recommendation typography retains dates, source originals and paid generation controls",()=>{
+test("recommendations retain source descriptions and use offline translation without paid controls",()=>{
   let calls=0;const never=()=>{calls++};
   const snapshot={schemaVersion:1 as const,source:"GitHub Trending" as const,date:beijingDate(),collectedAt:new Date().toISOString(),items:[{repo:"example/long-project-name",url:"https://github.com/example/long-project-name",description:"Source text",introZh:"中文介绍",language:"TypeScript",stars:"100",todayStars:"5"}],translationStatus:"pending",status:"ok"};
   for(const presentation of ["card","hud"] as const){
-    const html=renderToStaticMarkup(createElement(DailyOpenSourceView,{connections:defaultSettings.apiConnections,snapshot,presentation,busy:false,error:"",onRefresh:never,onGenerate:never,onOpen:never}));
-    for(const text of [snapshot.date,"中文介绍","Source text","查看原文","付费，每日 1 次"])assert.ok(html.includes(text),text);
+    const html=renderToStaticMarkup(createElement(DailyOpenSourceView,{snapshot,presentation,busy:false,error:"",onRefresh:never,onOpen:never}));
+    assert.doesNotMatch(html,/付费|生成中文|AI 中文介绍/);
+    for(const text of [snapshot.date,"Source text","英文简介自动离线译为中文","不调用翻译 API"])assert.ok(html.includes(text),text);
   }
   assert.equal(calls,0);
 });
 test("API settings start collapsed and keep billing permissions, consent and status messages",async()=>{
  const React=await import("react"),{renderToStaticMarkup}=await import("react-dom/server"),{ApiConnectionsSettings}=await import("../src/components/ApiConnectionsSettings");
- const markup=renderToStaticMarkup(React.createElement(ApiConnectionsSettings,{connections:{deepseekEnabled:false,anthropicEnabled:false,openaiEnabled:false,mimoEnabled:false,mimoDailyAuto:false,credentialRevision:0},onChange:()=>{}}));
+ const markup=renderToStaticMarkup(React.createElement(ApiConnectionsSettings,{connections:{deepseekEnabled:false,anthropicEnabled:false,openaiEnabled:false,mimoEnabled:false,credentialRevision:0},onChange:()=>{}}));
  assert.equal((markup.match(/class="api-connection connection-card"/g)||[]).length,4);
  assert.doesNotMatch(markup,/<details class="api-connection connection-card" open/);
- for(const text of ["帮助与数据范围","组织费用","普通聊天密钥不适用","付费","允许每天自动生成","读取验证","Windows 凭据管理器"])assert.ok(markup.includes(text),text);
+ for(const text of ["帮助与数据范围","组织费用","普通聊天密钥不适用","离线翻译","读取验证","Windows 凭据管理器"])assert.ok(markup.includes(text),text);
  assert.match(markup,/settings-help/);
 });
 

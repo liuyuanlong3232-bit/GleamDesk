@@ -11,20 +11,26 @@ env.backends.onnx.wasm!.numThreads=1;
 env.backends.onnx.wasm!.proxy=false;
 let translator:TranslationPipeline|undefined;
 const createTranslator=pipeline as (task:'translation',model:string,options:{device:'wasm';dtype:'q8';local_files_only:true})=>Promise<TranslationPipeline>;
-self.onmessage=async(event:MessageEvent<{text:string}>)=>{
+async function translateText(text:string){
+ const chunks=translationChunks(text);const result:string[]=[];
+ for(const chunk of chunks){
+  if(!chunk){result.push('\n\n');continue;}
+  const output=await translator!('>>cmn_Hans<< '+chunk,{max_new_tokens:512,num_beams:1} as Parameters<TranslationPipeline>[1]);
+  const item=Array.isArray(output)?output[0]:output;
+  if(!item||!('translation_text' in item)||typeof item.translation_text!=='string')throw Error('模型没有返回译文');result.push(item.translation_text+' ');
+ }
+ return result.join('').trim();
+}
+self.onmessage=async(event:MessageEvent<{text?:string;texts?:string[]}>)=>{
  try{
-  const chunks=translationChunks(event.data.text);
+  const batch=event.data.texts;const texts=batch??[event.data.text??''];
+  if(!texts.length||texts.length>8)throw Error('推荐翻译条目超过上限');texts.forEach(translationChunks);
   self.postMessage({status:'正在加载本机翻译模型…'});
   translator??=await createTranslator('translation','Xenova/opus-mt-en-zh',{device:'wasm',dtype:'q8',local_files_only:true});
-  const result:string[]=[];let completed=0;const total=chunks.filter(Boolean).length;
-  for(const chunk of chunks){
-   if(!chunk){result.push('\n\n');continue;}
-   self.postMessage({status:`正在离线翻译 ${++completed}/${total}…`});
-   const output=await translator('>>cmn_Hans<< '+chunk,{max_new_tokens:512,num_beams:1} as Parameters<TranslationPipeline>[1]);
-   const item=Array.isArray(output)?output[0]:output;
-   if(!item||!('translation_text' in item)||typeof item.translation_text!=='string')throw Error('模型没有返回译文');
-   result.push(item.translation_text+' ');
+  for(let index=0;index<texts.length;index++){
+   self.postMessage({status:`正在离线翻译 ${index+1}/${texts.length}…`});
+   const result=await translateText(texts[index]);self.postMessage(batch?{item:{index,result}}:{result});
   }
-  self.postMessage({result:result.join('').trim()});
+  if(batch)self.postMessage({done:true});
  }catch(error){self.postMessage({error:`离线翻译失败：${error instanceof Error?error.message:String(error)}`});}
 };

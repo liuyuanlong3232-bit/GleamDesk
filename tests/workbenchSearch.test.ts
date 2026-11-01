@@ -14,7 +14,8 @@ const items=(apps:ApplicationItem[]=[],sites:WebApp[]=[])=>buildWorkbenchSearchI
 
 test("搜索包含现有页面、工具和未固定的应用",()=>{
   const entries=items([application()]);
-  assert.ok(entries.some(item=>item.label==="邮箱中心"&&item.target.kind==="page"));
+  assert.ok(entries.some(item=>item.label==="新闻中心"&&item.target.kind==="page"));
+  assert.ok(!entries.some(item=>item.target.id==="mail"));
   assert.ok(entries.some(item=>item.label==="JSON 格式化"&&item.target.kind==="tool"));
   assert.ok(entries.some(item=>item.label==="VS Code"&&item.target.kind==="application"));
 });

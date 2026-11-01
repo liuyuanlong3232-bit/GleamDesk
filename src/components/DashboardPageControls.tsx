@@ -12,7 +12,7 @@ export function dashboardNavigationItems(document:DashboardPages,workspaceSelect
     {id:"overview",label:"工作台总览",icon:"home",active:page?.id==="overview"},
     {id:"resources",label:"本机资源",icon:"resources",active:page?.id==="resources"&&resourceView==="pc"},
     {id:"vps",label:"VPS 控制台",icon:"server",active:page?.id==="resources"&&resourceView==="vps"},
-    ...[{id:"news",label:"新闻中心",icon:"news"},{id:"market",label:"市场中心",icon:"market"},{id:"agriculture",label:"农业中心",icon:"agriculture"},{id:"mail",label:"邮箱中心",icon:"mail"},{id:"agents",label:"Agent Room",icon:"agents"},{id:"mues",label:"Muse / 网页工作区",icon:"web"},{id:"webapps",label:"自定义网站",icon:"custom"}].map(item=>({...item,active:page?.kind==="workspace"&&(item.id===workspaceSelection||item.id==="mues"&&!["news","market","agriculture","mail","agents","webapps"].includes(workspaceSelection))})),
+    ...[{id:"news",label:"新闻中心",icon:"news"},{id:"market",label:"市场中心",icon:"market"},{id:"agriculture",label:"农业中心",icon:"agriculture"},{id:"agents",label:"Agent Room",icon:"agents"},{id:"mues",label:"Muse / 网页工作区",icon:"web"},{id:"webapps",label:"自定义网站",icon:"custom"}].map(item=>({...item,active:page?.kind==="workspace"&&(item.id===workspaceSelection||item.id==="mues"&&!["news","market","agriculture","agents","webapps"].includes(workspaceSelection))})),
     {id:"toolbox",label:"工具箱",icon:"toolbox",active:page?.id==="toolbox"},
     ...document.pages.filter(item=>item.kind==="custom"&&!item.hidden).map(item=>({id:item.id,label:item.name,icon:"custom",active:page?.id===item.id})),
   ].filter(item=>{const target=document.pages.find(page=>page.id===(item.id==="vps"?"resources":item.id));return target?!target.hidden:document.pages.some(page=>page.kind==="workspace"&&!page.hidden);});
@@ -22,7 +22,7 @@ export interface WorkbenchSearchItem {
   key:string;label:string;description:string;keywords:string;actionLabel:string;
   target:{kind:"page"|"tool"|"application"|"webapp"|"preset";id:string};
 }
-const searchAliases:Record<string,string>={overview:"首页 总览 系统健康",resources:"本机 电脑 CPU 内存 磁盘 资源",vps:"服务器 云主机",news:"新闻 资讯",market:"行情 股票 期货",agriculture:"农业 农产品",mail:"邮箱 邮件",agents:"聊天室 群聊 模型 AI",mues:"Muse 网页 工作区",webapps:"网站 网页",toolbox:"工具 开发 网络"};
+const searchAliases:Record<string,string>={overview:"首页 总览 系统健康",resources:"本机 电脑 CPU 内存 磁盘 资源",vps:"服务器 云主机",news:"新闻 资讯",market:"行情 股票 期货",agriculture:"农业 农产品",agents:"聊天室 群聊 模型 AI",mues:"Muse 网页 工作区",webapps:"网站 网页",toolbox:"工具 开发 网络"};
 export function buildWorkbenchSearchItems(document:DashboardPages,applications:ApplicationItem[],webApps:WebApp[]):WorkbenchSearchItem[] {
   const navigation=dashboardNavigationItems(document,"", "pc");
   const entries:WorkbenchSearchItem[]=navigation.map(item=>({key:`page:${item.id}`,label:item.label,description:"工作台页面",keywords:`${item.id} ${searchAliases[item.id]??""}`,actionLabel:"打开",target:{kind:"page",id:item.id}}));

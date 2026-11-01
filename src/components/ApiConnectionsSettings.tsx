@@ -4,8 +4,7 @@ import type { ApiConnectionSettings } from "../types";
 import { clearCredential, hasCredential, saveCredential, hasLegacyCredentials, importLegacyCredentials } from "../services/credentials";
 import { readApiUsage, type ApiSource } from "../providers/api/apiUsageProvider";
 import { formatMoney } from "../services/formatMoney";
-import { openDailyLink } from "./DailyOpenSource";
-import {invokeLive,requireRealCallsAllowed} from "../services/simulationSafety";
+import {requireRealCallsAllowed} from "../services/simulationSafety";
 
 function Connection({ source, connections, onChange,simulationEnabled=false }: { source: ApiSource; connections: ApiConnectionSettings; onChange: (next: ApiConnectionSettings) => void;simulationEnabled?:boolean }) {
   const [secret, setSecret] = useState("");
@@ -20,14 +19,11 @@ function Connection({ source, connections, onChange,simulationEnabled=false }: {
       .catch(() => { if (active) setMessage("无法读取凭据状态"); });
     return () => { active = false; };
   }, [source, connections.credentialRevision]);
-  const act = async (action: "save" | "clear" | "test" | "generate") => {
+  const act = async (action: "save" | "clear" | "test") => {
     setBusy(true); setMessage("");
     try {
-      if(action==="generate"||action==="test")await requireRealCallsAllowed(simulationEnabled);
-      if (action === "generate" && source === "mimo") {
-        const result=await invokeLive<{items:unknown[]}>("generate_daily_recommendations",{consent:true},simulationEnabled);
-        setMessage(`已生成 ${result.items.length} 个项目的中文介绍并缓存；今天不会重复调用。`);
-      } else if (action === "test" && source === "mimo") {
+      if(action==="test")await requireRealCallsAllowed(simulationEnabled);
+      if (action === "test" && source === "mimo") {
         await invoke("mimo_connection_status");
         setMessage("连接成功，2.6 Flash 模型可用；未调用付费推理。自动余额请在下方连接官方账户。");
       } else if (action === "test") {
@@ -38,7 +34,7 @@ function Connection({ source, connections, onChange,simulationEnabled=false }: {
       } else {
         if (action === "save") await saveCredential(source, secret.trim()); else await clearCredential(source);
         setSecret(""); setConfigured(action === "save");
-        onChange({ ...connections, [key]: action === "save", ...(source === "mimo" && action === "clear" ? {mimoDailyAuto:false} : {}), credentialRevision: Date.now() });
+        onChange({ ...connections, [key]: action === "save", credentialRevision: Date.now() });
         setMessage(action === "save" ? "凭据已安全保存" : "凭据已删除");
       }
     } catch (error) {
@@ -49,11 +45,10 @@ function Connection({ source, connections, onChange,simulationEnabled=false }: {
   return <details className="api-connection connection-card">
     <summary><strong>{name}</strong><span className="connection-state">{configured === null ? "正在检查保存状态" : configured ? "凭据已保存" : "未配置"}</span></summary>
     <div className="connection-card-body">
-    <p className="connection-purpose-note">{source === "anthropic" || source === "openai" ? "组织费用 · 需管理密钥，普通聊天密钥不适用。" : source === "mimo" ? "模型连接、付费推荐和账户余额。" : "账户余额 · 不发送聊天消息。"}</p>
+    <p className="connection-purpose-note">{source === "anthropic" || source === "openai" ? "组织费用 · 需管理密钥，普通聊天密钥不适用。" : source === "mimo" ? "模型连接验证和账户余额；每日推荐使用离线翻译。" : "账户余额 · 不发送聊天消息。"}</p>
     <label className="settings-toggle">{source === "mimo" ? "启用 MiMo 连接与本机用量读取" : "启用自动读取"}<input type="checkbox" checked={connections[key] === true} onChange={(event) => onChange({ ...connections, [key]: event.target.checked })} /></label>
     <label>{source === "anthropic" || source === "openai" ? "组织管理凭据" : "API 密钥"}<input type="password" autoComplete="new-password" value={secret} disabled={!isTauri() || busy} placeholder={configured ? "已保存 · 输入新凭据以替换" : "输入密钥，仅保存在本机"} onChange={(event) => setSecret(event.target.value)} /></label>
     <div className="settings-actions"><button disabled={!isTauri() || busy || !secret.trim()} onClick={() => void act("save")}>安全保存</button><button disabled={simulationEnabled || !isTauri() || busy || !configured} onClick={() => void act("test")}>读取验证</button>{configured && <button disabled={busy} onClick={() => void act("clear")}>删除凭据</button>}</div>
-    {source === "mimo" && <section className="connection-purpose"><h4>每日推荐 · 付费功能</h4><button disabled={simulationEnabled || !isTauri() || busy || !configured || !connections.mimoEnabled} onClick={() => void act("generate")}>生成今日中文介绍（付费，每日最多 1 次）</button><label className="settings-toggle">允许每天自动生成中文推荐（付费）<input type="checkbox" disabled={simulationEnabled || !connections.mimoEnabled || !configured} checked={connections.mimoDailyAuto === true} onChange={(event) => onChange({...connections,mimoDailyAuto:event.target.checked})}/></label><details className="settings-help"><summary>付费调用说明</summary><p>按量计费 API Key（sk-）。仅发送最多 8 个公开项目名和简介；每天最多 1 次请求，关闭深度思考，估算月费用上限 ¥1。失败当天不重试；桌面关闭时不调用。密钥只保存在本机。</p></details><button className="text-button" onClick={() => void openDailyLink("https://platform.xiaomimimo.com/","MiMo 官方余额").catch(() => setMessage("无法打开 MiMo 控制台"))}>查看 MiMo 官方余额 ↗</button></section>}
     <details className="settings-help"><summary>帮助与数据范围</summary><p>{source === "openai" ? "使用组织管理密钥读取官方今日和本月费用（UTC）；余额接口未公开，余额保持未知。缺少组织权限时会提示，不会把普通模型密钥误当账单凭据。" : source === "mimo" ? "API Key 用于模型调用；余额通过下方的官方账户登录连接。今日和本月仅本机推荐调用的人民币估算，不代表整个账户消费。" : source === "deepseek" ? "读取官方账户余额；今日和本月费用未知。" : "读取 Claude Console 组织的费用报告；需要有 Admin API 权限的凭据，个人账户和普通工作区密钥不适用。费用按 UTC 统计，不含 Priority Tier，可能延迟。"}</p><p>凭据保存在 Windows 凭据管理器，不随应用配置导出。</p></details>
     {source === "mimo" && <MimoBalanceConnection connections={connections} onChange={onChange} simulationEnabled={simulationEnabled}/>}
     {message && <small role="status">{message}</small>}
@@ -63,7 +58,7 @@ function Connection({ source, connections, onChange,simulationEnabled=false }: {
 
 export function ApiConnectionsSettings({ connections, onChange,simulationEnabled=false }: { connections: ApiConnectionSettings; onChange: (next: ApiConnectionSettings) => void;simulationEnabled?:boolean }) {
   return <div className="settings-section api-settings">
-    <LegacyCredentialImport simulationEnabled={simulationEnabled} onImported={() => onChange({...connections,mimoDailyAuto:false,credentialRevision:Date.now()})}/>
+    <LegacyCredentialImport simulationEnabled={simulationEnabled} onImported={() => onChange({...connections,credentialRevision:Date.now()})}/>
     {simulationEnabled&&<p role="status">模拟模式：真实生成和读取验证已暂停。</p>}
     {!isTauri()&&<small>账户连接需要 Windows 桌面程序。</small>}
     <Connection source="deepseek" connections={connections} onChange={onChange} simulationEnabled={simulationEnabled} />
@@ -91,7 +86,7 @@ export function LegacyCredentialImport({simulationEnabled=false,onImported}:{sim
   return <section className="connection-purpose" aria-label="旧版账号导入">
     {choice?<><div className="settings-actions"><button className="text-button" disabled={busy} onClick={()=>{setChoice("");setMessage("")}}>导入旧版账号…</button></div>{message&&<p role="status">{message}</p>}</>:<>
       <h4>发现本机旧版账号</h4><p>是否将 AgentRoom 的账号复制到 GleamDesk？已有账号不覆盖，旧版账号不删除。</p>
-      <details className="settings-help"><summary>导入范围</summary><p>请先退出旧 AgentRoom。导入 API、聊天、邮箱和 VPS 服务凭据；仅在本机复制，不测试连接、不启用自动付费推荐。设置、自选和历史记录继续保留。</p></details>
+      <details className="settings-help"><summary>导入范围</summary><p>请先退出旧 AgentRoom。导入 API、聊天和 VPS 服务凭据；仅在本机复制，不测试连接、不启用额外调用。设置、自选和历史记录继续保留。</p></details>
       <label className="settings-toggle">同意导入旧版账号<input type="checkbox" checked={consent} disabled={busy||simulationEnabled} onChange={event=>setConsent(event.target.checked)}/></label>
       <div className="settings-actions"><button disabled={!consent||busy||simulationEnabled} onClick={()=>void importAccounts()}>{busy?"正在导入…":"导入账号"}</button><button disabled={busy} onClick={()=>{setConsent(false);choose("skipped")}}>暂不导入</button></div>
       {message&&<small role="status">{message}</small>}

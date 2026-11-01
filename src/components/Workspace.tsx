@@ -4,12 +4,11 @@ import { invoke, isTauri } from "@tauri-apps/api/core";
 import { loadWebApps, saveWebApps, applyWebAppMetadata, subscribeWebApps,temporaryWebApp, type WebApp, type WebAppMetadata } from "../services/webAppStore";
 import { isWindowVisible, subscribeWindowVisibility } from "../services/windowVisibility";
 import { NewsWorkspace } from "./NewsWorkspace";
-import { MailWorkspace } from "./MailWorkspace";
 import { AgricultureWorkspace } from "./AgricultureWorkspace";
 import { MarketWorkspace } from "./MarketWorkspace";
 import { AgentRoom } from "./AgentRoom";
 import { WidgetErrorBoundary } from "../widgets/WidgetCard";
-const nativeModules=[{id:"market",name:"市场中心"},{id:"agriculture",name:"农业中心"},{id:"news",name:"新闻中心"},{id:"mail",name:"邮箱中心"},{id:"agents",name:"Agent Room"},{id:"webapps",name:"自定义网站"}];
+const nativeModules=[{id:"market",name:"市场中心"},{id:"agriculture",name:"农业中心"},{id:"news",name:"新闻中心"},{id:"agents",name:"Agent Room"},{id:"webapps",name:"自定义网站"}];
 let webviewQueue:Promise<unknown>=Promise.resolve();
 function webviewCommand<T=void>(command:string,args?:Record<string,unknown>):Promise<T>{const next=webviewQueue.catch(()=>{}).then(()=>invoke<T>(command,args));webviewQueue=next;return next;}
 export function Workspace({visible,covered=false,simulationEnabled=false,onManageWebApps,openAppRequest,openUrlRequest,navigationHidden=false,onSelectionChange}:{navigationHidden?:boolean;onSelectionChange?:(id:string)=>void;visible:boolean;covered?:boolean;simulationEnabled?:boolean;onManageWebApps:()=>void;openAppRequest?:{id:string;nonce:number};openUrlRequest?:{url:string;name:string;nonce:number}}) {
@@ -38,7 +37,7 @@ export function Workspace({visible,covered=false,simulationEnabled=false,onManag
     const open=(event:Event)=>{try{const {url,name}=(event as CustomEvent<{url:string;name:string}>).detail;const existing=apps.find(app=>app.url===url);if(existing){setSelected(existing.id);return;}setSourceApp(temporaryWebApp(url,name));setSelected("source-view");}catch(e){setError(e instanceof Error?e.message:"来源网页无法打开");}};
     window.addEventListener("codex-desktop.open-workspace-url",open);return()=>window.removeEventListener("codex-desktop.open-workspace-url",open);
   },[apps]);
-  return <section className={`workspace-layout${navigationHidden?" workbench-native-layout":""}`} data-no-page-swipe>{!navigationHidden&&<nav className="workspace-navigation glass" aria-label="工作区模块">{apps.filter(item=>item.id==="mues"&&item.surface!=="toolbox").map(item=><button key={item.id} aria-current={selected===item.id?"page":undefined} onClick={()=>setSelected(item.id)}><span>{item.icon?<img className="webapp-icon" src={item.icon} alt=""/>:"◉"}</span> {item.name}</button>)}{nativeModules.map(item=><button key={item.id} aria-current={selected===item.id?"page":undefined} onClick={()=>setSelected(item.id)}><span className="workspace-nav-icon">{{market:"▥",agriculture:"♧",news:"▤",mail:"✉",agents:"♧",webapps:"▦"}[item.id as "market"]}</span>{item.name}</button>)}<button onClick={onManageWebApps}>＋ 管理网站</button></nav>}
+  return <section className={`workspace-layout${navigationHidden?" workbench-native-layout":""}`} data-no-page-swipe>{!navigationHidden&&<nav className="workspace-navigation glass" aria-label="工作区模块">{apps.filter(item=>item.id==="mues"&&item.surface!=="toolbox").map(item=><button key={item.id} aria-current={selected===item.id?"page":undefined} onClick={()=>setSelected(item.id)}><span>{item.icon?<img className="webapp-icon" src={item.icon} alt=""/>:"◉"}</span> {item.name}</button>)}{nativeModules.map(item=><button key={item.id} aria-current={selected===item.id?"page":undefined} onClick={()=>setSelected(item.id)}><span className="workspace-nav-icon">{{market:"▥",agriculture:"♧",news:"▤",agents:"♧",webapps:"▦"}[item.id as "market"]}</span>{item.name}</button>)}<button onClick={onManageWebApps}>＋ 管理网站</button></nav>}
     <div ref={content} className="workspace-content glass">{selected==="agents"?<NativeWorkspaceModule id={selected} visible={visible&&windowVisible} simulationEnabled={simulationEnabled} agentIncoming={agentIncoming}/>:<WidgetErrorBoundary key={selected} widgetId={selected} recoverable>{app?<NativeWebApp app={app} visible={visible&&windowVisible} covered={covered}/>:selected==="webapps"?<section className="custom-webapps-panel"><header><h2>自定义网站</h2><button onClick={onManageWebApps}>管理网站</button></header><div>{apps.filter(item=>item.surface!=="toolbox"&&item.id!=="mues").map(item=><button key={item.id} onClick={()=>setSelected(item.id)}><strong>{item.icon&&<img className="webapp-icon" src={item.icon} alt=""/>}{item.name}</strong><small>{item.category} · {new URL(item.url).hostname}</small></button>)}<button onClick={onManageWebApps}>＋ 添加网站</button></div>{error&&<p role="alert">{error}</p>}</section>:<NativeWorkspaceModule id={selected} visible={visible&&windowVisible} simulationEnabled={simulationEnabled} agentIncoming={agentIncoming}/>}</WidgetErrorBoundary>}</div></section>;
 }
 
@@ -80,7 +79,6 @@ function NativeWebApp({app,visible,covered}:{app:WebApp;visible:boolean;covered:
 function NativeWorkspaceModule({id,visible,simulationEnabled,agentIncoming}:{id:string;visible:boolean;simulationEnabled:boolean;agentIncoming?:{id:number;topic:string}}) {
   if(id==="agents")return <AgentRoom incoming={agentIncoming} visible={visible} simulationEnabled={simulationEnabled}/>;
   if(id==="market")return <MarketWorkspace visible={visible&&!simulationEnabled}/>;
-  if(id==="mail")return <MailWorkspace visible={visible&&!simulationEnabled}/>;
   if(id==="agriculture")return <AgricultureWorkspace visible={visible&&!simulationEnabled}/>;
   if(id==="news")return <NewsWorkspace visible={visible&&!simulationEnabled}/>;
   const name=nativeModules.find(item=>item.id===id)?.name??"自定义工作区";

@@ -37,7 +37,7 @@
 .theme-white.dock-window .dock-pill{border-width:1px}
 :root:is(.theme-lavender,.theme-moss,.theme-white).dock-window .quick-launch-preview .dock-item:is(:hover,:focus-visible){background:rgba(var(--theme-accent-rgb),.12)!important}
 :root:is(.theme-lavender,.theme-moss,.theme-white) .dock-window .dock::before{background:linear-gradient(180deg,rgba(var(--theme-surface-rgb),.9),rgba(var(--theme-surface-rgb),.75))}
-.theme-white :is(.wb-empty,.ar-empty,.native-tool-body,.wb-mail-reader-body,.wb-design-page){color:var(--theme-fg)}
+.theme-white :is(.wb-empty,.ar-empty,.native-tool-body,.wb-design-page){color:var(--theme-fg)}
 .theme-white :is(.ar-error,.wb-notes-error,.ar-shortcuts-error){color:#9d2143!important}
 .theme-white .settings-hud-opacity-heading button{color:var(--theme-fg)}
 .theme-white :is(.wb-market-grid,.wb-agriculture-grid,.wb-resources){--green:#16784c;--research-positive:#16784c;--amber:#895900}
@@ -52,7 +52,7 @@
 /* Inner surfaces and controls must follow the same palette as their cards. */
 :root:is(.theme-lavender,.theme-moss,.theme-white) .workbench-dashboard :is(.research-table-head,.wb-stock-head,.wb-tool-search){background:var(--theme-page);color:var(--theme-muted);border-color:var(--theme-border)}
 :root:is(.theme-lavender,.theme-moss,.theme-white) .workbench-dashboard :is(.wb-eyebrow,.tool-type){background:rgba(var(--theme-accent-rgb),.1);color:var(--theme-link);border-color:var(--theme-border)}
-:root:is(.theme-lavender,.theme-moss,.theme-white) .workbench-dashboard :is(.page-tabs button[aria-current=page],.research-chart nav button[aria-pressed=true],.mail-accounts-panel button[aria-current=page],.workspace-navigation button[aria-current=page],.resource-view-switch button[aria-pressed=true]){background:rgba(var(--theme-accent-rgb),.12);color:var(--theme-link);border-color:var(--theme-border)}
+:root:is(.theme-lavender,.theme-moss,.theme-white) .workbench-dashboard :is(.page-tabs button[aria-current=page],.research-chart nav button[aria-pressed=true],.workspace-navigation button[aria-current=page],.resource-view-switch button[aria-pressed=true]){background:rgba(var(--theme-accent-rgb),.12);color:var(--theme-link);border-color:var(--theme-border)}
 :root:is(.theme-lavender,.theme-moss,.theme-white) .workbench-dashboard :is(.wb-card,.wb-feature,.widget-card,.wb-tool-card):is(:hover,:focus-within){border-color:var(--theme-border);box-shadow:var(--surface-shine),var(--surface-depth)}
 :root:is(.theme-lavender,.theme-moss,.theme-white) .workbench-dashboard .wb-source-badges span{color:var(--theme-link)}
 :root:is(.theme-lavender,.theme-moss,.theme-white) .workbench-dashboard .resource-fx-controls>button[aria-pressed=true]{color:var(--theme-link);background:rgba(var(--theme-accent-rgb),.1);border-color:var(--theme-border)}

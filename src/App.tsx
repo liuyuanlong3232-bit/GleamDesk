@@ -1,4 +1,3 @@
-import {OfflineTranslator} from "./components/OfflineTranslation";
 import {appThemes,applyTheme} from "./presentation/theme";
 import {CloseIcon} from "./components/CloseIcon";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -53,7 +52,6 @@ import { DashboardPageManager, WorkbenchRail } from "./components/DashboardAvata
 import { ToolboxWorkspace } from "./components/ToolboxWorkspace";
 import { PagedViewport } from "./components/PagedViewport";
 import { WebAppManager } from "./components/WebAppManager";
-import { MailConnections } from "./components/MailConnections";
 import { WebAppDiagnostics } from "./components/WebAppDiagnostics";
 import { Workspace } from "./components/Workspace";
 import { WorkbenchOverview, WorkbenchResources } from "./components/WorkbenchOverview";
@@ -427,7 +425,6 @@ function MainScreen({
 
   return (
     <main className="main-screen scenic">
-      <OfflineTranslator/>
       <div className="scenic-haze" />
       <header className="main-top">
         <StatusHud monitorId={monitors.find(monitor=>monitor.isPrimary)?.id??"primary"} open={islandOpen} animations={settings.animations} onDrag={()=>{setIslandOpen(false);setHudPinned(false)}} onLeave={()=>{if(!hudPinned)setIslandOpen(false)}}>
@@ -442,13 +439,12 @@ function MainScreen({
                 </span>
               </button>
             ))}
-            <button className="island-item" aria-label="打开离线翻译" title="离线翻译" onClick={()=>{setIslandOpen(false);setHudPinned(false);window.dispatchEvent(new Event("gleamdesk.open-translator"));}}><span className="island-symbol"><HudLogo id="translate" label="译"/></span></button>
             <HudWorkbenchButton expanded={islandOpen&&hudPinned&&islandPanel==="workbench"} busy={workbenchScreens.loading} onEnter={()=>{if(islandPanel!=="workbench"){setIslandOpen(false);setHudPinned(false);}}} onOpen={()=>void chooseWorkbenchScreen()}/>
             <AppUpdateIndicator enabled={settings.checkUpdatesOnStartup!==false&&!settings.simulationEnabled} onOpen={()=>onDashboardAt("settings:updates")}/>
           </div>
             <div className={`island-popover glass${hudPinned?"":" hud-peek"}${hudPinned&&islandPanel==="daily"?" hud-daily-panel":""}`} hidden={!islandOpen} data-main-hit-region>
               {!hudPinned&&<><strong className="popover-title">{islandItems.find(item=>item.id===islandPanel)?.label}</strong><p className="hud-source-note">{[islandItems.find(item=>item.id===islandPanel)?.value,islandItems.find(item=>item.id===islandPanel)?.meta].filter(Boolean).join(" · ")}</p></>}
-              <DailyOpenSource connections={settings.apiConnections} enabled={!settings.simulationEnabled} presentation="hud" hidden={!islandOpen||!hudPinned||islandPanel!=="daily"} onClose={()=>{setIslandOpen(false);setHudPinned(false)}}/>
+              <DailyOpenSource enabled={!settings.simulationEnabled} presentation="hud" hidden={!islandOpen||!hudPinned||islandPanel!=="daily"} onClose={()=>{setIslandOpen(false);setHudPinned(false)}}/>
               {hudPinned&&islandPanel==="workbench"&&<><strong className="popover-title">打开工作台</strong>{workbenchScreens.loading?<p className="hud-source-note" role="status">正在检测屏幕…</p>:workbenchScreens.error?<><p className="hud-source-note" role="alert">{workbenchScreens.error}</p><button className="text-button" onClick={()=>void chooseWorkbenchScreen()}>重新检测</button></>:<div className="hud-screen-options"><button onClick={()=>openWorkbenchScreen(true)}>主屏</button>{workbenchScreens.hasSecondary&&<button onClick={()=>openWorkbenchScreen(false)}>副屏</button>}</div>}</>}
               <div hidden={!hudPinned||islandPanel==="daily"||islandPanel==="workbench"}>
               {(hudClient||hudAgent) && <><strong className="popover-title">{hudClient?.name??hudAgent?.name??"Agent"}</strong>{islandPanel==="ollama"?<div className="popover-row"><span>本地服务</span><strong>{displayData.localAI?.serviceStatus==="online"?"在线":displayData.localAI?.serviceStatus==="offline"?"离线":"未知"}</strong></div>:<HudQuotaDetails provider={hudAgent}/>} {hudAgent&&<button className="text-button" onClick={() => openPanel("codex")}>查看额度 →</button>}</>}
@@ -1019,7 +1015,6 @@ function Dashboard({
           agents:(<AgentConnectionsSettings enabled={settings.apiConnections.localAgentUsageEnabled===true} onEnabledChange={enabled=>onSettingsChange({apiConnections:{...settings.apiConnections,localAgentUsageEnabled:enabled}})}/>),
           api: (<ApiConnectionsSettings connections={settings.apiConnections} simulationEnabled={settings.simulationEnabled} onChange={(apiConnections) => onSettingsChange({ apiConnections })} />),
           analysis: (<><AnalysisConnectionsSettings settings={settings.remoteAnalysis} onChange={(remoteAnalysis) => onSettingsChange({ remoteAnalysis })} /><button className="action-button" onClick={()=>window.dispatchEvent(new Event("codex-desktop.open-history-analysis"))}>打开历史分析</button></>),
-          mail: (<MailConnections/>),
           webapps: (<WebAppManager/>),
           data: (<DataSourceConnectionsSettings/>),
           beszel: (<div className="settings-section beszel-settings"><strong>Beszel VPS 连接</strong>

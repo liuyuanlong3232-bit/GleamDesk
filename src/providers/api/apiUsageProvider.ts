@@ -15,7 +15,7 @@ interface BackendSnapshot {
   }>;
   observedAt: string;
 }
-export const defaultApiConnections: ApiConnectionSettings = { deepseekEnabled: false, anthropicEnabled: false, openaiEnabled: false, mimoEnabled: false, mimoDailyAuto: false, credentialRevision: 0 };
+export const defaultApiConnections: ApiConnectionSettings = { deepseekEnabled: false, anthropicEnabled: false, openaiEnabled: false, mimoEnabled: false, credentialRevision: 0 };
 const names = { deepseek: "DeepSeek", anthropic: "Anthropic API", mimo: "MiMo", openai: "OpenAI API" };
 const sourceUrls = { deepseek: "https://api.deepseek.com/user/balance", anthropic: "https://api.anthropic.com/v1/organizations/cost_report", mimo: "https://platform.xiaomimimo.com/", openai: "https://api.openai.com/v1/organization/costs" };
 

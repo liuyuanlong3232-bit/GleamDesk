@@ -13,7 +13,7 @@
 .workbench-dashboard :is(button,input,textarea,select){color:inherit}
 .workbench-dashboard :is(button,input,textarea,select):focus-visible{outline:2px solid var(--theme-accent,#e0576d);outline-offset:3px}
 .workbench-dashboard small{color:var(--glass-text-muted)}
-.workbench-dashboard :is(.glass,.widget-card,.research-stat,.room-side-box,.mail-risk-panel,.mail-accounts-panel,.mail-inbox-panel,.mail-detail-panel){background:var(--theme-surface,#141419);border:1px solid var(--line);box-shadow:inset 0 1px rgba(var(--theme-line-rgb,255,255,255),.035),0 12px 30px rgba(0,0,0,.17);backdrop-filter:none;color:var(--glass-text-primary)}
+.workbench-dashboard :is(.glass,.widget-card,.research-stat,.room-side-box){background:var(--theme-surface,#141419);border:1px solid var(--line);box-shadow:inset 0 1px rgba(var(--theme-line-rgb,255,255,255),.035),0 12px 30px rgba(0,0,0,.17);backdrop-filter:none;color:var(--glass-text-primary)}
 .workbench-dashboard :is(.action-button,.research-heading>button,.module-heading>button,.native-tool>header>button,.research-segments button,.news-category-tabs button,.workbench-page-heading button){border:1px solid var(--line);border-radius:11px;padding:8px 13px;background:rgba(var(--theme-line-rgb,255,255,255),.045);color:var(--glass-text-secondary);font-size:12px;cursor:pointer}
 .workbench-dashboard :is(.research-segments button[aria-pressed=true],.news-category-tabs button[aria-pressed=true],.tool-card>button,.room-send,.workbench-page-heading>div>button:last-child){background:var(--theme-accent,#c2263f);border-color:rgba(var(--theme-line-rgb,255,255,255),.08);color:var(--theme-fg,#fff);box-shadow:0 6px 18px rgba(var(--theme-accent-rgb,194,38,63),.15)}
 .workbench-dashboard button:disabled{opacity:.42;cursor:default;box-shadow:none}
@@ -59,7 +59,7 @@
 .workbench-dashboard :is(.provider-row,.compact-provider-row,.api-row,.health-event,.notification-row){border-color:var(--line)}
 .workbench-dashboard .workspace-layout.workbench-native-layout{grid-template-columns:minmax(0,1fr);gap:0}
 .workbench-dashboard .workspace-layout.workbench-native-layout>.workspace-content{border:0;background:transparent;box-shadow:none;overflow:hidden;border-radius:0}
-.workbench-dashboard .research-workspace,.workbench-dashboard .news-workspace,.workbench-dashboard .mail-hub,.workbench-dashboard .agent-room-studio{padding:0;gap:20px}
+.workbench-dashboard .research-workspace,.workbench-dashboard .news-workspace,.workbench-dashboard .agent-room-studio{padding:0;gap:20px}
 .workbench-dashboard .research-heading{min-height:48px;align-items:center;flex-shrink:0}
 .workbench-dashboard :is(.research-heading h2,.module-heading h2){font-size:28px;font-weight:700;line-height:1.3;letter-spacing:.02em}
 .workbench-dashboard .research-heading>small{font-size:12px;max-width:58%;text-align:right}
@@ -106,15 +106,6 @@
 .workbench-dashboard .module-heading{min-height:56px}
 .workbench-dashboard .module-heading p{font-size:12px;color:var(--theme-muted,#aaa3ad)}
 .workbench-dashboard .module-heading-icon{color:var(--theme-link,#e0576d);background:rgba(var(--theme-accent-rgb,194,38,63),.1);border-radius:13px}
-.workbench-dashboard .mail-account-card{border-color:var(--line);border-radius:14px;background:var(--theme-surface,#141419)}
-.workbench-dashboard .mail-account-card[aria-pressed=true]{border-color:rgba(var(--theme-accent-rgb,194,38,63),.5);background:rgba(var(--theme-accent-rgb,194,38,63),.08)}
-.workbench-dashboard .mail-total-bar{background:var(--theme-surface,#141419);border-color:var(--line);color:var(--theme-muted,#aaa3ad)}
-.workbench-dashboard .mail-three-pane{gap:16px;grid-template-columns:175px minmax(280px,.9fr) minmax(330px,1.15fr)}
-.workbench-dashboard .mail-accounts-panel{padding:16px}
-.workbench-dashboard .mail-accounts-panel button[aria-current=page]{background:rgba(var(--theme-accent-rgb,194,38,63),.12);color:#eda4b2}
-.workbench-dashboard .mail-message-list>button{border-color:var(--line);color:var(--theme-muted,#cbc5ca)}
-.workbench-dashboard .mail-message-list>button[aria-pressed=true]{background:rgba(var(--theme-accent-rgb,194,38,63),.12)}
-.workbench-dashboard .mail-detail-scroll pre{font-size:14px;line-height:1.75;color:var(--theme-muted,#cbc5ca)}
 .workbench-dashboard .room-mode-bar{padding:0;background:transparent;border:0;border-bottom:1px solid var(--line);border-radius:0;gap:14px}
 .workbench-dashboard .room-mode-bar>nav>button{border-radius:0;padding:12px 14px;border:0;border-bottom:3px solid transparent;background:transparent;color:var(--theme-muted,#aaa3ad)}
 .workbench-dashboard .room-mode-bar>nav>button[aria-pressed=true]{background:transparent;border-bottom-color:var(--theme-accent,#c2263f);color:var(--theme-fg,#fff)}
@@ -171,7 +162,6 @@
  .workbench-dashboard :is(.research-stat){padding:14px}
  .workbench-dashboard .research-stat b{font-size:22px}
  .workbench-dashboard .news-main-columns{grid-template-columns:165px minmax(0,1fr) 245px;gap:14px}
- .workbench-dashboard .mail-three-pane{grid-template-columns:150px minmax(220px,.9fr) minmax(270px,1.15fr);gap:12px}
  .workbench-dashboard .room-studio-columns{grid-template-columns:minmax(0,1fr) 275px;gap:16px}
 }
 @media(max-height:850px){
@@ -302,5 +292,3 @@
 .workbench-dashboard .wb-inspections-warning{display:block;margin-top:4px;color:var(--theme-muted);font-size:12px;white-space:normal}
 
 .workbench-dashboard .wb-feature .wb-feature-source-note{display:block;margin-top:6px}
-
-.wb-mail-list-panel>header>button{flex-shrink:0;white-space:nowrap;min-width:64px}.wb-mail-list-panel>header>div{min-width:0}

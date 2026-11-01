@@ -662,12 +662,3 @@ mod tests {
         let _ = fs::remove_file(path);
     }
 }
-
-#[cfg(windows)]
-pub(crate) fn open_public_url(value:&str)->Result<(),String>{
-    let url=tauri::Url::parse(value).map_err(|_|"OAuth授权网址无效")?;
-    if url.scheme()!="https"||!matches!(url.host_str(),Some("accounts.google.com"|"login.microsoftonline.com"))||!url.username().is_empty()||url.password().is_some(){return Err("OAuth授权目标不在官方白名单中".into());}
-    let operation:Vec<u16>="open".encode_utf16().chain(Some(0)).collect();let target:Vec<u16>=value.encode_utf16().chain(Some(0)).collect();
-    let result=unsafe{windows_sys::Win32::UI::Shell::ShellExecuteW(std::ptr::null_mut(),operation.as_ptr(),target.as_ptr(),std::ptr::null(),std::ptr::null(),1)} as isize;
-    if result>32{Ok(())}else{Err("无法打开系统浏览器，请检查默认浏览器配置".into())}
-}

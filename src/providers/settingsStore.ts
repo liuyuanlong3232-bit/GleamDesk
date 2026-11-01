@@ -36,7 +36,7 @@ export const defaultSettings: AppSettings = {
   beszelRefreshIntervalSeconds: 30,
   beszelCredentialRevision: 0,
   notificationPreferences: normalizeNotificationPreferences(null),
-  apiConnections: { localAgentUsageEnabled: false, deepseekEnabled: false, anthropicEnabled: false, openaiEnabled: false, mimoEnabled: false, mimoDailyAuto: false, credentialRevision: 0 },
+  apiConnections: { localAgentUsageEnabled: false, deepseekEnabled: false, anthropicEnabled: false, openaiEnabled: false, mimoEnabled: false, credentialRevision: 0 },
   remoteAnalysis: normalizeRemoteAnalysisSettings(null),
 };
 
@@ -81,8 +81,6 @@ export function loadSettings(): AppSettings {
         anthropicEnabled: value.apiConnections?.anthropicEnabled === true,
         mimoEnabled: value.apiConnections?.mimoEnabled === true,
         openaiEnabled: value.apiConnections?.openaiEnabled === true,
-        // Only the namespace transition requires renewed paid consent; subsequent upgrades keep it.
-        mimoDailyAuto: value.credentialNamespaceVersion === 1 && value.apiConnections?.mimoDailyAuto === true,
         credentialRevision: clamp(value.apiConnections?.credentialRevision, 0, Number.MAX_SAFE_INTEGER, 0),
       },
     };

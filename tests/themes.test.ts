@@ -9,8 +9,8 @@ test("four themes are explicit; unknown and legacy themes keep the burgundy fall
 test("every theme round-trips without changing data connections, transparency or limits",()=>{
  const values=new Map<string,string>();Object.defineProperty(globalThis,"localStorage",{configurable:true,value:{getItem:(key:string)=>values.get(key)??null,setItem:(key:string,value:string)=>{values.set(key,value);}}});
  for(const theme of appThemes){
-  saveSettings({...defaultSettings,theme:theme.id,accent:"ignored",opacity:73,hudBackgroundOpacity:61,animations:false,beszelRefreshIntervalSeconds:120,apiConnections:{...defaultSettings.apiConnections,mimoDailyAuto:false}});
-  const actual=loadSettings();assert.equal(actual.theme,theme.id);assert.equal(actual.accent,theme.accent);assert.equal(actual.opacity,73);assert.equal(actual.hudBackgroundOpacity,61);assert.equal(actual.animations,false);assert.equal(actual.beszelRefreshIntervalSeconds,120);assert.equal(actual.apiConnections.mimoDailyAuto,false);
+  saveSettings({...defaultSettings,theme:theme.id,accent:"ignored",opacity:73,hudBackgroundOpacity:61,animations:false,beszelRefreshIntervalSeconds:120,apiConnections:{...defaultSettings.apiConnections}});
+  const actual=loadSettings();assert.equal(actual.theme,theme.id);assert.equal(actual.accent,theme.accent);assert.equal(actual.opacity,73);assert.equal(actual.hudBackgroundOpacity,61);assert.equal(actual.animations,false);assert.equal(actual.beszelRefreshIntervalSeconds,120);assert.equal("mimoDailyAuto" in actual.apiConnections,false);
  }
 });
 test("switching theme replaces previous classes and keeps window and motion classes",()=>{

@@ -42,7 +42,6 @@ const request={id:'test',scope:'direct-DeepSeek',text:'你好',provider:'DeepSee
 
 test('模拟下原生Room服务不触发发送IPC',async()=>{const f=fixture(true),{nativeWorkspace}=f.load('src/services/roomWorkspace.ts');let sent=0;const service=nativeWorkspace(async()=>{sent++;return{}});await assert.rejects(service.send(request),/模拟/);assert.equal(sent,0)});
 test('正常模式仍保留Room原来的发送参数',async()=>{const f=fixture(false),{nativeWorkspace}=f.load('src/services/roomWorkspace.ts');let sent;const service=nativeWorkspace(async(command,args)=>{sent={command,args};return{}});await service.send(request);assert.equal(sent.command,'agent_room_workspace_send');assert.equal(sent.args.request,request)});
-test('模拟模式的设置生成入口即使直接调用事件也不发送',async()=>{const f=fixture(true),{__Connection:Connection}=f.load('src/components/ApiConnectionsSettings.tsx');const props={source:'mimo',connections:{mimoEnabled:true,credentialRevision:0},onChange(){},simulationEnabled:true};let tree=f.render(()=>Connection(props));await f.flush();tree=f.render(()=>Connection(props));const button=elements(tree,'button').find(n=>text(n).includes('生成今日中文介绍'));assert.ok(button);assert.equal(button.props.disabled,true);await button.props.onClick();await f.flush();assert.equal(f.calls.filter(c=>c.command==='generate_daily_recommendations').length,0)});
 test('模拟模式的Room按钮和快捷键都保留草稿且不发送',async()=>{
   const f=fixture(true),{blankWorkspace}=f.load('src/services/roomWorkspace.ts'),{AgentRoom}=f.load('src/components/AgentRoom.tsx');
   f.storage.setItem('codex-desktop.agent-room-current.v1','direct-DeepSeek');const snapshot=blankWorkspace();snapshot.models[0].connected=true;let sent=0;
@@ -53,7 +52,7 @@ test('模拟模式的Room按钮和快捷键都保留草稿且不发送',async()=
 });
 test('主屏和设置把模拟状态传给真实调用入口',()=>{const app=readFileSync('src/App.tsx','utf8'),workspace=readFileSync('src/components/Workspace.tsx','utf8');assert.match(app,/<ApiConnectionsSettings[^>]*simulationEnabled=/);assert.match(workspace,/<AgentRoom[^>]*simulationEnabled=/)});
 test('后端各推理入口在读凭据和写消息前检查统一闸门',()=>{
-  for(const[file,name]of[['agent_room_workspace.rs','agent_room_workspace_send'],['agent_room.rs','agent_room_chat_send'],['agent_room.rs','agent_room_reply'],['daily_recommendations.rs','generate_daily_recommendations'],['analysis.rs','analyze_history_remote']]){
+  for(const[file,name]of[['agent_room_workspace.rs','agent_room_workspace_send'],['agent_room.rs','agent_room_chat_send'],['agent_room.rs','agent_room_reply'],['analysis.rs','analyze_history_remote']]){
     const source=readFileSync('src-tauri/src/'+file,'utf8');const start=source.indexOf('pub async fn '+name+'(');assert.ok(start>=0);const prefix=source.slice(start,source.indexOf('spawn_blocking',start));assert.match(prefix,/simulation::require_live\(\)/,name);
   }
 });
@@ -64,8 +63,6 @@ test('开启再关闭模拟不能复活等待中的旧发送',async()=>{
  const initial=policy.syncSimulationMode(false);await f.flush();let sent=0;const pending=nativeWorkspace(async()=>{sent++;return{}}).send(request);const rejected=assert.rejects(pending,/模拟/);
  f.setMode(true);const on=policy.syncSimulationMode(true);f.setMode(false);const off=policy.syncSimulationMode(false);release();await initial;await f.flush();release();await on;await f.flush();release();await off;await rejected;assert.equal(sent,0);
 });
-test('自动推荐调用复用隔离服务，不在模拟中发送',async()=>{const f=fixture(true),{invokeLive}=f.load('src/services/simulationSafety.ts');await assert.rejects(invokeLive('generate_daily_recommendations',{consent:true}),/模拟/);assert.equal(f.calls.length,0);assert.match(readFileSync('src/components/DailyOpenSource.tsx','utf8'),/invokeLive<unknown>\("generate_daily_recommendations"/)});
-test('正常模式推荐生成仍只发送一次',async()=>{const f=fixture(false),{__Connection:Connection}=f.load('src/components/ApiConnectionsSettings.tsx');const props={source:'mimo',connections:{mimoEnabled:true,credentialRevision:0},onChange(){},simulationEnabled:false};let tree=f.render(()=>Connection(props));await f.flush();tree=f.render(()=>Connection(props));const button=elements(tree,'button').find(n=>text(n).includes('生成今日中文介绍'));assert.equal(button.props.disabled,false);button.props.onClick();await f.flush();assert.equal(f.calls.filter(c=>c.command==='generate_daily_recommendations').length,1)});
 
 test('模拟设置尚未落盘时，余额登录连接和刷新仍被界面状态拦截',async()=>{
  const f=fixture(false),{__Balance:Balance}=f.load('src/components/ApiConnectionsSettings.tsx');const props={connections:{credentialRevision:0},onChange(){},simulationEnabled:true};
@@ -74,10 +71,10 @@ test('模拟设置尚未落盘时，余额登录连接和刷新仍被界面状�
  assert.equal(f.calls.length,0);
 });
 
-test('每日推荐卡片的生成和刷新事件不能绕过模拟停用',async()=>{
+test('每日推荐卡片的刷新事件不能绕过模拟停用',async()=>{
  const f=fixture(false),{DailyOpenSource}=f.load('src/components/DailyOpenSource.tsx');
  const tree=f.render(()=>DailyOpenSource({connections:{mimoEnabled:true,mimoDailyAuto:true},enabled:false}));
- tree.props.onGenerate();tree.props.onRefresh();await f.flush();assert.equal(f.calls.length,0);
+ tree.props.onRefresh();await f.flush();assert.equal(f.calls.length,0);
 });
 
 test('自动推荐等待读取榜单时开启模拟，不再跟发付费生成',async()=>{
@@ -87,4 +84,13 @@ test('自动推荐等待读取榜单时开启模拟，不再跟发付费生成',
  assert.equal(typeof release,'function');f.setMode(true);
  release({schemaVersion:1,source:'GitHub Trending',date:beijingDate(),collectedAt:new Date().toISOString(),items:[{repo:'test/project',url:'https://github.com/test/project',description:'mock',language:'TS',stars:'1',todayStars:'1'}],translationStatus:'pending',status:'ok'});
  await f.flush();assert.equal(f.calls.filter(c=>c.command==='generate_daily_recommendations').length,0);
+});
+
+test('推荐与设置均不再提供付费翻译入口',async()=>{
+ const f=fixture(false),{__Connection:Connection}=f.load('src/components/ApiConnectionsSettings.tsx');
+ const props={source:'mimo',connections:{mimoEnabled:true},onChange(){},simulationEnabled:false};
+ let tree=f.render(()=>Connection(props));await f.flush();tree=f.render(()=>Connection(props));
+ assert.ok(!elements(tree,'button').some(node=>text(node).includes('生成今日中文介绍')));
+ const source=readFileSync('src/components/DailyOpenSource.tsx','utf8');assert.doesNotMatch(source,/generate_daily_recommendations|mimoDailyAuto/);
+ assert.doesNotMatch(readFileSync('src-tauri/src/lib.rs','utf8'),/generate_daily_recommendations|mail_read_snapshot|mail_oauth/);
 });

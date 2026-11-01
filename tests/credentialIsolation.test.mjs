@@ -30,7 +30,7 @@ const button=(tree,label)=>elements(tree,'button').find(b=>text(b)===label);
 test('fresh profiles remain unconfigured; existing watchlist and history storage are untouched',()=>{
   const f=fixture(),store=f.load('src/providers/settingsStore.ts');
   const before=JSON.stringify([...f.values]);const settings=store.loadSettings();
-  assert.equal(settings.credentialNamespaceVersion,1);assert.equal(settings.apiConnections.deepseekEnabled,false);assert.equal(settings.apiConnections.mimoDailyAuto,false);
+  assert.equal(settings.credentialNamespaceVersion,1);assert.equal(settings.apiConnections.deepseekEnabled,false);assert.equal(settings.apiConnections.mimoDailyAuto,undefined);
   assert.equal(settings.apiConnections.localAgentUsageEnabled,false);
   assert.equal(settings.checkUpdatesOnStartup,true);
   assert.equal(JSON.stringify([...f.values]),before);
@@ -40,7 +40,7 @@ test('existing profiles need a separate local AI read choice without erasing pre
   const f=fixture({settings:{credentialNamespaceVersion:1,displayName:'fixture user',apiConnections:{deepseekEnabled:true,mimoDailyAuto:true}}});
   const store=f.load('src/providers/settingsStore.ts'),settings=store.loadSettings();
   assert.equal(settings.apiConnections.localAgentUsageEnabled,false);
-  assert.equal(settings.apiConnections.deepseekEnabled,true);assert.equal(settings.apiConnections.mimoDailyAuto,true);assert.equal(settings.displayName,'fixture user');
+  assert.equal(settings.apiConnections.deepseekEnabled,true);assert.equal(settings.apiConnections.mimoDailyAuto,undefined);assert.equal(settings.displayName,'fixture user');
   for(const enabled of [true,false]){settings.apiConnections.localAgentUsageEnabled=enabled;store.saveSettings(settings);assert.equal(store.loadSettings().apiConnections.localAgentUsageEnabled,enabled);}
 });
 
@@ -50,17 +50,17 @@ test('startup update checking preserves a saved opt-out and defaults on for olde
     assert.equal(settings.checkUpdatesOnStartup,preference!==false);store.saveSettings(settings);assert.equal(store.loadSettings().checkUpdatesOnStartup,preference!==false);assert.equal(settings.displayName,'fixture user');
   }
 });
-test('namespace transition keeps preferences and connections but requires renewed automatic-paid consent',()=>{
+test('namespace transition keeps preferences and connections but ignores removed automatic translation consent',()=>{
   const f=fixture({settings:{displayName:'fixture user',theme:'ocean',beszelUrl:'http://127.0.0.1:8090',apiConnections:{deepseekEnabled:true,mimoEnabled:true,mimoDailyAuto:true}}});
   f.values.set('codex-desktop.market-watchlist.v1','synthetic watchlist');f.values.set('history-fixture','synthetic history');
   const store=f.load('src/providers/settingsStore.ts'),settings=store.loadSettings();
-  assert.equal(settings.displayName,'fixture user');assert.equal(settings.beszelUrl,'http://127.0.0.1:8090');assert.equal(settings.apiConnections.deepseekEnabled,true);assert.equal(settings.apiConnections.mimoEnabled,true);assert.equal(settings.apiConnections.mimoDailyAuto,false);
+  assert.equal(settings.displayName,'fixture user');assert.equal(settings.beszelUrl,'http://127.0.0.1:8090');assert.equal(settings.apiConnections.deepseekEnabled,true);assert.equal(settings.apiConnections.mimoEnabled,true);assert.equal(settings.apiConnections.mimoDailyAuto,undefined);
   store.saveSettings(settings);assert.equal(f.values.get('codex-desktop.market-watchlist.v1'),'synthetic watchlist');assert.equal(f.values.get('history-fixture'),'synthetic history');
 });
-test('subsequent GleamDesk updates preserve saved credentials marker and renewed paid setting',()=>{
+test('subsequent GleamDesk updates preserve saved credentials marker and drops the removed paid translation setting',()=>{
   const f=fixture({settings:{credentialNamespaceVersion:1,apiConnections:{mimoEnabled:true,mimoDailyAuto:true,credentialRevision:123}}});
   const store=f.load('src/providers/settingsStore.ts'),settings=store.loadSettings();store.saveSettings(settings);const reloaded=store.loadSettings();
-  assert.equal(reloaded.apiConnections.mimoDailyAuto,true);assert.equal(reloaded.apiConnections.credentialRevision,123);assert.equal(reloaded.credentialNamespaceVersion,1);
+  assert.equal(reloaded.apiConnections.mimoDailyAuto,undefined);assert.equal(reloaded.apiConnections.credentialRevision,123);assert.equal(reloaded.credentialNamespaceVersion,1);
 });
 test('no legacy account means no import prompt or import call',async()=>{
   const f=fixture({legacy:false});f.render();await f.flush();assert.equal(f.render(),null);assert.deepEqual(f.calls,['inspect']);

@@ -153,29 +153,19 @@ fn legacy_destination(target:&str)->Option<String>{
         "Anthropic.AdminKey","OpenAI.AdminKey","DeepSeek.InferenceKey","Anthropic.InferenceKey","DeepSeek.AgentRoomKey"];
     let room=suffix.strip_prefix("AgentRoom.").and_then(|s|s.strip_suffix(".ApiKey"))
         .is_some_and(|p|["DeepSeek","GPT","Gemini","Claude","Qwen","Kimi","Grok","豆包","MiMo"].contains(&p));
-    let mail=suffix.strip_prefix("Mail.").is_some_and(|s|{
-        let Some((provider,part))=s.split_once('.')else{return false};
-        ["gmail","outlook","netease","qq"].contains(&provider)
-            && (part=="Part0"||(0..=1).any(|bank|(1..=5).any(|index|part==format!("Bank{bank}.Part{index}"))))
-    });
     let service=suffix.strip_prefix("VpsService.").and_then(|s|s.split_once('.')).is_some_and(|(kind,endpoint)|
         ["3x-ui","sing-box"].contains(&kind)&&!endpoint.is_empty()&&endpoint.len()<=1000
             &&endpoint.len()%2==0&&endpoint.bytes().all(|b|b.is_ascii_hexdigit()));
-    (fixed.contains(&suffix)||room||mail||service).then(||format!("GleamDesk.{suffix}"))
+    (fixed.contains(&suffix)||room||service).then(||format!("GleamDesk.{suffix}"))
 }
 
 fn import_legacy_with(targets:&[String],consent:bool,mut exists:impl FnMut(&str)->Result<bool,String>,mut copy:impl FnMut(&str,&str)->Result<(),String>)->Result<usize,String>{
     if !consent{return Err("请先确认导入旧版账号".into())}
-    // Protect an entire mail account if GleamDesk already has its metadata, including its chunk banks.
-    let mut protected_mail=Vec::new();
-    for provider in ["gmail","outlook","netease","qq"]{
-        if exists(&format!("GleamDesk.Mail.{provider}.Part0"))?{protected_mail.push(format!("GleamDesk.Mail.{provider}."));}
-    }
-    let mut ordered=targets.to_vec();ordered.sort_by_key(|s|(s.ends_with(".Part0"),s.clone()));ordered.dedup();
+    let mut ordered=targets.to_vec();ordered.sort();ordered.dedup();
     let mut copied=0;
     for old in &ordered{
         let Some(new)=legacy_destination(old)else{continue};
-        if protected_mail.iter().any(|prefix|new.starts_with(prefix))||exists(&new)?{continue}
+        if exists(&new)?{continue}
         copy(old,&new).map_err(|_|format!("导入中止，已复制 {copied} 项；旧账号未删除，已有账号未覆盖，可重试"))?;
         copied+=1;
     }
@@ -225,8 +215,6 @@ pub fn credential_import_legacy(view:tauri::Webview,consent:bool)->Result<usize,
     require_local_settings(&view)?;
     if !consent{return Err("请先确认导入旧版账号".into())}
     #[cfg(windows)]{
-        // Keep the existing mail-save lock order; never import between bank and metadata writes.
-        let _mail_lock=crate::mail::CREDENTIAL_LOCK.lock().map_err(|_|"邮箱凭据正在保存，请稍后重试")?;
         let _lock=WRITING.lock().map_err(|_|"凭据正在保存，请稍后重试")?;
         import_legacy_with(&legacy_targets()?,consent,exists_named,|old,new|{
             let secret=read_named(old)?;save_unlocked(new,secret.as_str())
@@ -271,10 +259,10 @@ mod tests {
     }
     #[test]
     fn import_allowlist_excludes_other_apps_and_malformed_targets(){
-        for target in ["CodexDesktop.DeepSeek.ApiKey","CodexDesktop.MiMo.ConsoleSession","CodexDesktop.AgentRoom.豆包.ApiKey","CodexDesktop.Mail.gmail.Bank1.Part5","CodexDesktop.Mail.qq.Part0","CodexDesktop.VpsService.3x-ui.6874747073"]{
+        for target in ["CodexDesktop.DeepSeek.ApiKey","CodexDesktop.MiMo.ConsoleSession","CodexDesktop.AgentRoom.豆包.ApiKey","CodexDesktop.VpsService.3x-ui.6874747073"]{
             assert!(legacy_destination(target).unwrap().starts_with("GleamDesk."));
         }
-        for target in ["OtherApp.MiMo.ApiKey","CodexDesktop.Unknown.Secret","CodexDesktop.Mail.gmail.Bank0.Part6","CodexDesktop.Mail.qq.Part1","CodexDesktop.VpsService.3x-ui.not-hex","CodexDesktop.AgentRoom.Ollama.ApiKey"]{
+        for target in ["OtherApp.MiMo.ApiKey","CodexDesktop.Unknown.Secret","CodexDesktop.Mail.gmail.Bank1.Part5","CodexDesktop.Mail.qq.Part0","CodexDesktop.Mail.gmail.Bank0.Part6","CodexDesktop.Mail.qq.Part1","CodexDesktop.VpsService.3x-ui.not-hex","CodexDesktop.AgentRoom.Ollama.ApiKey"]{
             assert!(legacy_destination(target).is_none());
         }
     }
@@ -296,16 +284,10 @@ mod tests {
         assert_eq!(store.borrow()["GleamDesk.MiMo.ApiKey"],"old-mimo");
     }
     #[test]
-    fn import_never_overwrites_banks_of_an_existing_mail_account(){
-        let targets=vec!["CodexDesktop.Mail.gmail.Part0".into(),"CodexDesktop.Mail.gmail.Bank0.Part1".into()];
-        assert_eq!(import_legacy_with(&targets,true,|key|Ok(key=="GleamDesk.Mail.gmail.Part0"),|_,_|panic!("must preserve all banks")).unwrap(),0);
-    }
-    #[test]
-    fn import_writes_mail_metadata_last_and_stops_on_failure(){
-        let targets=vec!["CodexDesktop.Mail.qq.Part0".into(),"CodexDesktop.Mail.qq.Bank0.Part1".into(),"CodexDesktop.Mail.qq.Bank0.Part2".into()];
-        let mut copied=Vec::new();
-        import_legacy_with(&targets,true,|_|Ok(false),|old,_|{copied.push(old.to_string());Ok(())}).unwrap();
-        assert_eq!(copied.last().unwrap(),"CodexDesktop.Mail.qq.Part0");
+    fn removed_mail_targets_are_not_imported_and_failures_stay_redacted(){
+        let removed=vec!["CodexDesktop.Mail.qq.Part0".into(),"CodexDesktop.Mail.qq.Bank0.Part1".into()];
+        assert_eq!(import_legacy_with(&removed,true,|_|Ok(false),|_,_|panic!("removed mail targets must not be copied")).unwrap(),0);
+        let targets=vec!["CodexDesktop.DeepSeek.ApiKey".into(),"CodexDesktop.MiMo.ApiKey".into()];
         let mut attempts=0;
         let error=import_legacy_with(&targets,true,|_|Ok(false),|_,_|{attempts+=1;Err("sensitive backend error".into())}).unwrap_err();
         assert_eq!(attempts,1);assert!(error.contains("已复制 0 项"));assert!(!error.contains("sensitive"));
