@@ -43,7 +43,7 @@ export function DataSourceConnectionsSettings(){
     <label className="settings-toggle"><span>内置行情（金银参考价 / 官方汇率）</span><input aria-label="内置免费行情" type="checkbox" disabled={!loaded||busy} checked={draft.marketEnabled??true} onChange={e=>setDraft({...draft,marketEnabled:e.target.checked})}/></label>
     <small>新闻每 15 分钟、金银每 5 分钟、汇率每小时读取；CFTC 每小时、WASDE、出口检验、NOAA、作物进度每 6 小时读取，年报、月价和 IBGE 每天读取；仅在对应页面显示时刷新，无需密钥或服务器。</small>
     <label className="settings-toggle"><span>Open-Meteo 产区天气</span><input aria-label="Open-Meteo 产区天气" type="checkbox" disabled={!loaded||busy} checked={draft.weatherEnabled??false} onChange={e=>setDraft({...draft,weatherEnabled:e.target.checked})}/></label>
-    <label className="settings-toggle"><span>GitHub 每日榜单</span><input aria-label="GitHub 每日榜单" type="checkbox" disabled={!loaded||busy} checked={draft.githubEnabled??false} onChange={e=>setDraft({...draft,githubEnabled:e.target.checked})}/></label>
+    <label className="settings-toggle"><span>GitHub / Skills 公开榜单</span><input aria-label="GitHub / Skills 公开榜单" type="checkbox" disabled={!loaded||busy} checked={draft.githubEnabled??false} onChange={e=>setDraft({...draft,githubEnabled:e.target.checked})}/></label>
     <strong>可选 SSH 数据源</strong>
     <label className="settings-toggle"><span>启用 SSH 快照</span><input aria-label="启用 SSH 快照" type="checkbox" disabled={!loaded||busy} checked={draft.enabled} onChange={e=>setDraft({...draft,enabled:e.target.checked})}/></label>
     <div className="beszel-settings">

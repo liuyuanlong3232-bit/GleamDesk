@@ -9,11 +9,13 @@ import {invokeLive} from "../services/simulationSafety";
 
 import {validateDailySnapshot,beijingDate,type DailySnapshot} from "../domain/news/dailyRecommendations";
 import {readDailyRecommendations} from "../services/publicSources";
+import {isSkillsLink} from "../services/publicSources";
+import {SkillsLeaderboard} from "./SkillsLeaderboard";
 export {validateDailySnapshot,beijingDate} from "../domain/news/dailyRecommendations";
 export type {DailySnapshot} from "../domain/news/dailyRecommendations";
 interface DailyPresentation {presentation?:"card"|"hud";hidden?:boolean;onClose?:()=>void}
 export async function openDailyLink(url:string,name:string){
-  if(!/^https:\/\/github\.com\/[-\w.]+\/[-\w.]+$/.test(url)&&!["https://daily.juya.uk/","https://platform.xiaomimimo.com/"].includes(url))throw new Error("链接来源无效");
+  if(!/^https:\/\/github\.com\/[-\w.]+\/[-\w.]+$/.test(url)&&!isSkillsLink(url)&&!["https://daily.juya.uk/","https://platform.xiaomimimo.com/"].includes(url))throw new Error("链接来源无效");
   await launchApplication({id:"daily-link",name,icon:"",type:"url",target:url,pinned:false,order:0});
 }
 export function DailyOpenSource({connections,enabled=true,...presentation}:{connections:ApiConnectionSettings;enabled?:boolean}&DailyPresentation){
@@ -48,14 +50,15 @@ export function DailyOpenSource({connections,enabled=true,...presentation}:{conn
   return <DailyOpenSourceView connections={connections} enabled={enabled} snapshot={snapshot} busy={busy} error={error} onRefresh={()=>void refresh()} onGenerate={()=>void generate()} onOpen={open} {...presentation}/>;
 }
 export function DailyOpenSourceView({connections,enabled=true,snapshot,busy,error,onRefresh,onGenerate,onOpen,presentation="card",hidden=false,onClose}:{connections:ApiConnectionSettings;enabled?:boolean;snapshot:DailySnapshot|null;busy:boolean;error:string;onRefresh:()=>void;onGenerate:()=>void;onOpen:(url:string,name:string)=>void}&DailyPresentation){
-  const [collapsed,setCollapsed]=useState(false);
+  const [collapsed,setCollapsed]=useState(false),[section,setSection]=useState<"projects"|"skills">("projects");
   const fresh=snapshot?.date===beijingDate()&&snapshot?.status!=="STALE";
   return <section className={`daily-opensource${presentation==="hud"?" daily-opensource-hud":""}${collapsed?" is-collapsed":""}`} hidden={hidden} aria-label="每日开源推荐" data-main-hit-region={presentation==="card"?true:undefined} data-no-page-swipe>
-    <header><div><strong>每日开源推荐</strong><small>{snapshot?`${snapshot.date} · ${snapshot.items.length} 个${fresh?"":" · 旧榜单"}`:enabled?"GitHub Trending · 每日最多 8 个":"模拟模式已暂停采集"}</small></div>
-      <button aria-label="刷新推荐" aria-busy={busy} disabled={busy||!isTauri()||!enabled} onClick={onRefresh}><span className={busy?"daily-refresh-icon is-refreshing":"daily-refresh-icon"} aria-hidden="true">↻</span></button>
+    <header><div><strong>每日开源推荐</strong><small>{section==="skills"?"Skills.sh · 技能安装热榜":snapshot?`${snapshot.date} · ${snapshot.items.length} 个${fresh?"":" · 旧榜单"}`:enabled?"GitHub Trending · 每日最多 8 个":"模拟模式已暂停采集"}</small></div>
+      {section==="projects"&&<button aria-label="刷新推荐" aria-busy={busy} disabled={busy||!isTauri()||!enabled} onClick={onRefresh}><span className={busy?"daily-refresh-icon is-refreshing":"daily-refresh-icon"} aria-hidden="true">↻</span></button>}
       {presentation==="hud"?<button className="ui-icon-button" aria-label="关闭每日推荐" onClick={onClose}><CloseIcon/></button>:<button aria-label={collapsed?"展开每日推荐":"收起每日推荐"} aria-expanded={!collapsed} onClick={()=>setCollapsed(value=>!value)}>{collapsed?"＋":"−"}</button>}
     </header>
-    {!collapsed&&<><div className="daily-projects">{snapshot?.items.map((item,index)=><article key={item.repo}>
+    {!collapsed&&<><div className="daily-board-tabs" role="group" aria-label="推荐内容"><button aria-pressed={section==="projects"} onClick={()=>setSection("projects")}>开源项目</button><button aria-pressed={section==="skills"} onClick={()=>setSection("skills")}>Skills 热榜</button></div>
+    {section==="skills"?<SkillsLeaderboard enabled={enabled&&!hidden} onOpen={onOpen}/>:<><div className="daily-projects">{snapshot?.items.map((item,index)=><article key={item.repo}>
       <button className="daily-project-title" onClick={()=>onOpen(item.url,item.repo)}><span>{String(index+1).padStart(2,"0")}</span><strong>{item.titleZh||item.repo.split("/")[1]}</strong><b aria-hidden="true">↗</b></button>
       <p>{item.introZh||item.description||"来源未提供简介，用途待确认。"}</p>
       <small>{item.language||"语言未标注"}{item.stars?` · ★ ${item.stars}`:""}{item.introZh?" · AI 中文介绍":" · 原文"}</small>
@@ -65,6 +68,6 @@ export function DailyOpenSourceView({connections,enabled=true,snapshot,busy,erro
     {snapshot&&snapshot.translationStatus!=="done"&&<div className="daily-translate"><small>{snapshot.translationStatus==="attempted"?"今天已尝试生成，保留原文；不重复扣费。":connections.mimoDailyAuto?"等待 MiMo 中文介绍":"中文介绍尚未生成"}</small>
       {snapshot.translationStatus==="pending"&&<button disabled={busy||!fresh||!connections.mimoEnabled||!isTauri()||!enabled} onClick={onGenerate}>生成中文 · 付费，每日 1 次</button>}
     </div>}
-    <footer><small>{busy?"处理中…":"每日更新"}</small><button onClick={()=>onOpen("https://daily.juya.uk/","橘鸦 AI 早报")}>AI 早报 ↗</button></footer></>}
+    <footer><small>{busy?"处理中…":"每日更新"}</small><button onClick={()=>onOpen("https://daily.juya.uk/","橘鸦 AI 早报")}>AI 早报 ↗</button></footer></>}</>}
   </section>;
 }

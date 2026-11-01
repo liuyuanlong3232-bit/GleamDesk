@@ -294,6 +294,27 @@ pub(crate) fn validate_github_receipt(app:&AppHandle,snapshot:&Value)->Result<()
         })
     }).await.map_err(|_|"榜单读取任务失败")?
 }
+#[tauri::command]pub async fn fetch_public_skills_leaderboard(app:AppHandle,view:tauri::Webview,board:String)->Result<Value,String>{
+    authorize(&app,&view,false)?;
+    let path=match board.as_str(){"trending"=>"/trending","all-time"=>"/",_=>return Err("Skills 榜单类型无效".into())};
+    tauri::async_runtime::spawn_blocking(move||{
+        enabled(&app,false)?;
+        let state=app.state::<PublicSourceState>();
+        let slot={let mut entries=state.builtin.lock().map_err(|_|"公开榜单忙碌")?;entries.entry(format!("skills-{board}")).or_insert_with(||Arc::new(Mutex::new(None))).clone()};
+        cached(&slot,||{
+            #[cfg(windows)]{
+                let permit=crate::simulation::require_live()?;
+                let(status,bytes)=crate::http::skills_page_get(path,&||{permit.check()?;enabled(&app,false)})?;
+                permit.check()?;enabled(&app,false)?;
+                if status!=200{return Err(format!("Skills.sh 返回 HTTP {status}，暂不可用"));}
+                let html=String::from_utf8(bytes).map_err(|_|"Skills 榜单编码无效")?;
+                let(_,at)=crate::daily_recommendations::clock()?;
+                Ok(json!({"source":"Skills.sh","board":board,"collectedAt":at,"html":html}))
+            }
+            #[cfg(not(windows))]{let _=path;Err("公开榜单需要 Windows 桌面程序".into())}
+        })
+    }).await.map_err(|_|"Skills 榜单读取任务失败")?
+}
 #[cfg(test)]mod tests{
  use super::*;
  #[test]fn monthly_selection_cannot_call_the_other_source(){use crate::agriculture::{SnapshotConnection,MonthlySource};let mut c=SnapshotConnection::default();assert!(!c.enabled);assert!(monthly_allowed(&c,"worldbank-monthly"));assert!(!monthly_allowed(&c,"monthly-commodities"));c.monthly_source=MonthlySource::Fred;assert!(monthly_allowed(&c,"monthly-commodities"));assert!(!monthly_allowed(&c,"worldbank-monthly"));c.monthly_enabled=false;assert!(!monthly_allowed(&c,"monthly-commodities"));let(h,p,ttl,news)=builtin_source("worldbank-monthly").unwrap();assert_eq!(h,"www.worldbank.org");assert_eq!(p,crate::worldbank::PAGE);assert_eq!(ttl,86400);assert!(!news);}

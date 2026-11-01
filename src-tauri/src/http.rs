@@ -44,6 +44,10 @@
     pub(crate) fn anonymous_get(host:&str,port:u16,path:&str,check:&impl Fn()->Result<(),String>)->Result<(u32,Vec<u8>),String>{
         get_request(host,port,true,path,"Accept: application/json\r\n",true,512*1024,check)
     }
+    pub(crate) fn skills_page_get(path:&str,check:&impl Fn()->Result<(),String>)->Result<(u32,Vec<u8>),String>{
+        if !matches!(path,"/"|"/trending"){return Err("Skills 榜单地址无效".into());}
+        get_request("www.skills.sh",443,true,path,"Accept: text/html\r\n",true,2*1024*1024,check)
+    }
     pub(crate) fn vps_service_get(host:&str,port:u16,secure:bool,path:&str,headers:&str,check:&impl Fn()->Result<(),String>)->Result<(u32,Vec<u8>),String>{
         // User-configured service: explicit Bearer only, no automatic Windows auth,
         // cookies, redirects or retries. Endpoint policy is checked by vps_services.
@@ -376,6 +380,11 @@
 
     #[cfg(test)]
     mod tests {
+        #[test]
+        fn skills_transport_only_accepts_two_public_boards_and_checks_cancellation(){
+            for path in ["/api/v1/skills","https://evil.test/","/trending?key=x"]{assert!(super::skills_page_get(path,&||Ok(())).unwrap_err().contains("地址无效"));}
+            for path in ["/","/trending"]{assert!(super::skills_page_get(path,&||Err("fixture cancelled".into())).unwrap_err().contains("fixture cancelled"));}
+        }
         use super::*;
         #[test]
         fn fred_diagnostics_are_fixed_stage_and_numeric_code_without_network() {

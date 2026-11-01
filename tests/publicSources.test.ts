@@ -5,7 +5,7 @@ import {mockIPC,clearMocks} from "@tauri-apps/api/mocks";
 import regions from "../src/domain/agriculture/publicWeatherRegions.json";
 import {parsePublicWeather} from "../src/domain/agriculture/publicWeather";
 import {createPublicWeatherProvider} from "../src/providers/agriculture/publicWeatherProvider";
-import {parseTrending,readDailyRecommendations,enablePublicWeather} from "../src/services/publicSources";
+import {parseTrending,readDailyRecommendations,enablePublicWeather,parseSkillsLeaderboard,validateSkillsSnapshot,isSkillsLink} from "../src/services/publicSources";
 import {syncSimulationMode} from "../src/services/simulationSafety";
 import {createElement} from "react";
 import {renderToStaticMarkup} from "react-dom/server";
@@ -49,6 +49,19 @@ function parser(rows:{href:string;description?:string}[]){return ()=>({querySele
 const page={source:"GitHub Trending",collectedAt:at,html:"synthetic fixture"};
 test("Trending preserves official order, deduplicates and rejects foreign repository links",()=>{const view=parseTrending(page,parser([{href:"/demo/first",description:"  Raw description  "},{href:"https://example.test/a/b"},{href:"/demo/first"},{href:"/demo/second"}]));assert.deepEqual(view.items.map(i=>i.repo),["demo/first","demo/second"]);assert.equal(view.items[0].description,"Raw description");assert.equal(view.translationStatus,"pending");});
 test("changed Trending markup cannot fabricate a ranking",()=>{assert.throws(()=>parseTrending(page,parser([])),/页面格式已变化/);});
+function skillsParser(rows:{href:string;rank:string;installs:string}[]){return ()=>({querySelectorAll:()=>rows.map(row=>({getAttribute:()=>row.href,firstElementChild:{textContent:row.rank},lastElementChild:{textContent:row.installs},querySelector:(selector:string)=>({textContent:selector==="h3"?"fixture-skill":"fixture/skills"})}))} as unknown as Pick<ParentNode,"querySelectorAll">);}
+const skillsPage={source:"Skills.sh",board:"trending",collectedAt:at,html:"synthetic fixture"};
+test("Skills preserves source ranks and formatted installs, skipping duplicates and foreign links",()=>{
+ const snapshot=parseSkillsLeaderboard(skillsPage,"trending",skillsParser([{href:"/fixture/skills/first",rank:"1",installs:"1.2K"},{href:"https://evil.test/a/b",rank:"2",installs:"100"},{href:"/fixture/skills/first",rank:"3",installs:"1.2K"},{href:"/example.com/second",rank:"5",installs:"500"}]));
+ assert.deepEqual(snapshot.items.map(item=>[item.rank,item.installs]),[[1,"1.2K"],[5,"500"]]);assert.equal(snapshot.items[1].url,"https://www.skills.sh/example.com/second");
+ assert.throws(()=>validateSkillsSnapshot(snapshot,"all-time"));assert.throws(()=>validateSkillsSnapshot({...snapshot,items:[...snapshot.items,snapshot.items[0]]},"trending"));
+});
+test("Skills refuses missing counts, changed markup and mismatched sources instead of inventing values",()=>{
+ for(const rows of [[],[{href:"/fixture/skills/a",rank:"1",installs:"unknown"}],[{href:"/fixture/skills/a",rank:"not-ranked",installs:"10"}]])assert.throws(()=>parseSkillsLeaderboard(skillsPage,"trending",skillsParser(rows)),/页面格式已变化/);
+ assert.throws(()=>parseSkillsLeaderboard({...skillsPage,source:"other"},"trending",skillsParser([])));
+ assert.throws(()=>parseSkillsLeaderboard(skillsPage,"all-time",skillsParser([])));
+ for(const url of ["javascript:alert(1)","https://www.skills.sh.evil.test/a/b/c","https://www.skills.sh/a/b/c?secret=x","https://user@www.skills.sh/a/b/c"])assert.equal(isSkillsLink(url),false);
+});
 test("disabled Github never falls through to fetch or SSH",async()=>native(async()=>{const calls:string[]=[];mockIPC(command=>{calls.push(command);if(command==="set_simulation_mode")return null;throw "PUBLIC_SOURCE_DISABLED: disabled";});await syncSimulationMode(false);await assert.rejects(readDailyRecommendations());assert.deepEqual(calls.filter(c=>c!=="set_simulation_mode"),["read_daily_recommendations"]);}));
 test("old Github cache survives a failed public refresh with its original date",async()=>native(async()=>{const calls:string[]=[];mockIPC(command=>{calls.push(command);if(command==="set_simulation_mode")return null;if(command==="read_daily_recommendations")return {schemaVersion:1,source:"GitHub Trending",date:"2020-01-01",collectedAt:"2020-01-01T00:00:00Z",items:[{repo:"demo/old",url:"https://github.com/demo/old",description:"",language:"",stars:"",todayStars:""}],translationStatus:"pending",status:"STALE"};if(command==="fetch_public_github_trending")throw "offline";throw Error("unexpected")});await syncSimulationMode(false);const result=await readDailyRecommendations();assert.equal(result.date,"2020-01-01");assert.equal(result.status,"STALE");assert.ok(!calls.some(c=>c.includes("generate")||c.includes("save")));}));
 test("runtime implementation does not depend on Python or SSH and keeps inert parsing",()=>{const native=readFileSync("src-tauri/src/public_sources.rs","utf8"),daily=readFileSync("src-tauri/src/daily_recommendations.rs","utf8"),front=readFileSync("src/services/publicSources.ts","utf8");assert.doesNotMatch(native,/read_remote|Command::|credentials::/);assert.doesNotMatch(daily,/read_remote|SOURCE_SCRIPT/);assert.match(front,/createElement\("template"\)/);assert.doesNotMatch(front,/innerHTML\s*=.*document\.body|eval\(/);});

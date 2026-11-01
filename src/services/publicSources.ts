@@ -2,6 +2,34 @@ import {invokeLive} from "./simulationSafety";
 import {validateDailySnapshot,beijingDate,type DailySnapshot} from "../domain/news/dailyRecommendations";
 import type {SnapshotConnection} from "../domain/agriculture/contracts";
 
+export type SkillsBoard="trending"|"all-time";
+export interface SkillsSnapshot {source:"Skills.sh";board:SkillsBoard;collectedAt:string;items:{rank:number;name:string;source:string;url:string;installs:string}[]}
+export function isSkillsLink(url:string):boolean{
+ try{const parsed=new URL(url);return parsed.protocol==="https:"&&parsed.hostname==="www.skills.sh"&&!parsed.port&&!parsed.username&&!parsed.password&&!parsed.search&&!parsed.hash&&/^\/[\w.-]+\/[\w.-]+(?:\/[\w.-]+)?$/.test(parsed.pathname)&&!parsed.pathname.split("/").some(part=>part==="."||part==="..");}catch{return false;}
+}
+export function validateSkillsSnapshot(raw:unknown,board:SkillsBoard):SkillsSnapshot{
+ const value=raw as SkillsSnapshot;
+ if(!value||value.source!=="Skills.sh"||value.board!==board||!Number.isFinite(Date.parse(value.collectedAt))||!Array.isArray(value.items)||!value.items.length||value.items.length>8)throw Error("Skills 榜单缓存格式无效");
+ const seen=new Set<string>();
+ for(const item of value.items){if(!item||!Number.isInteger(item.rank)||item.rank<1||item.rank>100000||!isSkillsLink(item.url)||seen.has(item.url)||typeof item.name!=="string"||!item.name.trim()||item.name.length>160||typeof item.source!=="string"||!item.source.trim()||item.source.length>200||typeof item.installs!=="string"||!/^\d[\d,.]*(?:[KMB])?$/i.test(item.installs))throw Error("Skills 榜单条目无效");seen.add(item.url);}
+ return value;
+}
+export function parseSkillsLeaderboard(raw:unknown,board:SkillsBoard,parseHtml:(html:string)=>Pick<ParentNode,"querySelectorAll">=html=>{const template=document.createElement("template");template.innerHTML=html;return template.content;}):SkillsSnapshot{
+ const page=raw as {source?:string;board?:string;collectedAt?:string;html?:string};
+ if(page?.source!=="Skills.sh"||page.board!==board||typeof page.html!=="string"||page.html.length>2*1024*1024||!Number.isFinite(Date.parse(page.collectedAt??"")))throw Error("Skills 榜单来源或格式无效");
+ const seen=new Set<string>();
+ const items=Array.from(parseHtml(page.html).querySelectorAll("a[href]")).flatMap(anchor=>{
+  const href=anchor.getAttribute("href")??"",url=`https://www.skills.sh${href}`;
+  const name=anchor.querySelector("h3")?.textContent?.trim(),source=anchor.querySelector("p")?.textContent?.trim();
+  const installs=anchor.lastElementChild?.textContent?.trim()??"";
+  const rank=Number(anchor.firstElementChild?.textContent?.trim());
+  if(!name||!source||!Number.isInteger(rank)||rank<1||!/^\/[\w.-]+\/[\w.-]+(?:\/[\w.-]+)?$/.test(href)||!isSkillsLink(url)||seen.has(url)||!/^\d[\d,.]*(?:[KMB])?$/i.test(installs))return [];
+  seen.add(url);return [{rank,name,source,url,installs}];
+ }).slice(0,8);
+ if(!items.length)throw Error("Skills 榜单页面格式已变化，暂不可用");
+ return validateSkillsSnapshot({source:"Skills.sh",board,collectedAt:page.collectedAt,items},board);
+}
+
 export async function enablePublicWeather():Promise<void>{
  const config=await invokeLive<SnapshotConnection>("load_snapshot_connection");
  if(config.weatherEnabled)return;
