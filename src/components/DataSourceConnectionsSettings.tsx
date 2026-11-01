@@ -43,7 +43,7 @@ export function DataSourceConnectionsSettings(){
     <label className="settings-toggle"><span>内置行情（金银参考价 / 官方汇率）</span><input aria-label="内置免费行情" type="checkbox" disabled={!loaded||busy} checked={draft.marketEnabled??true} onChange={e=>setDraft({...draft,marketEnabled:e.target.checked})}/></label>
     <small>新闻每 15 分钟、金银每 5 分钟、汇率每小时读取；CFTC 每小时、WASDE、出口检验、NOAA、作物进度每 6 小时读取，年报、月价和 IBGE 每天读取；仅在对应页面显示时刷新，无需密钥或服务器。</small>
     <label className="settings-toggle"><span>Open-Meteo 产区天气</span><input aria-label="Open-Meteo 产区天气" type="checkbox" disabled={!loaded||busy} checked={draft.weatherEnabled??false} onChange={e=>setDraft({...draft,weatherEnabled:e.target.checked})}/></label>
-    <label className="settings-toggle"><span>GitHub / Skills 公开榜单</span><input aria-label="GitHub / Skills 公开榜单" type="checkbox" disabled={!loaded||busy} checked={draft.githubEnabled??false} onChange={e=>setDraft({...draft,githubEnabled:e.target.checked})}/></label>
+    <label className="settings-toggle"><span>每日推荐公开榜单</span><input aria-label="每日推荐公开榜单" type="checkbox" disabled={!loaded||busy} checked={draft.githubEnabled??false} onChange={e=>setDraft({...draft,githubEnabled:e.target.checked})}/></label>
     <strong>可选 SSH 数据源</strong>
     <label className="settings-toggle"><span>启用 SSH 快照</span><input aria-label="启用 SSH 快照" type="checkbox" disabled={!loaded||busy} checked={draft.enabled} onChange={e=>setDraft({...draft,enabled:e.target.checked})}/></label>
     <div className="beszel-settings">
@@ -54,6 +54,6 @@ export function DataSourceConnectionsSettings(){
     <CustomHttpSourceEditor sources={draft.customSources??[]} onChange={customSources=>setDraft({...draft,customSources})} disabled={!loaded||busy}/>
     <div className="settings-actions"><button disabled={!loaded||busy} onClick={()=>void save()}>{busy?"保存中…":"保存数据源"}</button></div>
     {message&&<small role="status">{message}</small>}
-    <details className="settings-help"><summary>接入帮助</summary><p>新安装默认开启新闻、内置行情、CFTC、WASDE、出口检验、NOAA、NASS 年报/进度、月价、IBGE 与天气，可关闭；已有配置保持原开关，SSH 默认关闭。使用你自己的 SSH 配置与已信任主机，读取约定快照。不会安装软件或修改定时任务，SSH 密码与私钥由系统 SSH 管理。</p><p>仅支持约定的 JSON / SQLite 结构，填写地址不代表任意接口已适配。免费天气和 GitHub 榜单可独立开启，无需 SSH 或密钥；天气按小时刷新，榜单每天成功保存一次，单次请求不重试。天气免费服务用于非商业用途。榜单原文免费；AI 中文介绍沿用现有付费开关。自定义行情支持公开 HTTPS GET JSON，在市场中心单独显示；默认手动读取，不发送鉴权信息。字段用点分隔，如 data.items、quote.price。</p></details>
+    <details className="settings-help"><summary>接入帮助</summary><p>新安装默认开启新闻、内置行情、CFTC、WASDE、出口检验、NOAA、NASS 年报/进度、月价、IBGE 与天气，可关闭；已有配置保持原开关，SSH 默认关闭。使用你自己的 SSH 配置与已信任主机，读取约定快照。不会安装软件或修改定时任务，SSH 密码与私钥由系统 SSH 管理。</p><p>仅支持约定的 JSON / SQLite 结构，填写地址不代表任意接口已适配。免费天气和每日推荐榜单可独立开启，无需 SSH 或密钥；天气按小时刷新，GitHub 每日更新，Skills、Spaces 和 Show HN 按小时缓存，单次请求不重试。天气免费服务用于非商业用途。英文简介在本机离线翻译，保留原文。自定义行情支持公开 HTTPS GET JSON，在市场中心单独显示；默认手动读取，不发送鉴权信息。字段用点分隔，如 data.items、quote.price。</p></details>
   </div>;
 }

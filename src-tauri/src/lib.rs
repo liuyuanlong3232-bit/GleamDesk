@@ -409,6 +409,7 @@ pub fn run() {
             public_sources::read_builtin_public_source,
             public_sources::fetch_public_github_trending,
             public_sources::fetch_public_skills_leaderboard,
+            public_sources::fetch_public_discovery,
             daily_recommendations::save_public_daily_recommendations,
             agriculture::read_agriculture_snapshot,
             agriculture::load_snapshot_connection,

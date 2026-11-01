@@ -30,6 +30,55 @@ export function parseSkillsLeaderboard(raw:unknown,board:SkillsBoard,parseHtml:(
  return validateSkillsSnapshot({source:"Skills.sh",board,collectedAt:page.collectedAt,items},board);
 }
 
+export type DiscoveryBoard="spaces"|"show-hn";
+export interface DiscoveryItem {rank:number;id:string;title:string;description:string;url:string;score:number|null;comments:number|null;detail:string}
+export interface DiscoverySnapshot {board:DiscoveryBoard;source:"Hugging Face Spaces"|"Show HN";collectedAt:string;items:DiscoveryItem[]}
+export function isDiscoveryLink(value:string):boolean{
+ try{const url=new URL(value);if(url.protocol!=="https:"||url.port||url.username||url.password||url.hash)return false;
+  if(url.hostname==="news.ycombinator.com")return url.pathname==="/show"&&!url.search||url.pathname==="/item"&&/^\?id=[1-9]\d{0,14}$/.test(url.search);
+  return url.hostname==="huggingface.co"&&(url.pathname==="/spaces"&&url.search==="?sort=trending"||!url.search&&/^\/spaces\/[\w.-]+\/[\w.-]+$/.test(url.pathname)&&!url.pathname.split('/').some(part=>part==='.'||part==='..'));
+ }catch{return false;}
+}
+export function validateDiscoverySnapshot(raw:unknown,board:DiscoveryBoard):DiscoverySnapshot{
+ const value=raw as DiscoverySnapshot,source=board==="spaces"?"Hugging Face Spaces":"Show HN";
+ if(!value||value.board!==board||value.source!==source||!Number.isFinite(Date.parse(value.collectedAt))||Date.parse(value.collectedAt)>Date.now()+60000||!Array.isArray(value.items)||!value.items.length||value.items.length>8)throw Error("每日推荐缓存格式无效");
+ const seen=new Set<string>();
+ for(const item of value.items){
+  if(!item||!Number.isInteger(item.rank)||item.rank<1||item.rank>100000||typeof item.id!=="string"||item.id.length>200||seen.has(item.id)||typeof item.title!=="string"||!item.title.trim()||item.title.length>300||typeof item.description!=="string"||item.description.length>700||typeof item.detail!=="string"||item.detail.length>250||!isDiscoveryLink(item.url)||![item.score,item.comments].every(number=>number===null||Number.isSafeInteger(number)&&number>=0))throw Error("每日推荐条目无效");
+  if(board==="spaces"?item.url!==`https://huggingface.co/spaces/${item.id}`:item.url!==`https://news.ycombinator.com/item?id=${item.id}`)throw Error("推荐链接与来源不匹配");seen.add(item.id);
+ }
+ return value;
+}
+export function parseDiscovery(raw:unknown,board:DiscoveryBoard,parseHtml:(html:string)=>Pick<ParentNode,"querySelectorAll">=html=>{const template=document.createElement('template');template.innerHTML=html;return template.content;}):DiscoverySnapshot{
+ const page=raw as {board?:string;source?:string;collectedAt?:string;payload?:unknown;html?:string},source=board==="spaces"?"Hugging Face Spaces":"Show HN";
+ if(!page||page.board!==board||page.source!==source)throw Error("每日推荐来源不匹配");
+ const count=(value:unknown)=>typeof value==="number"&&Number.isSafeInteger(value)&&value>=0?value:null;
+ let items:DiscoveryItem[];
+ if(board==="spaces"){
+  if(!Array.isArray(page.payload)||page.payload.length>100)throw Error("Spaces 榜单格式无效");
+  items=page.payload.slice(0,8).map((value,index)=>{
+   const item=value as {id?:unknown;likes?:unknown;cardData?:{title?:unknown;short_description?:unknown};runtime?:{stage?:unknown};lastModified?:unknown};
+   if(!item||typeof item.id!=="string"||!/^[-\w.]+\/[-\w.]+$/.test(item.id))throw Error("Spaces 标识无效");
+   const states:Record<string,string>={RUNNING:"运行中",SLEEPING:"休眠中",PAUSED:"已暂停",RUNTIME_ERROR:"运行异常",BUILD_ERROR:"构建异常",BUILDING:"正在构建",NO_APP_FILE:"尚未就绪"};
+   const state=typeof item.runtime?.stage==="string"?states[item.runtime.stage]??"状态未知":"状态未知";
+   const date=typeof item.lastModified==="string"&&Number.isFinite(Date.parse(item.lastModified))?item.lastModified.slice(0,10):null;
+   return {rank:index+1,id:item.id,title:typeof item.cardData?.title==="string"&&item.cardData.title.trim()?item.cardData.title.trim().slice(0,300):item.id.split('/')[1],description:typeof item.cardData?.short_description==="string"?item.cardData.short_description.slice(0,700):"",url:`https://huggingface.co/spaces/${item.id}`,score:count(item.likes),comments:null,detail:`${state}${date?` · 更新 ${date}`:''}`};
+  });
+ }else{
+  if(typeof page.html!=="string"||page.html.length>512*1024)throw Error("Show HN 榜单格式无效");
+  const seen=new Set<string>();
+  items=Array.from(parseHtml(page.html).querySelectorAll('tr.athing')).flatMap(row=>{
+   const id=row.getAttribute('id')??'',title=row.querySelector('.titleline>a')?.textContent?.trim()??'',rankText=row.querySelector('.rank')?.textContent?.trim()??'';
+   if(!/^[1-9]\d{0,14}$/.test(id)||!/^\d+\.?$/.test(rankText)||!title||seen.has(id))return [];
+   seen.add(id);const meta=row.nextElementSibling,scoreText=meta?.querySelector('.score')?.textContent?.trim()??'',age=meta?.querySelector('.age')?.textContent?.trim()??'';
+   const comments=Array.from(meta?.querySelectorAll('a')??[]).map(link=>link.textContent?.trim()??'').find(text=>/^\d+\s+comments?$/.test(text));
+   const ageZh=age.replace(/^(\d+)\s+(minute|hour|day|month|year)s? ago$/,(_all,n:string,unit:string)=>`${n}${({minute:'分钟',hour:'小时',day:'天',month:'个月',year:'年'} as Record<string,string>)[unit]}前`);
+   return [{rank:Number.parseInt(rankText,10),id,title:title.slice(0,300),description:"",url:`https://news.ycombinator.com/item?id=${id}`,score:/^\d+\s+points?$/.test(scoreText)?Number.parseInt(scoreText,10):null,comments:comments?Number.parseInt(comments,10):null,detail:ageZh.slice(0,250)}];
+  }).slice(0,8);
+ }
+ return validateDiscoverySnapshot({board,source,collectedAt:page.collectedAt,items},board);
+}
+
 export async function enablePublicWeather():Promise<void>{
  const config=await invokeLive<SnapshotConnection>("load_snapshot_connection");
  if(config.weatherEnabled)return;

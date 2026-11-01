@@ -315,6 +315,51 @@ pub(crate) fn validate_github_receipt(app:&AppHandle,snapshot:&Value)->Result<()
         })
     }).await.map_err(|_|"Skills 榜单读取任务失败")?
 }
+
+fn discovery_source(board:&str)->Result<(&'static str,&'static str,&'static str),String>{
+ match board{
+  "spaces"=>Ok(("Hugging Face Spaces","huggingface.co","/api/spaces?sort=trendingScore&direction=-1&limit=8&expand%5B%5D=cardData&expand%5B%5D=likes&expand%5B%5D=trendingScore&expand%5B%5D=lastModified&expand%5B%5D=runtime")),
+  "show-hn"=>Ok(("Show HN","news.ycombinator.com","/show")),
+  _=>Err("每日推荐榜单类型无效".into())
+ }
+}
+#[tauri::command]pub async fn fetch_public_discovery(app:AppHandle,view:tauri::Webview,board:String)->Result<Value,String>{
+ authorize(&app,&view,false)?;
+ let(source,host,path)=discovery_source(&board)?;
+ tauri::async_runtime::spawn_blocking(move||{
+  enabled(&app,false)?;let state=app.state::<PublicSourceState>();
+  let slot={let mut entries=state.builtin.lock().map_err(|_|"每日推荐忙碌")?;entries.entry(format!("discovery-{board}")).or_insert_with(||Arc::new(Mutex::new(None))).clone()};
+  cached(&slot,||{
+   #[cfg(windows)]{
+    let permit=crate::simulation::require_live()?;
+    let(status,bytes)=crate::http::anonymous_get(host,443,path,&||{permit.check()?;enabled(&app,false)})?;
+    permit.check()?;enabled(&app,false)?;
+    if status!=200{return Err(format!("{source} 返回 HTTP {status}，暂不可用"));}
+    let(_,at)=crate::daily_recommendations::clock()?;
+    if board=="spaces"{let payload:Value=serde_json::from_slice(&bytes).map_err(|_|"Spaces 榜单格式无效")?;Ok(json!({"source":source,"board":board,"collectedAt":at,"payload":payload}))}
+    else{let html=String::from_utf8(bytes).map_err(|_|"Show HN 榜单编码无效")?;Ok(json!({"source":source,"board":board,"collectedAt":at,"html":html}))}
+   }
+   #[cfg(not(windows))]{let _=(source,host,path);Err("每日推荐需要 Windows 桌面程序".into())}
+  })
+ }).await.map_err(|_|"每日推荐读取任务失败")?
+}
+#[cfg(test)]mod discovery_tests{
+ use super::*;
+ #[test]fn discovery_only_reads_fixed_public_listing_endpoints(){
+  let(source,host,path)=discovery_source("spaces").unwrap();assert_eq!((source,host),("Hugging Face Spaces","huggingface.co"));assert!(path.starts_with("/api/spaces?sort=trendingScore"));assert!(path.contains("limit=8"));assert!(!path.contains("full=true"));
+  assert_eq!(discovery_source("show-hn").unwrap(),("Show HN","news.ycombinator.com","/show"));
+  for value in ["https://evil.invalid","../spaces","spaces?token=x",""]{assert!(discovery_source(value).is_err());}
+ }
+ #[cfg(windows)]#[test]#[ignore="explicit read-only acceptance of the two public recommendation feeds"]
+ fn discovery_live_listings(){
+  for board in ["spaces","show-hn"]{
+   let(_,host,path)=discovery_source(board).unwrap();let(status,bytes)=crate::http::anonymous_get(host,443,path,&||Ok(())).unwrap();assert_eq!(status,200);
+   if board=="spaces"{let value:Value=serde_json::from_slice(&bytes).unwrap();assert_eq!(value.as_array().unwrap().len(),8);}
+   else{assert!(String::from_utf8(bytes.clone()).unwrap().contains("athing"));}
+   println!("{board}: HTTP {status}, {} bytes",bytes.len());
+  }
+ }
+}
 #[cfg(test)]mod tests{
  use super::*;
  #[test]fn monthly_selection_cannot_call_the_other_source(){use crate::agriculture::{SnapshotConnection,MonthlySource};let mut c=SnapshotConnection::default();assert!(!c.enabled);assert!(monthly_allowed(&c,"worldbank-monthly"));assert!(!monthly_allowed(&c,"monthly-commodities"));c.monthly_source=MonthlySource::Fred;assert!(monthly_allowed(&c,"monthly-commodities"));assert!(!monthly_allowed(&c,"worldbank-monthly"));c.monthly_enabled=false;assert!(!monthly_allowed(&c,"monthly-commodities"));let(h,p,ttl,news)=builtin_source("worldbank-monthly").unwrap();assert_eq!(h,"www.worldbank.org");assert_eq!(p,crate::worldbank::PAGE);assert_eq!(ttl,86400);assert!(!news);}

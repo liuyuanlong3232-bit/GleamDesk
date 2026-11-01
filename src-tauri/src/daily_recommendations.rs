@@ -51,7 +51,7 @@ fn validate_snapshot(value:&Value)->Result<(),String>{
 fn read_daily(app:&AppHandle)->Result<Value,String>{
     crate::simulation::require_live()?;
     let connection=crate::agriculture::connection(app)?;
-    if !connection.github_enabled{return Err("PUBLIC_SOURCE_DISABLED: 请在设置 → 数据来源启用 GitHub 榜单".into());}
+    if !connection.github_enabled{return Err("PUBLIC_SOURCE_DISABLED: 请在设置 → 数据来源启用每日推荐公开榜单".into());}
     let path=directory(app)?.join("daily-opensource.json");let(today,_)=clock()?;
     let mut value=load(&path)?.ok_or("PUBLIC_CACHE_MISS: 尚无本机公开榜单")?;
     validate_snapshot(&value)?;

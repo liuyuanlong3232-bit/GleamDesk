@@ -5,7 +5,7 @@ import {mockIPC,clearMocks} from "@tauri-apps/api/mocks";
 import regions from "../src/domain/agriculture/publicWeatherRegions.json";
 import {parsePublicWeather} from "../src/domain/agriculture/publicWeather";
 import {createPublicWeatherProvider} from "../src/providers/agriculture/publicWeatherProvider";
-import {parseTrending,readDailyRecommendations,enablePublicWeather,parseSkillsLeaderboard,validateSkillsSnapshot,isSkillsLink} from "../src/services/publicSources";
+import {parseTrending,readDailyRecommendations,enablePublicWeather,parseSkillsLeaderboard,validateSkillsSnapshot,isSkillsLink,parseDiscovery,validateDiscoverySnapshot,isDiscoveryLink} from "../src/services/publicSources";
 import {syncSimulationMode} from "../src/services/simulationSafety";
 import {createElement} from "react";
 import {renderToStaticMarkup} from "react-dom/server";
@@ -13,6 +13,23 @@ import {AgricultureWeatherMap} from "../src/components/AgricultureWorkspace";
 import {emptySnapshotConnection} from "../src/domain/agriculture/contracts";
 
 const at="2026-10-22T00:00:00Z";
+test('Spaces preserves source ranking, real zero and unavailable metrics without inventing descriptions',()=>{
+ const page={source:'Hugging Face Spaces',board:'spaces',collectedAt:at,payload:[{id:'fixture/one',likes:0,cardData:{title:'Demo One',short_description:'A public demonstration.'},runtime:{stage:'RUNNING'},lastModified:at},{id:'fixture/two'}]};
+ const value=parseDiscovery(page,'spaces');assert.deepEqual(value.items.map(item=>item.rank),[1,2]);assert.equal(value.items[0].score,0);assert.equal(value.items[0].detail,'运行中 · 更新 2026-10-22');assert.equal(value.items[1].score,null);assert.equal(value.items[1].description,'');assert.equal(value.items[1].url,'https://huggingface.co/spaces/fixture/two');
+ assert.throws(()=>parseDiscovery({...page,source:'Unknown'},'spaces'));assert.throws(()=>parseDiscovery({...page,payload:[{id:'fixture/..'}]},'spaces'));assert.throws(()=>parseDiscovery({...page,payload:[null]},'spaces'));
+ assert.throws(()=>validateDiscoverySnapshot({...value,items:[value.items[0],value.items[0]]},'spaces'));assert.throws(()=>validateDiscoverySnapshot({...value,items:[{...value.items[0],url:'https://evil.invalid/'}]},'spaces'));
+});
+test('Show HN preserves source rank and zero counts and always opens the matching discussion',()=>{
+ const row={getAttribute:()=> '42',querySelector:(selector:string)=>({textContent:selector==='.rank'?'3.':'Show HN: A useful app'}),nextElementSibling:{querySelector:(selector:string)=>({textContent:selector==='.score'?'0 points':'2 hours ago'}),querySelectorAll:()=>[{textContent:'0 comments'}]}};
+ const parse=()=>({querySelectorAll:()=>[row] as unknown as NodeListOf<Element>});
+ const value=parseDiscovery({source:'Show HN',board:'show-hn',collectedAt:at,html:'<fixture>'},'show-hn',parse);
+ assert.equal(value.items[0].rank,3);assert.equal(value.items[0].score,0);assert.equal(value.items[0].comments,0);assert.equal(value.items[0].detail,'2小时前');assert.equal(value.items[0].url,'https://news.ycombinator.com/item?id=42');assert.equal(value.items[0].description,'');
+ assert.throws(()=>parseDiscovery({source:'Show HN',board:'show-hn',collectedAt:at,html:'<fixture>'},'show-hn',()=>({querySelectorAll:()=>[] as unknown as NodeListOf<Element>})));
+});
+test('discovery links exclude credentials, unrelated hosts, model APIs and executable schemes',()=>{
+ for(const url of ['https://huggingface.co/spaces/fixture/demo','https://huggingface.co/spaces?sort=trending','https://news.ycombinator.com/show','https://news.ycombinator.com/item?id=42'])assert.ok(isDiscoveryLink(url),url);
+ for(const url of ['javascript:alert(1)','https://evil.invalid/spaces/fixture/demo','https://huggingface.co/api/spaces','https://huggingface.co/spaces/a/../b','https://token@huggingface.co/spaces/a/b','https://news.ycombinator.com/item?id=42&x=1','https://news.ycombinator.com/item?id=-1'])assert.ok(!isDiscoveryLink(url),url);
+});
 function weather(){return {source:"Open-Meteo",collectedAt:at,payload:regions.map(region=>({...region,utc_offset_seconds:0,daily_units:{temperature_2m_max:"°C",precipitation_sum:"mm"},daily:{time:Array.from({length:7},(_,i)=>`2026-10-${22+i}`),temperature_2m_max:[10,11,12,13,14,15,16] as (number|null)[],precipitation_sum:[0,0,0,0,0,0,0] as (number|null)[]}}))};}
 test("direct weather keeps zero rainfall, real range, UTC and collection time",()=>{const view=parsePublicWeather(weather());assert.equal(view.weather.length,9);assert.equal(view.weather[0].precip,0);assert.equal(view.weather[0].maximum,16);assert.equal(view.weather[0].generatedAt,at);assert.equal(view.weather[0].weatherAt,null);assert.equal(view.weather[0].forecastStart,"2026-10-22");assert.equal(view.weather[0].forecastEnd,"2026-10-28");});
 test("七天逐日预报保留每一天、真实零和缺值，不用合计补每天",()=>{const raw=weather();raw.payload[0].daily.precipitation_sum[2]=null;raw.payload[0].daily.temperature_2m_max[3]=null;const row=parsePublicWeather(raw).weather[0];assert.equal(row.forecastDays?.length,7);assert.deepEqual(row.forecastDays?.[0],{date:"2026-10-22",maximum:10,precip:0});assert.equal(row.forecastDays?.[2].precip,null);assert.equal(row.forecastDays?.[3].maximum,null);assert.equal(row.precip,null);});

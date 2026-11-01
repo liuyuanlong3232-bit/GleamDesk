@@ -401,7 +401,7 @@ function MainScreen({
     { id: "api" as const, ...apiOverview, badge: "", progress: undefined, quota: false, detail: "各账户按币种和口径分列", path: "m12 2 4 4-4 4-4-4zM2 12l4-4 4 4-4 4zm10 2 4 4-4 4-4-4zm2-2 4-4 4 4-4 4z" },
     { id: "vps" as const, label: "VPS 状态", value: vpsState === "online" || vpsState === "normal" ? "在线" : vpsState === "offline" ? "离线" : vpsState === "warning" ? "警告" : "未知", meta: vpsHint, badge: "", state: vpsState, progress: undefined, quota: false, detail: displayData.vps.error ?? displayData.vps.statusMessage ?? "", path: "M3 4h18v13H3zM8 21h8M12 17v4" },
     { id: "pc" as const, label: "本机 PC", value: healthReadable ? `${healthEvents.length} 条` : displayData.health.eventLogStatus === "error" || displayData.health.eventLogStatus === "unavailable" ? "不可用" : "未知", meta: "", badge: healthBadge, state: healthReadable ? criticalHealth || errorHealth ? "error" : healthBadge ? "warning" : "normal" : "unknown", progress: undefined, quota: false, detail: displayData.health.summary, path: "M3 4h18v13H3zM8 21h8M12 17v4" },
-    { id: "daily" as const, label: "每日开源推荐", value: "开源项目 · Skills 热榜", meta: "GitHub / Skills.sh", badge: "", state: "normal", progress: undefined, quota: false, detail: "", path: "" },
+    { id: "daily" as const, label: "每日推荐", value: "GitHub · Skills · Spaces · Show HN", meta: "发现新工具与新作品", badge: "", state: "normal", progress: undefined, quota: false, detail: "", path: "" },
   ];
   const launchApp = async (application: ApplicationItem) => {
     if (!application.target.trim()) {

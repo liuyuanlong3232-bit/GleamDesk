@@ -35,7 +35,7 @@ test("recommendations retain source descriptions and use offline translation wit
   for(const presentation of ["card","hud"] as const){
     const html=renderToStaticMarkup(createElement(DailyOpenSourceView,{snapshot,presentation,busy:false,error:"",onRefresh:never,onOpen:never}));
     assert.doesNotMatch(html,/付费|生成中文|AI 中文介绍/);
-    for(const text of [snapshot.date,"Source text","英文简介自动离线译为中文","不调用翻译 API"])assert.ok(html.includes(text),text);
+    for(const text of [snapshot.date,"Source text","英文简介离线译为中文","原文可展开","上一页推荐","下一页推荐","GitHub"])assert.ok(html.includes(text),text);
   }
   assert.equal(calls,0);
 });
