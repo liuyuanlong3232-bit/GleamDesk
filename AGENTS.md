@@ -42,3 +42,4 @@ Windows 透明 HUD 的 Computer Use 可能同时返回 14×14 小区域与完整
 离线英译中使用固定版本 Transformers.js 与 OPUS-MT ONNX；首次开发运行 `npm.cmd run prepare:translation` 下载并校验模型，构建只检查本机资源，不自动联网下载。`public/translation-models` 和 `public/translation-runtime` 可重新生成，不提交 Git；运行时禁止远程模型及 CDN。
 主屏交互面板须放在 `.main-screen` 内并标记 `data-main-hit-region`，否则原生透明窗口裁剪会让面板在可访问树中存在却不可见、不可点击。
 每日推荐的英文简介自动使用本机离线模型翻译并缓存，保留原文；不接入付费翻译 API，不恢复独立 HUD 翻译按钮或已移除的邮箱模块。
+离线翻译资源可复用同版本开发副本的 `public/translation-models` 与 `public/translation-runtime`，仍须由 `npm run build` 重新校验；缺包先按锁文件运行 `npm ci`，不要跳过模型检查。

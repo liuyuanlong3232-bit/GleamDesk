@@ -29,6 +29,7 @@ import {AvatarArtwork} from "./AvatarArtwork";
 import {hudQuotaUsed} from "../presentation/quotaAdapter";
 import {usageWindowTitle} from "./AIControlCenter";
 import type {ProviderStatus} from "../types";
+import {CloseIcon} from "./CloseIcon";
 
 const clientMarks:Record<string,string>={codex:codexMark,claude:claudeMark,antigravity:antigravityMark,ollama:ollamaMark,doubao:doubaoMark,gemini:geminiMark,cursor:cursorMark,windsurf:windsurfMark,trae:traeMark,copilot:copilotMark,qwen:qwenMark,opencode:opencodeMark,kimi:kimiMark,pi:piMark,hermes:hermesMark,openclaw:openclawMark,codebuddy:codebuddyMark,workbuddy:workbuddyMark,qoder:qoderMark,zcode:zcodeMark,"deepseek-harness":deepseekMark,goose:gooseMark};
 const templateMarks=new Set(["codex","cursor","windsurf","copilot","kimi","pi","hermes","zcode","goose","ollama"]);
@@ -37,8 +38,26 @@ export function HudQuotaDetails({provider}:{provider?:ProviderStatus}){
  const used=hudQuotaUsed(provider);
  const windows=used===undefined?[]:provider?.usageWindows?.filter(window=>Number.isFinite(window.usedPercent)&&window.usedPercent>=0&&window.usedPercent<=100)??[];
  const rows=windows.length?windows:[{id:"summary",title:provider?.name??"额度",usedPercent:used}];
- if(used===undefined)return <p className="hud-source-note">额度未知</p>;
- return <>{rows.map((window,index)=><div className="popover-row hud-window-row" key={`${window.id}-${index}`}><span>{usageWindowTitle(window,provider?.id??"")}</span><strong>{window.usedPercent===undefined?"—":`已用 ${Math.round(window.usedPercent)}%`}</strong>{window.usedPercent!==undefined&&<><small className="hud-window-remaining">剩余 {Number((100-window.usedPercent).toFixed(1))}%</small><div className="micro-track"><i style={{width:`${window.usedPercent}%`}}/></div></>}</div>)}</>;
+ if(used===undefined)return <div className="hud-panel-empty"><strong>额度未知</strong><p>{provider?.error||"当前没有可用的额度读数，可在工作台检查连接与读取权限。"}</p></div>;
+ return <div className="hud-quota-grid">{rows.map((window,index)=>{
+  const remaining=Number((100-window.usedPercent!).toFixed(1));
+  const reset="resetsAt" in window&&window.resetsAt?new Date(window.resetsAt):undefined;
+  return <section className="hud-quota-card" key={`${window.id}-${index}`}>
+   <span className="hud-panel-label">{usageWindowTitle(window,provider?.id??"")}</span>
+   <strong className="hud-quota-value" aria-label={`剩余 ${remaining}%`}>{remaining}<small>%</small></strong>
+   <span className="hud-quota-caption">剩余额度</span>
+   <div className="hud-detail-track" role="progressbar" aria-label={`${usageWindowTitle(window,provider?.id??"")}剩余额度`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={remaining}><i style={{width:`${remaining}%`}}/></div>
+   <div className="hud-quota-meta"><small>已用 {Math.round(window.usedPercent!)}%</small><small>{reset&&Number.isFinite(reset.getTime())?`${reset.toLocaleString("zh-CN",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"})} 重置`:"重置时间未知"}</small></div>
+  </section>;
+ })}</div>;
+}
+
+export function HudPanelHeading({eyebrow,title,status,onClose}:{eyebrow:string;title:string;status?:string;onClose:()=>void}){
+ return <header className="hud-panel-heading"><div><span className="hud-panel-label">{eyebrow}</span><h2>{title}</h2></div>{status&&<span className="hud-panel-status">{status}</span>}<button type="button" className="hud-panel-close" aria-label="收起详情" onClick={onClose}><CloseIcon/></button></header>;
+}
+
+export function HudPanelFooter({note,action,onOpen}:{note?:string;action:string;onOpen:()=>void}){
+ return <footer className="hud-panel-footer"><span>{note}</span><button type="button" className="hud-panel-action" onClick={onOpen}>{action}<span aria-hidden="true">↗</span></button></footer>;
 }
 
 export function HudLogo({id,label,showQuota=false,quotaUsed}:{id:string;label:string;showQuota?:boolean;quotaUsed?:number}){

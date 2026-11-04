@@ -24,7 +24,7 @@ import {DataSourceConnectionsSettings} from "./components/DataSourceConnectionsS
 import { ApplicationManager } from "./components/ApplicationManager";
 import { SettingsDialog } from "./components/SettingsDialog";
 import {PersonalAvatarDialog} from "./components/RoomPortrait";
-import { StatusHud,HudLogo,HudQuotaDetails,HudWorkbenchButton } from "./components/StatusHud";
+import { StatusHud,HudLogo,HudQuotaDetails,HudWorkbenchButton,HudPanelHeading,HudPanelFooter } from "./components/StatusHud";
 import { hudQuotaUsed,apiHudSummary } from "./presentation/quotaAdapter";
 import {agentClients,readAgentRuntime,unavailableAgentRuntime,runningAgentClients} from "./providers/agents/agentUsageProvider";
 import { AgentConnectionsSettings } from "./components/AgentConnectionsSettings";
@@ -325,7 +325,6 @@ function MainScreen({
   onDashboardAt,
   onSelectMonitor,
   settings,
-  onSettingsChange,
 }: {
   monitors: MonitorInfo[];
   onDashboard: () => void;
@@ -421,6 +420,8 @@ function MainScreen({
   };
 
   const openPanel = (id: string) => onDashboardAt(id);
+  const closeHudPanel=()=>{setIslandOpen(false);setHudPinned(false)};
+  const vpsCurrent=vpsDiagnostic?.status!=="stale"&&["online","normal","warning"].includes(vpsState);
 
 
   return (
@@ -442,17 +443,15 @@ function MainScreen({
             <HudWorkbenchButton expanded={islandOpen&&hudPinned&&islandPanel==="workbench"} busy={workbenchScreens.loading} onEnter={()=>{if(islandPanel!=="workbench"){setIslandOpen(false);setHudPinned(false);}}} onOpen={()=>void chooseWorkbenchScreen()}/>
             <AppUpdateIndicator enabled={settings.checkUpdatesOnStartup!==false&&!settings.simulationEnabled} onOpen={()=>onDashboardAt("settings:updates")}/>
           </div>
-            <div className={`island-popover glass${hudPinned?"":" hud-peek"}${hudPinned&&islandPanel==="daily"?" hud-daily-panel":""}`} hidden={!islandOpen} data-main-hit-region>
+            <div className={`island-popover glass${hudPinned?" hud-expanded-panel":" hud-peek"}${hudPinned&&islandPanel==="daily"?" hud-daily-panel":""}`} hidden={!islandOpen} data-main-hit-region>
               {!hudPinned&&<><strong className="popover-title">{islandItems.find(item=>item.id===islandPanel)?.label}</strong><p className="hud-source-note">{[islandItems.find(item=>item.id===islandPanel)?.value,islandItems.find(item=>item.id===islandPanel)?.meta].filter(Boolean).join(" · ")}</p></>}
               <DailyOpenSource enabled={!settings.simulationEnabled} presentation="hud" hidden={!islandOpen||!hudPinned||islandPanel!=="daily"} onClose={()=>{setIslandOpen(false);setHudPinned(false)}}/>
-              {hudPinned&&islandPanel==="workbench"&&<><strong className="popover-title">打开工作台</strong>{workbenchScreens.loading?<p className="hud-source-note" role="status">正在检测屏幕…</p>:workbenchScreens.error?<><p className="hud-source-note" role="alert">{workbenchScreens.error}</p><button className="text-button" onClick={()=>void chooseWorkbenchScreen()}>重新检测</button></>:<div className="hud-screen-options"><button onClick={()=>openWorkbenchScreen(true)}>主屏</button>{workbenchScreens.hasSecondary&&<button onClick={()=>openWorkbenchScreen(false)}>副屏</button>}</div>}</>}
-              <div hidden={!hudPinned||islandPanel==="daily"||islandPanel==="workbench"}>
-              {(hudClient||hudAgent) && <><strong className="popover-title">{hudClient?.name??hudAgent?.name??"Agent"}</strong>{islandPanel==="ollama"?<div className="popover-row"><span>本地服务</span><strong>{displayData.localAI?.serviceStatus==="online"?"在线":displayData.localAI?.serviceStatus==="offline"?"离线":"未知"}</strong></div>:<HudQuotaDetails provider={hudAgent}/>} {hudAgent&&<button className="text-button" onClick={() => openPanel("codex")}>查看额度 →</button>}</>}
-              {islandPanel === "api" && <><strong className="popover-title">API 账户</strong><div className="hud-api-accounts">{apiProviders.map(provider=><section className="hud-api-account" key={provider.id}><strong>{provider.name}</strong><ApiMoneyDetails api={provider} now={apiClock}/></section>)}</div><button className="text-button" onClick={() => openPanel("api")}>查看 API 面板 →</button></>}
-              {islandPanel === "vps" && <><strong className="popover-title">VPS · {displayData.vps.name || "Beszel"}</strong><div className="popover-row"><span>连接状态</span><strong>{displayData.vps.state === "online" ? "在线" : displayData.vps.state === "offline" ? "离线" : displayData.vps.state === "warning" ? "警告" : "未知"}</strong></div><div className="popover-row"><span>延迟</span><strong>{displayData.vps.latency === undefined ? "—" : `${displayData.vps.latency} ms`}</strong></div><button className="text-button" onClick={() => openPanel("vps")}>打开 VPS 面板 →</button></>}
-              {islandPanel === "pc" && <><strong className="popover-title">System Health</strong><div className="popover-row"><span>状态</span><strong>{displayData.health.summary || "等待扫描"}</strong></div><div className="popover-row"><span>近期重点事件</span><strong>{displayData.health.events?.length ?? 0} 条</strong></div><button className="text-button" onClick={() => openPanel("health")}>查看系统健康 →</button></>}
-              <button className="text-button island-mode-toggle" onClick={() => { onSettingsChange({ desktopMode: !settings.desktopMode }); setIslandOpen(false); }}>{settings.desktopMode ? "切到交互模式" : "切到桌面模式"}</button>
-              <label className="passthrough-toggle"><input type="checkbox" checked={settings.mousePassthrough} onChange={(event) => onSettingsChange({ mousePassthrough: event.target.checked })} /> 鼠标穿透 <kbd>Ctrl Shift Space 退出</kbd></label>
+              {hudPinned&&islandPanel==="workbench"&&<div className="hud-panel-body"><HudPanelHeading eyebrow="工作台" title="选择打开位置" onClose={closeHudPanel}/>{workbenchScreens.loading?<div className="hud-panel-empty" role="status">正在检测屏幕…</div>:workbenchScreens.error?<div className="hud-panel-empty"><p role="alert">{workbenchScreens.error}</p><button className="hud-panel-action" onClick={()=>void chooseWorkbenchScreen()}>重新检测</button></div>:<div className="hud-screen-options"><button onClick={()=>openWorkbenchScreen(true)}><span aria-hidden="true">▣</span><strong>主屏</strong><small>在主显示器打开</small></button>{workbenchScreens.hasSecondary&&<button onClick={()=>openWorkbenchScreen(false)}><span aria-hidden="true">▣</span><strong>副屏</strong><small>在副显示器打开</small></button>}</div>}</div>}
+              <div className="hud-panel-body" key={islandPanel} hidden={!hudPinned||islandPanel==="daily"||islandPanel==="workbench"}>
+              {(hudClient||hudAgent) && <><HudPanelHeading eyebrow="AI 客户端" title={hudClient?.name??hudAgent?.name??"Agent"} status={hudAgent?.plan} onClose={closeHudPanel}/>{islandPanel==="ollama"?<div className="hud-panel-hero"><span className="hud-panel-label">本地服务</span><strong>{displayData.localAI?.serviceStatus==="online"?"在线":displayData.localAI?.serviceStatus==="offline"?"离线":"未知"}</strong></div>:<HudQuotaDetails provider={hudAgent}/>}<HudPanelFooter note={settings.simulationEnabled?"模拟数据":hudAgent?.error?"读取异常，保留未知状态":"各周期额度分别统计"} action="查看额度与连接" onOpen={()=>openPanel("codex")}/></>}
+              {islandPanel === "api" && <><HudPanelHeading eyebrow="API 账户" title="余额与费用" status={`${apiProviders.length} 个账户`} onClose={closeHudPanel}/><div className="hud-api-accounts">{apiProviders.map(provider=><section className="hud-api-account" key={provider.id}><strong>{provider.name}</strong><ApiMoneyDetails api={provider} now={apiClock}/></section>)}{!apiProviders.length&&<div className="hud-panel-empty">暂无账户，可在 API 面板中配置连接。</div>}</div><HudPanelFooter note="按账户、币种与统计口径分别展示" action="打开 API 面板" onOpen={()=>openPanel("api")}/></>}
+              {islandPanel === "vps" && <><HudPanelHeading eyebrow="服务器" title={displayData.vps.name||"VPS · Beszel"} status={vpsDiagnostic?.status==="stale"?"数据过期":vpsCurrent?vpsState==="warning"?"警告":"在线":vpsState==="offline"?"离线":"未知"} onClose={closeHudPanel}/><div className="hud-vps-overview"><div className="hud-panel-hero"><span className="hud-panel-label">连接延迟</span><strong>{vpsCurrent&&Number.isFinite(displayData.vps.latency)?Math.round(displayData.vps.latency!):"—"}<small>ms</small></strong></div><div className="hud-vps-uptime"><span className="hud-panel-label">持续运行</span><strong>{vpsCurrent?displayData.vps.uptime||"未知":"—"}</strong></div></div>{vpsCurrent&&displayData.vps.gauges.length>0&&<div className="hud-vps-gauges">{displayData.vps.gauges.slice(0,3).map((gauge,index)=><div key={`${gauge.label}-${index}`}><span className="hud-panel-label">{gauge.label}</span><strong>{Number.isFinite(gauge.value)?`${Math.round(gauge.value)}%`:"—"}</strong>{Number.isFinite(gauge.value)&&gauge.value>=0&&gauge.value<=100&&<div className="hud-detail-track"><i style={{width:`${gauge.value}%`}}/></div>}</div>)}</div>}{(displayData.vps.error||displayData.vps.statusMessage)&&<p className="hud-panel-note">{displayData.vps.error||displayData.vps.statusMessage}</p>}<HudPanelFooter note={vpsHint||"Beszel 服务器状态"} action="打开 VPS 面板" onOpen={()=>openPanel("vps")}/></>}
+              {islandPanel === "pc" && <><HudPanelHeading eyebrow="本机 PC" title="系统健康" status={healthReadable?displayData.health.eventLogStatus==="partial"?"部分可读":"已扫描":"未确认"} onClose={closeHudPanel}/><div className="hud-health-overview"><div className="hud-panel-hero"><span className="hud-panel-label">近期重点事件</span><strong>{healthReadable?healthEvents.length:"—"}<small>条</small></strong></div><div className="hud-health-summary"><strong>{displayData.health.summary||"等待扫描"}</strong><p>{displayData.health.detail||"Windows 系统与应用事件日志"}</p></div></div>{healthReadable&&healthEvents.length>0&&<div className="hud-health-events">{healthEvents.slice(0,3).map(event=><div key={event.id}><span className={`hud-event-severity severity-${event.severity}`}>{event.severity==="critical"?"重大":event.severity==="error"?"错误":"警告"}</span><div><strong>{event.category}</strong><small>{event.source} · {event.eventId}</small></div></div>)}</div>}<HudPanelFooter note={healthReadable?"完整事件与诊断在工作台查看":"当前扫描不可用，不将旧记录计作本次结果"} action="查看系统健康" onOpen={()=>openPanel("health")}/></>}
               </div>
             </div>
         </StatusHud>
