@@ -8,6 +8,8 @@ import {normalizeApiSnapshot} from "../src/providers/api/apiUsageProvider";
 import {emptyDashboardData} from "../src/providers/dashboardAdapter";
 import {WidgetCard} from "../src/widgets/WidgetCard";
 import {ApiMoneyDetails} from "../src/components/ApiMoneyDetails";
+import {HudApiBalances} from "../src/components/StatusHud";
+import {defaultSettings} from "../src/providers/settingsStore";
 import {WorkbenchOverview} from "../src/components/WorkbenchOverview";
 import {mergeDashboardData} from "../src/providers/dashboardAdapter";
 const at=new Date().toISOString();
@@ -39,6 +41,20 @@ test("主屏不再自动选一家金额充当API总额",()=>{const code=readFile
 
 const now=Date.parse("2026-10-19T04:30:00Z");
 const liveBalance=(patch:Partial<typeof balance>={})=>presentApiUsage([{...balance,observedAt:new Date(now).toISOString(),...patch}],"normal")[0];
+
+test("HUD shows only enabled API accounts and a current balance, preserving zero and hiding stale amounts",()=>{
+ const connections={...defaultSettings.apiConnections,deepseekEnabled:true};
+ const rows=[liveBalance({balance:0}),{...liveBalance({balance:42}),id:"mimo",name:"MiMo"}];
+ const html=renderToStaticMarkup(createElement(HudApiBalances,{providers:rows,connections,now}));
+ assert.match(html,/DeepSeek/);assert.match(html,/0\.00/);assert.doesNotMatch(html,/MiMo|读取于|来源与统计区间|今日|本月/);
+ const stale=renderToStaticMarkup(createElement(HudApiBalances,{providers:rows,connections,now:now+300001}));
+ assert.match(stale,/余额未知/);assert.doesNotMatch(stale,/0\.00/);
+ const disabled=renderToStaticMarkup(createElement(HudApiBalances,{providers:rows,connections:defaultSettings.apiConnections,now}));
+ assert.match(disabled,/未启用账户/);assert.doesNotMatch(disabled,/DeepSeek|MiMo/);
+ const costOnly={...rows[0],id:"openai",name:"OpenAI API",apiAmountScope:"organization" as const,monthlyCost:123};
+ const cost=renderToStaticMarkup(createElement(HudApiBalances,{providers:[costOnly],connections:{...defaultSettings.apiConnections,openaiEnabled:true},now}));
+ assert.match(cost,/OpenAI API/);assert.match(cost,/余额未知/);assert.doesNotMatch(cost,/123|0\.00|本月/);
+});
 const organization=(patch:Record<string,unknown>={})=>presentApiUsage([{id:"openai",name:"OpenAI API",state:"normal",currency:"USD",monthCost:1.5,todayCost:0.1,observedAt:new Date(now).toISOString(),sourceUrl:"https://api.openai.com/v1/organization/costs",periodStart:"2026-10-01T00:00:00Z",periodEnd:"2026-10-20T00:00:00Z",todayPeriodStart:"2026-10-19T00:00:00Z",todayPeriodEnd:"2026-10-20T00:00:00Z",...patch} as any],"normal")[0];
 test("时间经过会自动遮住旧金额，真实0值在有效期内仍显示",()=>{
  const row=liveBalance({balance:0});assert.match(apiMoneyView(row,now).primary,/0\.00 USD/);

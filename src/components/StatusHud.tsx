@@ -26,9 +26,9 @@ import zcodeMark from "../assets/hud/zcode.png";
 import deepseekMark from "../assets/hud/deepseek.png";
 import gooseMark from "../assets/hud/goose.svg";
 import {AvatarArtwork} from "./AvatarArtwork";
-import {hudQuotaUsed} from "../presentation/quotaAdapter";
+import {hudQuotaUsed,apiMoneyView} from "../presentation/quotaAdapter";
 import {usageWindowTitle} from "./AIControlCenter";
-import type {ProviderStatus} from "../types";
+import type {ProviderStatus,ApiConnectionSettings} from "../types";
 import {CloseIcon} from "./CloseIcon";
 
 const clientMarks:Record<string,string>={codex:codexMark,claude:claudeMark,antigravity:antigravityMark,ollama:ollamaMark,doubao:doubaoMark,gemini:geminiMark,cursor:cursorMark,windsurf:windsurfMark,trae:traeMark,copilot:copilotMark,qwen:qwenMark,opencode:opencodeMark,kimi:kimiMark,pi:piMark,hermes:hermesMark,openclaw:openclawMark,codebuddy:codebuddyMark,workbuddy:workbuddyMark,qoder:qoderMark,zcode:zcodeMark,"deepseek-harness":deepseekMark,goose:gooseMark};
@@ -37,23 +37,39 @@ const templateMarks=new Set(["codex","cursor","windsurf","copilot","kimi","pi","
 export function HudQuotaDetails({provider}:{provider?:ProviderStatus}){
  const used=hudQuotaUsed(provider);
  const windows=used===undefined?[]:provider?.usageWindows?.filter(window=>Number.isFinite(window.usedPercent)&&window.usedPercent>=0&&window.usedPercent<=100)??[];
- const rows=windows.length?windows:[{id:"summary",title:provider?.name??"额度",usedPercent:used}];
- if(used===undefined)return <div className="hud-panel-empty"><strong>额度未知</strong><p>{provider?.error||"当前没有可用的额度读数，可在工作台检查连接与读取权限。"}</p></div>;
+ const rank=(window:{windowDurationMins?:number})=>window.windowDurationMins===300?0:window.windowDurationMins===10080?1:2;
+ const rows=windows.length?[...windows].sort((a,b)=>rank(a)-rank(b)):[{id:"summary",title:"剩余额度",usedPercent:used,windowDurationMins:undefined}];
+ if(used===undefined)return <div className="hud-panel-empty"><strong>额度未知</strong></div>;
  return <div className="hud-quota-grid">{rows.map((window,index)=>{
   const remaining=Number((100-window.usedPercent!).toFixed(1));
-  const reset="resetsAt" in window&&window.resetsAt?new Date(window.resetsAt):undefined;
+  const title=window.windowDurationMins===300?"5 小时":window.windowDurationMins===10080?"周额度":usageWindowTitle(window,provider?.id??"");
   return <section className="hud-quota-card" key={`${window.id}-${index}`}>
-   <span className="hud-panel-label">{usageWindowTitle(window,provider?.id??"")}</span>
+   <span className="hud-panel-label">{title}</span>
    <strong className="hud-quota-value" aria-label={`剩余 ${remaining}%`}>{remaining}<small>%</small></strong>
-   <span className="hud-quota-caption">剩余额度</span>
-   <div className="hud-detail-track" role="progressbar" aria-label={`${usageWindowTitle(window,provider?.id??"")}剩余额度`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={remaining}><i style={{width:`${remaining}%`}}/></div>
-   <div className="hud-quota-meta"><small>已用 {Math.round(window.usedPercent!)}%</small><small>{reset&&Number.isFinite(reset.getTime())?`${reset.toLocaleString("zh-CN",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"})} 重置`:"重置时间未知"}</small></div>
+   <span className="hud-quota-caption">剩余</span>
+   <div className="hud-detail-track" role="progressbar" aria-label={`${title}剩余额度`} aria-valuetext={`剩余 ${remaining}%，已用 ${Math.round(window.usedPercent!)}%`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={remaining}><i style={{width:`${remaining}%`}}/></div>
   </section>;
  })}</div>;
 }
 
-export function HudPanelHeading({eyebrow,title,status,onClose}:{eyebrow:string;title:string;status?:string;onClose:()=>void}){
- return <header className="hud-panel-heading"><div><span className="hud-panel-label">{eyebrow}</span><h2>{title}</h2></div>{status&&<span className="hud-panel-status">{status}</span>}<button type="button" className="hud-panel-close" aria-label="收起详情" onClick={onClose}><CloseIcon/></button></header>;
+export function HudApiBalances({providers,connections,now}:{providers:ProviderStatus[];connections:ApiConnectionSettings;now:number}){
+ const accounts=([
+  ["deepseek","DeepSeek",connections.deepseekEnabled],
+  ["mimo","MiMo",connections.mimoEnabled],
+  ["openai","OpenAI API",connections.openaiEnabled],
+  ["anthropic","Anthropic API",connections.anthropicEnabled],
+ ] as const).filter(([, ,enabled])=>enabled===true);
+ if(!accounts.length)return <div className="hud-panel-empty">未启用账户</div>;
+ return <div className="hud-api-accounts">{accounts.map(([id,name])=>{
+  const provider=providers.find(item=>item.id===id);
+  const view=provider?apiMoneyView(provider,now):undefined;
+  const balance=view?.balanceScope&&view.primary!=="未知"?view.primary:undefined;
+  return <section className="hud-api-account" key={id}><span className="hud-panel-label">{provider?.name??name}</span><strong className="hud-api-balance" aria-label={balance?`余额 ${balance}`:"余额未知"}>{balance?balance.replace(/ [A-Z]{3}$/,""):"—"}</strong></section>;
+ })}</div>;
+}
+
+export function HudPanelHeading({eyebrow,title,status,onClose}:{eyebrow?:string;title:string;status?:string;onClose:()=>void}){
+ return <header className="hud-panel-heading"><div>{eyebrow&&<span className="hud-panel-label">{eyebrow}</span>}<h2>{title}</h2></div>{status&&<span className="hud-panel-status">{status}</span>}<button type="button" className="hud-panel-close" aria-label="收起详情" onClick={onClose}><CloseIcon/></button></header>;
 }
 
 export function HudPanelFooter({note,action,onOpen}:{note?:string;action:string;onOpen:()=>void}){
@@ -106,7 +122,7 @@ export function StatusHud({monitorId,open,onDrag,onLeave,animations,children}:{m
  const save=(next:HudPlacement)=>{try{saveHudPlacement(monitorId,next);setSaveError("")}catch{setSaveError("当前位置暂时无法保存，重启后会使用默认位置")}};
  const position=hudPosition(placement,size,viewport);
  const keyEdges:Record<string,HudEdge>={ArrowUp:"top",ArrowDown:"bottom",ArrowLeft:"left",ArrowRight:"right"};
- return <div ref={root} className={`island-wrap hud-island hud-${placement.edge}${open?" island-open":""}${dragging?" hud-dragging":""}${menu?" hud-has-menu":""}${animations?"":" hud-motion-off"}`} style={{left:position.x,top:position.y,"--hud-panel-left":`${Math.max(16-position.x,Math.min(size.width-panelWidth,viewport.width-16-position.x-panelWidth))}px`,"--hud-panel-top":`${Math.min(0,viewport.height-80-position.y-panelHeight)}px`} as CSSProperties} data-main-hit-region onMouseEnter={()=>window.clearTimeout(hoverTimer.current)} onMouseMove={event=>{const eyes=root.current?.querySelector<HTMLElement>(".is-opened .hud-bot-eyes");if(!eyes)return;const bounds=eyes.getBoundingClientRect();eyes.style.setProperty("--hud-look-x",`${Math.max(-2,Math.min(2,(event.clientX-bounds.x-bounds.width/2)/25))}px`);eyes.style.setProperty("--hud-look-y",`${Math.max(-2,Math.min(2,(event.clientY-bounds.y-bounds.height/2)/25))}px`)}} onMouseLeave={()=>{if(!menu&&!gesture.current){window.clearTimeout(hoverTimer.current);hoverTimer.current=window.setTimeout(onLeave,180)}}} onKeyDown={event=>{if(event.key==="Escape"&&!exitBusy){setMenu(null);setExitConfirm(false);setExitError("");onDrag()}}} onContextMenu={event=>{if(exitConfirm||exitBusy){event.preventDefault();return;}if((event.target as HTMLElement).closest(".hud-context-menu")){event.preventDefault();return;}if(event.target!==event.currentTarget&&!(event.target as HTMLElement).closest(".status-island,.hud-grip"))return;event.preventDefault();window.clearTimeout(hoverTimer.current);onDrag();setExitError("");setMenu({x:Math.max(8,Math.min(event.clientX,viewport.width-208)),y:Math.max(8,Math.min(event.clientY,viewport.height-124))});}}
+ return <div ref={root} className={`island-wrap hud-island hud-${placement.edge}${open?" island-open":""}${dragging?" hud-dragging":""}${menu?" hud-has-menu":""}${animations?"":" hud-motion-off"}`} style={{left:position.x,top:position.y,"--hud-panel-left":`${Math.max(16-position.x,Math.min((size.width-panelWidth)/2,viewport.width-16-position.x-panelWidth))}px`,"--hud-panel-top":`${Math.min(0,viewport.height-80-position.y-panelHeight)}px`} as CSSProperties} data-main-hit-region onMouseEnter={()=>window.clearTimeout(hoverTimer.current)} onMouseMove={event=>{const eyes=root.current?.querySelector<HTMLElement>(".is-opened .hud-bot-eyes");if(!eyes)return;const bounds=eyes.getBoundingClientRect();eyes.style.setProperty("--hud-look-x",`${Math.max(-2,Math.min(2,(event.clientX-bounds.x-bounds.width/2)/25))}px`);eyes.style.setProperty("--hud-look-y",`${Math.max(-2,Math.min(2,(event.clientY-bounds.y-bounds.height/2)/25))}px`)}} onMouseLeave={()=>{if(!menu&&!gesture.current){window.clearTimeout(hoverTimer.current);hoverTimer.current=window.setTimeout(onLeave,180)}}} onKeyDown={event=>{if(event.key==="Escape"&&!exitBusy){setMenu(null);setExitConfirm(false);setExitError("");onDrag()}}} onContextMenu={event=>{if(exitConfirm||exitBusy){event.preventDefault();return;}if((event.target as HTMLElement).closest(".hud-context-menu")){event.preventDefault();return;}if(event.target!==event.currentTarget&&!(event.target as HTMLElement).closest(".status-island,.hud-grip"))return;event.preventDefault();window.clearTimeout(hoverTimer.current);onDrag();setExitError("");setMenu({x:Math.max(8,Math.min(event.clientX,viewport.width-208)),y:Math.max(8,Math.min(event.clientY,viewport.height-124))});}}
  onPointerDown={event=>{if(exitConfirm||exitBusy||event.button!==0||!(event.target as HTMLElement).closest(".status-island,.hud-grip"))return;const bounds=root.current!.getBoundingClientRect(),horizontal=latest.current.edge==="top"||latest.current.edge==="bottom",grabFraction=(horizontal?event.clientX-bounds.left:event.clientY-bounds.top)/Math.max(1,horizontal?bounds.width:bounds.height);const capture=(event.target as HTMLElement).closest<HTMLElement>("button")??root.current!;gesture.current={id:event.pointerId,x:event.clientX,y:event.clientY,started:false,original:latest.current,grabFraction,capture};capture.setPointerCapture(event.pointerId)}}
  onPointerMove={event=>{const g=gesture.current;if(!g||g.id!==event.pointerId)return;if(!g.started){if(Math.hypot(event.clientX-g.x,event.clientY-g.y)<6)return;g.started=true;skipClick.current=true;setDragging(true);onDrag()}setPlacement(dragHudPlacement({x:event.clientX,y:event.clientY},viewport,latest.current,size,g.grabFraction))}}
  onPointerUp={event=>{const g=gesture.current;if(!g||g.id!==event.pointerId)return;gesture.current=null;if(g.started){save(latest.current);setDragging(false)}if(g.capture.hasPointerCapture(event.pointerId))g.capture.releasePointerCapture(event.pointerId)}}

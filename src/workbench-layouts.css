@@ -805,8 +805,6 @@ html.workbench-console .notification-center .notification-preferences :is(select
 .main-screen .hud-expanded-panel .hud-quota-caption{display:block;margin-top:4px;color:var(--hud-panel-muted);font-size:12px}
 .main-screen .hud-expanded-panel .hud-detail-track{height:4px;margin-top:16px;overflow:hidden;border-radius:999px;background:rgba(var(--theme-line-rgb,255,255,255),.08)}
 .main-screen .hud-expanded-panel .hud-detail-track>i{display:block;height:100%;border-radius:inherit;background:var(--theme-accent,#b56681)}
-.main-screen .hud-expanded-panel .hud-quota-meta{display:flex;flex-direction:column;gap:4px;margin-top:12px;color:var(--hud-panel-muted);font:12px/1.5 var(--font-ui)}
-.main-screen .hud-expanded-panel .hud-quota-meta small{font:inherit;overflow-wrap:anywhere}
 .main-screen .hud-expanded-panel .hud-panel-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:24px;padding-top:16px;border-top:1px solid rgba(var(--theme-line-rgb,255,255,255),.08);font:12px/1.5 var(--font-ui);color:var(--hud-panel-muted)}
 .main-screen .hud-expanded-panel .hud-panel-footer>span{min-width:0;overflow-wrap:anywhere}
 .main-screen .hud-expanded-panel .hud-panel-action{display:flex;align-items:center;justify-content:center;gap:8px;flex:none;min-height:36px;padding:8px 12px;border:0;border-radius:8px;background:var(--hud-panel-inset);color:var(--hud-panel-accent);font-size:14px;cursor:pointer}
@@ -817,13 +815,8 @@ html.workbench-console .notification-center .notification-preferences :is(select
 .main-screen .hud-expanded-panel .hud-api-accounts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;max-height:none;overflow:visible}
 .main-screen .hud-expanded-panel .hud-api-account{min-width:0;margin:0;padding:16px;border:0;border-radius:16px;background:var(--hud-panel-inset)}
 .main-screen .hud-expanded-panel .hud-api-account>strong{font-size:14px;font-weight:600;color:var(--theme-fg,#f5f2f3)}
-.main-screen .hud-expanded-panel .hud-api-account .api-money-details{gap:8px;margin-top:16px}
-.main-screen .hud-expanded-panel .api-money-primary{display:flex;flex-direction:column;align-items:flex-start;gap:4px}
-.main-screen .hud-expanded-panel .api-money-primary>span{font-size:12px;color:var(--hud-panel-muted)}
-.main-screen .hud-expanded-panel .api-money-primary>strong{font:500 20px/1.4 var(--font-numeric);font-variant-numeric:tabular-nums;overflow-wrap:anywhere;max-width:100%}
-.main-screen .hud-expanded-panel .api-money-details :is(small,details){font-size:12px;line-height:1.6;color:var(--hud-panel-muted)}
-.main-screen .hud-expanded-panel .api-money-details .api-money-state{color:var(--theme-warning,#e3b46f)}
-.main-screen .hud-expanded-panel .api-money-details summary{color:var(--hud-panel-accent);padding:4px 0}
+.main-screen .hud-expanded-panel .hud-api-account:only-child{grid-column:1/-1}
+.main-screen .hud-expanded-panel .hud-api-account .hud-api-balance{display:block;margin-top:8px;font:500 30px/1.3 var(--font-numeric);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
 .main-screen .hud-expanded-panel .hud-panel-hero{min-width:0}
 .main-screen .hud-expanded-panel .hud-panel-hero>strong{display:block;margin-top:8px;color:var(--theme-fg,#f5f2f3);font:500 36px/1.2 var(--font-numeric);font-variant-numeric:tabular-nums}
 .main-screen .hud-expanded-panel .hud-panel-hero>strong>small{margin-left:8px;font:14px/1.5 var(--font-ui);color:var(--hud-panel-muted)}
@@ -883,7 +876,9 @@ html.workbench-console .notification-center .notification-preferences :is(select
 @media(max-width:600px){
  .main-screen .hud-island .island-popover.hud-expanded-panel{padding:16px}
  .main-screen .hud-expanded-panel .hud-panel-heading{gap:8px}
- .main-screen .hud-expanded-panel :is(.hud-quota-grid,.hud-api-accounts,.hud-screen-options){grid-template-columns:minmax(0,1fr)}
+ .main-screen .hud-expanded-panel :is(.hud-api-accounts,.hud-screen-options){grid-template-columns:minmax(0,1fr)}
+ .main-screen .hud-expanded-panel .hud-quota-card{padding:16px}
+ .main-screen .hud-expanded-panel .hud-quota-value{font-size:30px}
  .main-screen .hud-expanded-panel .hud-health-overview{grid-template-columns:minmax(0,1fr);gap:16px;padding:16px}
  .main-screen .hud-expanded-panel .hud-vps-overview{gap:16px;padding:16px}
  .main-screen .hud-expanded-panel .hud-panel-footer{flex-wrap:wrap}

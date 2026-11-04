@@ -82,6 +82,17 @@ test("HUD quota chooses the tightest valid window and rejects unknown or failed 
  const unknown=renderToStaticMarkup(createElement(HudQuotaDetails,{provider:{...provider,state:"unknown"}}));
  assert.match(unknown,/额度未知/);assert.doesNotMatch(unknown,/已用 80%/);
 });
+
+test("HUD quota places the five-hour window before weekly and never invents a missing window",()=>{
+ const provider:ProviderStatus={id:"codex",name:"Codex",kind:"agent",state:"normal",confidence:"verified",lastUpdated:"2026-11-04T00:00:00Z",plan:"Pro",usageWindows:[{id:"weekly",windowDurationMins:10080,usedPercent:25},{id:"session",windowDurationMins:300,usedPercent:40}]};
+ const html=renderToStaticMarkup(createElement(HudQuotaDetails,{provider}));
+ assert.ok(html.indexOf('>5 小时<')<html.indexOf('>周额度<'));
+ assert.match(html,/剩余 60%/);assert.match(html,/剩余 75%/);
+ assert.doesNotMatch(html,/重置时间未知|hud-quota-meta/);
+ const weekly=renderToStaticMarkup(createElement(HudQuotaDetails,{provider:{...provider,usageWindows:provider.usageWindows!.slice(0,1)}}));
+ assert.match(weekly,/>周额度</);assert.doesNotMatch(weekly,/5 小时/);
+ assert.equal((weekly.match(/class="hud-quota-card"/g)??[]).length,1);
+});
 test("HUD recommendation uses the approved avatar and workbench keeps technical provenance out of default cards",async()=>{
  const icon=renderToStaticMarkup(createElement(HudLogo,{id:"daily",label:"每日开源推荐"}));assert.match(icon,/class="hud-brand-image hud-daily-avatar"/);assert.match(icon,/avatar-art-daily/);assert.match(icon,/src="data:image\/png;base64,/);assert.doesNotMatch(icon,/hud-daily-mark/);assert.match(icon,/hud-bot-eyes/);
  const provider:ProviderStatus={id:"codex",name:"Codex",kind:"agent",state:"normal",running:true,confidence:"verified",source:"codex-cli-official-rpc",detail:"内部接口实现说明",lastUpdated:"2026-10-15T00:00:00Z",usageWindows:[{id:"5h",windowDurationMins:300,usedPercent:20}]};
