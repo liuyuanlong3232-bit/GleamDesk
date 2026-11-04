@@ -20,6 +20,15 @@ test("API connection cards separate saved configuration and billing from offline
 });
 import { normalizeAgentUsage, unknownAgentUsage, createAgentUsageProvider, agentClients, normalizeAgentRuntime, runningAgentClients } from "../src/providers/agents/agentUsageProvider";
 import {AgentConnectionsSettings} from "../src/components/AgentConnectionsSettings";
+test("Kimi quota reaches the HUD with its actual monthly window",()=>{
+ const observedAtUnixMs=Date.now();
+ const data=normalizeAgentUsage({observedAtUnixMs,accounts:[{id:"kimi",name:"Kimi Code",state:"normal",installed:true,running:true,loginStatus:"verified",plan:"Plus",usageType:"subscription",source:"kimi-code-api",confidence:"verified",reason:"",observedAtUnixMs,ordinaryUsageAllowed:null,windows:[{id:"limit_5h",usedPercent:30.6,windowDurationMins:300,resetsAtUnixMs:null,title:"5 小时额度"},{id:"limit_month_total",usedPercent:1.22,windowDurationMins:43200,resetsAtUnixMs:null,title:"每月额度"}]}]});
+ assert.equal(data.accounts.length,1);
+ const provider=presentAgentQuotas(data.accounts,"normal").find(item=>item.id==="kimi");
+ assert.ok(provider);const html=renderToStaticMarkup(createElement(HudQuotaDetails,{provider}));
+ assert.match(html,/每月额度/);assert.match(html,/98.8/);assert.doesNotMatch(html,/周额度/);
+ assert.match(renderToStaticMarkup(createElement(AgentConnectionsSettings)),/Kimi Code/);
+});
 import {DailyOpenSourceView,validateDailySnapshot,beijingDate} from "../src/components/DailyOpenSource";
 test("daily recommendations render in HUD without invoking refresh, generation or links",()=>{
  let calls=0;const never=()=>{calls++};
@@ -92,6 +101,20 @@ test("HUD quota places the five-hour window before weekly and never invents a mi
  const weekly=renderToStaticMarkup(createElement(HudQuotaDetails,{provider:{...provider,usageWindows:provider.usageWindows!.slice(0,1)}}));
  assert.match(weekly,/>周额度</);assert.doesNotMatch(weekly,/5 小时/);
  assert.equal((weekly.match(/class="hud-quota-card"/g)??[]).length,1);
+});
+
+test("HUD preserves Claude model quotas and Antigravity groups instead of renaming all weekly windows",()=>{
+ const base:ProviderStatus={id:"claude",name:"Claude Code",kind:"agent",state:"normal",confidence:"verified",lastUpdated:"2026-11-04T00:00:00Z",usageWindows:[{id:"sonnet",title:"Sonnet 周额度",windowDurationMins:10080,usedPercent:30},{id:"opus",title:"Opus 周额度",windowDurationMins:10080,usedPercent:60}]};
+ const claude=renderToStaticMarkup(createElement(HudQuotaDetails,{provider:base}));
+ assert.match(claude,/Sonnet 周额度/);assert.match(claude,/Opus 周额度/);
+ const antigravity=renderToStaticMarkup(createElement(HudQuotaDetails,{provider:{...base,id:"antigravity",usageWindows:[{id:"weekly",title:"Gemini · 每周",windowDurationMins:10080,usedPercent:40}]}}));
+ assert.match(antigravity,/Gemini · 每周/);
+});
+
+test("HUD displays the actual Doubao member-page usage without inventing remaining percentages",()=>{
+ const provider:ProviderStatus={id:"doubao",name:"豆包",kind:"agent",state:"normal",confidence:"local",lastUpdated:"2026-11-04T00:00:00Z",usageWindows:[],membership:{available:true,planName:"专业版",cached:false,benefits:[{label:"当前时段",detail:"当前时段 · 已用 <1% · 2 小时后重置"},{label:"近7天",detail:"近7天 · 已用 23%"}]}};
+ const html=renderToStaticMarkup(createElement(HudQuotaDetails,{provider}));
+ assert.match(html,/当前时段/);assert.match(html,/近7天/);assert.match(html,/&lt;1%/);assert.match(html,/23%/);assert.doesNotMatch(html,/额度未知|剩余 99%/);
 });
 test("HUD recommendation uses the approved avatar and workbench keeps technical provenance out of default cards",async()=>{
  const icon=renderToStaticMarkup(createElement(HudLogo,{id:"daily",label:"每日开源推荐"}));assert.match(icon,/class="hud-brand-image hud-daily-avatar"/);assert.match(icon,/avatar-art-daily/);assert.match(icon,/src="data:image\/png;base64,/);assert.doesNotMatch(icon,/hud-daily-mark/);assert.match(icon,/hud-bot-eyes/);
@@ -338,12 +361,12 @@ test("AI Control Center keeps running clients aligned and shows an unknown hint 
   ];
   const html=renderToStaticMarkup(createElement(AIControlCenter,{agents,localAI:unavailableLocalAI("offline-detail")}));
   const rows=[...html.matchAll(/<section[^>]*data-agent-id="([^"]+)"[^>]*data-expanded="([^"]+)"[^>]*>(.*?)<\/section>/g)];
-  assert.deepEqual(rows.map(row=>[row[1],row[2]]),[["codex","true"],["claude","false"],["antigravity","false"],["ollama","false"],["doubao","true"]]);
+  assert.deepEqual(rows.map(row=>[row[1],row[2]]),[["codex","true"],["claude","false"],["antigravity","false"],["ollama","false"],["doubao","true"],["kimi","false"]]);
   for(const row of rows.filter(row=>row[2]==="false")) assert.doesNotMatch(row[3],/<small|<p|<details|confidence-tag|agent-quota-windows/);
   assert.match(html,/剩余 75%/);
   assert.match(rows.find(row=>row[1]==="doubao")![3],/客户端运行中/);
   const closed=renderToStaticMarkup(createElement(AIControlCenter,{agents:agents.map(agent=>({...agent,running:false}))}));
-  assert.equal((closed.match(/data-expanded="false"/g)??[]).length,5);
+  assert.equal((closed.match(/data-expanded="false"/g)??[]).length,6);
   assert.doesNotMatch(closed,/剩余 75%/);
   const reopened=renderToStaticMarkup(createElement(AIControlCenter,{agents:agents.map(agent=>({...agent,running:true}))}));
   assert.equal((reopened.match(/data-expanded="true"/g)??[]).length,4);
@@ -369,7 +392,7 @@ test("simulated AI cards do not display real quota history", () => {
 });
 
 
-test("AI overview counts only the five real sources, keeping cached and disconnected separate", () => {
+test("AI overview counts the six real sources, keeping cached and disconnected separate", () => {
   const now=Date.parse("2026-10-13T01:00:00Z");
   const agents=[
     {id:"codex",name:"Codex",kind:"agent" as const,state:"normal" as const,dataState:"Live" as const,confidence:"verified" as const,lastUpdated:new Date(now).toISOString()},
@@ -379,13 +402,13 @@ test("AI overview counts only the five real sources, keeping cached and disconne
     {id:"gemini",name:"Gemini",kind:"agent" as const,state:"normal" as const,dataState:"Live" as const,confidence:"verified" as const,lastUpdated:""},
   ];
   const local={serviceStatus:"online" as const,source:"http://127.0.0.1:11434",models:[],runningModels:[],modelCount:0,truncated:false,observedAtUnixMs:now,error:null};
-  assert.deepEqual(summarizeAiStatus(agents,local,now),{在线:2,缓存:1,未知:1,未连接:1});
-  assert.deepEqual(summarizeAiStatus([],null,now),{在线:0,缓存:0,未知:5,未连接:0});
-  assert.deepEqual(summarizeAiStatus(agents,{...local,observedAtUnixMs:now-61000},now),{在线:1,缓存:2,未知:1,未连接:1});
+  assert.deepEqual(summarizeAiStatus(agents,local,now),{在线:2,缓存:1,未知:2,未连接:1});
+  assert.deepEqual(summarizeAiStatus([],null,now),{在线:0,缓存:0,未知:6,未连接:0});
+  assert.deepEqual(summarizeAiStatus(agents,{...local,observedAtUnixMs:now-61000},now),{在线:1,缓存:2,未知:2,未连接:1});
   assert.equal(summarizeAiStatus(agents,{...local,serviceStatus:"offline"},now).未连接,2);
   assert.equal(summarizeAiStatus([{...agents[0],confidence:"estimated"}],null,now).在线,0);
   assert.equal(summarizeAiStatus([{...agents[3],membership:{available:true,cached:true,benefits:[]}}],null,now).缓存,1);
-  assert.equal(summarizeAiStatus([], {...local,observedAtUnixMs:now+1},now).未知,5);
+  assert.equal(summarizeAiStatus([], {...local,observedAtUnixMs:now+1},now).未知,6);
 });
 
 function quotaAccount(percent:number,stamp="2026-10-13T01:00:00Z") {

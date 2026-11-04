@@ -2,6 +2,8 @@ use std::{path::PathBuf, time::Duration};
 use serde::Serialize;
 use serde_json::Value;
 use crate::{cli_reader, provider_requests::{observed_unix_ms, RequestCache}};
+#[cfg(windows)]
+mod kimi;
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all="camelCase")]
@@ -262,7 +264,9 @@ fn load(app:Option<&tauri::AppHandle>) -> AgentSnapshot {
     #[cfg(windows)] antigravity_quota(&mut antigravity);
     let mut doubao=local("doubao","豆包","doubao");let member=app.map(|app|crate::doubao_membership::snapshot(app,true)).unwrap_or(Value::Null);
     if member["available"]==true{doubao.login_status="verified";doubao.source="doubao-member-page";doubao.confidence="local";doubao.reason="";doubao.state="normal";doubao.plan=bounded_text(member.get("planName"));doubao.membership=Some(member);}
-    AgentSnapshot { accounts: vec![codex, claude, antigravity, doubao, account("gemini", "Gemini（预留）")], observed_at_unix_ms: observed_unix_ms() }
+    #[cfg(windows)] let kimi=kimi::read();
+    #[cfg(not(windows))] let kimi=account("kimi","Kimi Code");
+    AgentSnapshot { accounts: vec![codex, claude, antigravity, doubao, kimi, account("gemini", "Gemini（预留）")], observed_at_unix_ms: observed_unix_ms() }
 }
 #[tauri::command]
 pub async fn read_agent_usage(app:tauri::AppHandle,state: tauri::State<'_, AgentUsageState>,force:Option<bool>,consent:Option<bool>) -> Result<AgentSnapshot, String> {

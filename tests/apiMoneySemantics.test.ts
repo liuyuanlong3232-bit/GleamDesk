@@ -55,6 +55,13 @@ test("HUD shows only enabled API accounts and a current balance, preserving zero
  const cost=renderToStaticMarkup(createElement(HudApiBalances,{providers:[costOnly],connections:{...defaultSettings.apiConnections,openaiEnabled:true},now}));
  assert.match(cost,/OpenAI API/);assert.match(cost,/余额未知/);assert.doesNotMatch(cost,/123|0\.00|本月/);
 });
+
+test("HUD keeps both DeepSeek currencies as separate balances",()=>{
+ const rows=[{...liveBalance({balance:12.34,currency:"CNY"}),id:"deepseek-cny",name:"DeepSeek · CNY"},{...liveBalance({balance:5.67,currency:"USD"}),id:"deepseek-usd",name:"DeepSeek · USD"}];
+ const html=renderToStaticMarkup(createElement(HudApiBalances,{providers:rows,connections:{...defaultSettings.apiConnections,deepseekEnabled:true},now}));
+ assert.match(html,/12\.34/);assert.match(html,/5\.67/);assert.match(html,/CNY/);assert.match(html,/USD/);assert.doesNotMatch(html,/余额未知/);
+ assert.equal((html.match(/class="hud-api-account"/g)??[]).length,2);
+});
 const organization=(patch:Record<string,unknown>={})=>presentApiUsage([{id:"openai",name:"OpenAI API",state:"normal",currency:"USD",monthCost:1.5,todayCost:0.1,observedAt:new Date(now).toISOString(),sourceUrl:"https://api.openai.com/v1/organization/costs",periodStart:"2026-10-01T00:00:00Z",periodEnd:"2026-10-20T00:00:00Z",todayPeriodStart:"2026-10-19T00:00:00Z",todayPeriodEnd:"2026-10-20T00:00:00Z",...patch} as any],"normal")[0];
 test("时间经过会自动遮住旧金额，真实0值在有效期内仍显示",()=>{
  const row=liveBalance({balance:0});assert.match(apiMoneyView(row,now).primary,/0\.00 USD/);

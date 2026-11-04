@@ -8,7 +8,7 @@ import {launchApplication} from "../services/launcher/launcherService";
 import type {AgentQuotaAccount} from "../domain/agent/contracts";
 import type {LocalAiSnapshot} from "../domain/local/contracts";
 
-const providers=[{id:"codex",name:"Codex",url:"https://chatgpt.com/codex",hint:"5 小时额度与周额度"},{id:"claude",name:"Claude Code",url:"https://code.claude.com/docs/en/authentication",hint:"订阅额度与登录状态"},{id:"antigravity",name:"Antigravity",url:"https://antigravity.google/",hint:"请先启动并登录客户端"},{id:"ollama",name:"Ollama",url:"https://ollama.com/",hint:"本地模型与显存占用"},{id:"doubao",name:"豆包会员",url:"https://www.doubao.com/chat/",hint:"会员档位、有效期与用量"}];
+const providers=[{id:"codex",name:"Codex",url:"https://chatgpt.com/codex",hint:"5 小时额度与周额度"},{id:"claude",name:"Claude Code",url:"https://code.claude.com/docs/en/authentication",hint:"订阅额度与登录状态"},{id:"antigravity",name:"Antigravity",url:"https://antigravity.google/",hint:"请先启动并登录客户端"},{id:"ollama",name:"Ollama",url:"https://ollama.com/",hint:"本地模型与显存占用"},{id:"doubao",name:"豆包会员",url:"https://www.doubao.com/chat/",hint:"会员档位、有效期与用量"},{id:"kimi",name:"Kimi Code",url:"https://www.kimi.com/code",hint:"先在 Kimi Code 登录；读取 5 小时、周或月额度。登录过期请在 Kimi Code 重新登录。"}];
 export function AgentConnectionsSettings({enabled=false,onEnabledChange}:{enabled?:boolean;onEnabledChange?:(enabled:boolean)=>void}){
  const generation=useRef(0),allowed=useRef(enabled);allowed.current=enabled;
  const [runtime,setRuntime]=useState(unavailableAgentRuntime);

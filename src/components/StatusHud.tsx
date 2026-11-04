@@ -35,6 +35,13 @@ const clientMarks:Record<string,string>={codex:codexMark,claude:claudeMark,antig
 const templateMarks=new Set(["codex","cursor","windsurf","copilot","kimi","pi","hermes","zcode","goose","ollama"]);
 
 export function HudQuotaDetails({provider}:{provider?:ProviderStatus}){
+ if(provider?.id==="doubao"&&provider.membership?.available){
+  const readings=provider.membership.benefits.flatMap(benefit=>{
+   const usage=benefit.detail.match(/已(?:用|使用)\s*[<＜]?\s*\d+(?:\.\d+)?\s*%/);
+   return usage?[{label:benefit.label,value:usage[0].replace(/^已(?:用|使用)\s*/,"")}]:[];
+  });
+  if(readings.length)return <>{(provider.membership.cached||provider.error||provider.state==="offline"||provider.state==="unknown")&&<p className="hud-panel-note">上次读取</p>}<div className="hud-quota-grid">{readings.map((row,index)=><section className="hud-quota-card" key={`${row.label}-${index}`}><span className="hud-panel-label">{row.label}</span><strong className="hud-quota-value">{row.value}</strong><span className="hud-quota-caption">已用</span></section>)}</div></>;
+ }
  const used=hudQuotaUsed(provider);
  const windows=used===undefined?[]:provider?.usageWindows?.filter(window=>Number.isFinite(window.usedPercent)&&window.usedPercent>=0&&window.usedPercent<=100)??[];
  const rank=(window:{windowDurationMins?:number})=>window.windowDurationMins===300?0:window.windowDurationMins===10080?1:2;
@@ -42,7 +49,7 @@ export function HudQuotaDetails({provider}:{provider?:ProviderStatus}){
  if(used===undefined)return <div className="hud-panel-empty"><strong>额度未知</strong></div>;
  return <div className="hud-quota-grid">{rows.map((window,index)=>{
   const remaining=Number((100-window.usedPercent!).toFixed(1));
-  const title=window.windowDurationMins===300?"5 小时":window.windowDurationMins===10080?"周额度":usageWindowTitle(window,provider?.id??"");
+  const title=provider?.id==="codex"?(window.windowDurationMins===300?"5 小时":window.windowDurationMins===10080?"周额度":usageWindowTitle(window,"codex")):usageWindowTitle(window,provider?.id??"");
   return <section className="hud-quota-card" key={`${window.id}-${index}`}>
    <span className="hud-panel-label">{title}</span>
    <strong className="hud-quota-value" aria-label={`剩余 ${remaining}%`}>{remaining}<small>%</small></strong>
@@ -60,11 +67,13 @@ export function HudApiBalances({providers,connections,now}:{providers:ProviderSt
   ["anthropic","Anthropic API",connections.anthropicEnabled],
  ] as const).filter(([, ,enabled])=>enabled===true);
  if(!accounts.length)return <div className="hud-panel-empty">未启用账户</div>;
- return <div className="hud-api-accounts">{accounts.map(([id,name])=>{
-  const provider=providers.find(item=>item.id===id);
+ return <div className="hud-api-accounts">{accounts.flatMap(([id,name])=>{
+  const matches=providers.filter(item=>item.id===id||id==="deepseek"&&/^deepseek-(?:cny|usd)$/.test(item.id));
+  return (matches.length?matches:[undefined]).map((provider)=>{
   const view=provider?apiMoneyView(provider,now):undefined;
   const balance=view?.balanceScope&&view.primary!=="未知"?view.primary:undefined;
-  return <section className="hud-api-account" key={id}><span className="hud-panel-label">{provider?.name??name}</span><strong className="hud-api-balance" aria-label={balance?`余额 ${balance}`:"余额未知"}>{balance?balance.replace(/ [A-Z]{3}$/,""):"—"}</strong></section>;
+  return <section className="hud-api-account" key={provider?.id??id}><span className="hud-panel-label">{provider?.name??name}</span><strong className="hud-api-balance" aria-label={balance?`余额 ${balance}`:"余额未知"}>{balance?balance.replace(/ [A-Z]{3}$/,""):"—"}</strong></section>;
+  });
  })}</div>;
 }
 

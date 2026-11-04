@@ -18,10 +18,10 @@ export function membershipBenefitDetail(detail:string,observedAt?:number):string
   const reset=new Date(observedAt!+(Number(relative[1]||0)*60+Number(relative[2]||0))*60000);
   return detail.replace(relative[0],`重置 ${reset.toLocaleString("zh-CN",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"})}（约）`);
 }
-const agentIds = ["codex", "claude", "antigravity", "ollama", "doubao"] as const;
-const names = { codex: "Codex", claude: "Claude Code", antigravity: "Antigravity", ollama: "Ollama", doubao: "豆包" };
-const glyphs = { codex: "✳", claude: "✺", antigravity: "▲", ollama: "◌", doubao: "豆" };
-const sourceNames: Record<string, string> = { "codex-cli-official-rpc": "Codex CLI · 官方额度", "codex-cli": "Codex CLI", "claude-cli-auth-status": "Claude CLI · 登录状态", "claude-oauth-usage":"Claude 账户使用量", "claude-engine-get-usage":"Claude Code · 客户端额度", "antigravity-local-quota":"Antigravity 本机额度", "doubao-member-page":"豆包官方会员页", "windows-client-metadata": "本机安装 / 进程", none: "没有可靠来源" };
+const agentIds = ["codex", "claude", "antigravity", "ollama", "doubao", "kimi"] as const;
+const names = { codex: "Codex", claude: "Claude Code", antigravity: "Antigravity", ollama: "Ollama", doubao: "豆包", kimi:"Kimi Code" };
+const glyphs = { codex: "✳", claude: "✺", antigravity: "▲", ollama: "◌", doubao: "豆", kimi:"K" };
+const sourceNames: Record<string, string> = { "codex-cli-official-rpc": "Codex CLI · 官方额度", "codex-cli": "Codex CLI", "claude-cli-auth-status": "Claude CLI · 登录状态", "claude-oauth-usage":"Claude 账户使用量", "claude-engine-get-usage":"Claude Code · 客户端额度", "antigravity-local-quota":"Antigravity 本机额度", "doubao-member-page":"豆包官方会员页", "kimi-code-api":"Kimi Code · 官方额度", "windows-client-metadata": "本机安装 / 进程", none: "没有可靠来源" };
 const confidenceNames = { verified: "已核实", local: "本地", estimated: "估算", unknown: "额度未知" };
 
 export function AIControlCenter({ agents, localAI, gpuName, simulationEnabled=false }: { agents: ProviderStatus[]; localAI?: LocalAiSnapshot | null; gpuName?: string|null; simulationEnabled?:boolean }) {
@@ -61,7 +61,7 @@ export function AIControlCenter({ agents, localAI, gpuName, simulationEnabled=fa
             <small>本机 GPU：{gpuName || "未知"} · {localAI?.modelCount === 0 ? "无模型" : localAI?.models.some(model => !model.remote) ? "Ready" : localAI?.truncated ? "本地模型状态未知" : "无本地模型"}</small>
             <details className="local-model-list"><summary>模型列表</summary>{localAI?.models.length ? localAI.models.map(model => <p key={model.name}><b>{model.name}</b><small>{[model.parameterSize,model.quantization,model.remote ? "远程模型" : "本地模型"].filter(Boolean).join(" · ")}</small></p>) : <p>尚无已安装模型</p>}{localAI?.truncated && <small>列表已截断，最多显示128项</small>}</details>
           </> : <>
-            {(id === "codex" || id === "claude" || id === "antigravity") ? <>
+            {(id === "codex" || id === "claude" || id === "antigravity" || id === "kimi") ? <>
               <small>{agent?.plan ? `${agent.plan} · ` : ""}{agent?.loginStatus === "not-logged-in" ? "未登录" : agent?.loginStatus === "verified" ? "已连接" : agent?.loginStatus === "configured" ? "已保存登录" : "登录状态未知"}</small>
               {!windows.length&&<p className="provider-hint">{id==="claude"?agent?.loginStatus==="not-logged-in"?"未登录":agent?.usageType==="api"?"API 计费":"额度暂不可用":"额度暂不可用"}</p>}
               <div className="agent-quota-windows">{windows.map(window => <div key={window.id}>
@@ -77,7 +77,7 @@ export function AIControlCenter({ agents, localAI, gpuName, simulationEnabled=fa
     </div>
     {simulationEnabled?<section className="codex-quota-trend" aria-label="Codex 额度使用趋势"><p>模拟模式 · 不读取真实额度历史</p></section>:<CodexQuotaTrend records={history} unavailable={historyUnavailable}/>}
     {details && <div className="widget-source-details">
-      {agents.filter(agent => ["codex","claude","antigravity","doubao"].includes(agent.id)).map(agent => <p key={agent.id}><strong>{agent.name}</strong><span>{sourceNames[agent.source??"none"]??"未知"}{agent.detail?` · ${agent.detail}`:""}{agent.lastUpdated ? ` · 读取于 ${new Date(agent.lastUpdated).toLocaleString("zh-CN")}` : ""}{agent.id === "antigravity" ? ` · CLI ${agent.cliDetected ? "已检测" : "未检测"} · 配置 ${agent.configurationDetected ? "存在" : "未检测"} · 缓存 ${agent.cacheDetected ? "存在" : "未检测"} · 最近使用未知` : ""}</span></p>)}
+      {agents.filter(agent => ["codex","claude","antigravity","doubao","kimi"].includes(agent.id)).map(agent => <p key={agent.id}><strong>{agent.name}</strong><span>{sourceNames[agent.source??"none"]??"未知"}{agent.detail?` · ${agent.detail}`:""}{agent.lastUpdated ? ` · 读取于 ${new Date(agent.lastUpdated).toLocaleString("zh-CN")}` : ""}{agent.id === "antigravity" ? ` · CLI ${agent.cliDetected ? "已检测" : "未检测"} · 配置 ${agent.configurationDetected ? "存在" : "未检测"} · 缓存 ${agent.cacheDetected ? "存在" : "未检测"} · 最近使用未知` : ""}</span></p>)}
       <p><strong>Ollama</strong><span>{localAI?.serviceStatus === "online" ? "本机 API 已连接" : localAI?.error || "本机服务状态未知"}</span></p>
 
 
