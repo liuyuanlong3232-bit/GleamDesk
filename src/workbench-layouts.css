@@ -911,6 +911,11 @@ html.workbench-console .notification-center .notification-preferences :is(select
 .mail-otp-toast .mail-icon-action:hover,.mail-otp-toast .mail-otp-close:hover{background:rgba(var(--theme-line-rgb,255,255,255),.08);color:var(--theme-fg,#f5f2f3)}
 .mail-icon-action:disabled{opacity:.35;cursor:default}.mail-icon-action.is-refreshing svg{animation:daily-refresh-spin 1s linear infinite}
 .mail-inbox-accounts{display:grid;gap:4px;margin-bottom:16px;max-height:180px;overflow:auto;flex:none}
+.mail-account-viewport{height:40px;overflow:hidden;mask-image:linear-gradient(to bottom,transparent,#000 4px,#000 calc(100% - 4px),transparent)}
+.mail-account-track{transition:transform .5s cubic-bezier(.22,1,.36,1)}
+.mail-account-track.is-still{transition:none}
+.mail-account-slide{height:40px;display:flex}
+.mail-otp-toast .mail-account-slide .mail-inbox-account{width:100%;height:40px;flex-wrap:nowrap}
 .mail-otp-toast .mail-inbox-all{justify-self:start;padding:4px 12px;margin-bottom:4px;border-radius:999px;font-size:12px;line-height:20px;color:var(--theme-muted,#b8aeba);background:rgba(var(--theme-line-rgb,255,255,255),.04);border:1px solid transparent}
 .mail-otp-toast .mail-inbox-all[aria-pressed=true]{color:var(--theme-link,#ed8294);background:rgba(var(--theme-accent-rgb,194,38,63),.1);border-color:rgba(var(--theme-accent-rgb,194,38,63),.18)}
 .mail-otp-toast .mail-inbox-account{display:flex;flex-wrap:wrap;align-items:center;gap:8px;justify-content:space-between;width:100%;min-height:40px;padding:8px 12px;text-align:left;background:rgba(var(--theme-line-rgb,255,255,255),.025);border:1px solid transparent;border-radius:12px;color:inherit;transition:background .18s ease,border-color .18s ease}
@@ -933,7 +938,7 @@ html.workbench-console .notification-center .notification-preferences :is(select
 .mail-inbox-list::-webkit-scrollbar-thumb,.mail-inbox-accounts::-webkit-scrollbar-thumb{background:rgba(var(--theme-line-rgb,255,255,255),.16);border-radius:999px;min-height:32px}
 .mail-inbox-list:hover::-webkit-scrollbar-thumb,.mail-inbox-accounts:hover::-webkit-scrollbar-thumb{background:rgba(var(--theme-line-rgb,255,255,255),.3)}
 .mail-inbox-list::-webkit-scrollbar-button,.mail-inbox-accounts::-webkit-scrollbar-button{display:none;width:0;height:0}
-@media(prefers-reduced-motion:reduce){.mail-otp-toast button,.mail-otp-recent-row{transition:none}.mail-icon-action.is-refreshing svg{animation:none}}
+@media(prefers-reduced-motion:reduce){.mail-otp-toast button,.mail-otp-recent-row,.mail-account-track{transition:none}.mail-icon-action.is-refreshing svg{animation:none}}
 .mail-otp-settings .mail-otp-account{display:flex;gap:16px;align-items:center;padding:16px;border-radius:16px;background:rgba(var(--theme-line-rgb,255,255,255),.04);border:1px solid rgba(var(--theme-line-rgb,255,255,255),.1)}
 .mail-otp-account>div{flex:1;min-width:0}.mail-otp-account strong,.mail-otp-account small{display:block;overflow-wrap:anywhere}.mail-otp-account small{margin-top:4px;font-size:12px}
 .mail-otp-settings fieldset{display:grid;gap:16px;margin-top:16px;padding:20px;border-radius:16px;border:1px solid rgba(var(--theme-line-rgb,255,255,255),.12)}

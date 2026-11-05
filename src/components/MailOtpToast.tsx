@@ -3,7 +3,7 @@ import {isTauri} from '@tauri-apps/api/core';
 import {readMailSnapshot,refreshMailInbox,mailStateLabel,mailSenderLabel,nextOtp,remainingOtpTime,type MailSnapshot,type OtpNotice} from '../services/mailOtp';
 import {CloseIcon} from './CloseIcon';
 
-export function MailOtpToast({blocked,enabled=true,recent=false,onCloseRecent,onOpenSettings}:{onOpenSettings?:()=>void;blocked:boolean;enabled?:boolean;recent?:boolean;onCloseRecent?:()=>void}){
+export function MailOtpToast({blocked,enabled=true,recent=false,animations=true,onCloseRecent,onOpenSettings}:{onOpenSettings?:()=>void;blocked:boolean;enabled?:boolean;recent?:boolean;animations?:boolean;onCloseRecent?:()=>void}){
  const [snapshot,setSnapshot]=useState<MailSnapshot>({accounts:[],statuses:[],notices:[]}),[active,setActive]=useState<OtpNotice>(),[clock,setClock]=useState(Date.now()),[hover,setHover]=useState(false),[copied,setCopied]=useState(''),[error,setError]=useState('');
  const [selectedAccount,setSelectedAccount]=useState(''),[loadError,setLoadError]=useState(''),[refreshing,setRefreshing]=useState(false);
  useEffect(()=>{if(selectedAccount&&!snapshot.accounts.some(a=>a.id===selectedAccount))setSelectedAccount('')},[selectedAccount,snapshot.accounts]);
@@ -20,17 +20,34 @@ export function MailOtpToast({blocked,enabled=true,recent=false,onCloseRecent,on
  const copy=async(n:OtpNotice)=>{if(!n.code||n.expiresAt<=Date.now()){setError('验证码已过期');return}setError('');try{await navigator.clipboard.writeText(n.code);setCopied(n.id);window.clearTimeout(copyTimer.current);copyTimer.current=window.setTimeout(()=>{dismissed.current.add(n.id);setActive(a=>a?.id===n.id?undefined:a);setCopied('');},700)}catch{setError('复制失败，请重试')}};
  const notices=(snapshot.inbox??snapshot.notices).filter(n=>!selectedAccount||n.accountId===selectedAccount).sort((a,b)=>b.receivedAt-a.receivedAt).slice(0,20);
  if(!enabled||blocked&&!recent||!recent&&!active)return null;
- return <MailOtpCard recent={recent} active={active} notices={notices} snapshot={snapshot} copied={copied} error={error||loadError} copy={copy} selectedAccount={selectedAccount} onSelectAccount={setSelectedAccount} refreshing={refreshing} onRefresh={()=>void refresh()} onOpenSettings={onOpenSettings} onHover={setHover} onClose={()=>{if(recent)onCloseRecent?.();else dismiss()}}/>;
+ return <MailOtpCard animations={animations} recent={recent} active={active} notices={notices} snapshot={snapshot} copied={copied} error={error||loadError} copy={copy} selectedAccount={selectedAccount} onSelectAccount={setSelectedAccount} refreshing={refreshing} onRefresh={()=>void refresh()} onOpenSettings={onOpenSettings} onHover={setHover} onClose={()=>{if(recent)onCloseRecent?.();else dismiss()}}/>;
+}
+function MailAccountTicker({snapshot,selectedAccount,onSelectAccount,animations}:{snapshot:MailSnapshot;selectedAccount:string;onSelectAccount?:(id:string)=>void;animations:boolean}){
+ const [index,setIndex]=useState(0),[paused,setPaused]=useState(false),[resetting,setResetting]=useState(false);
+ const count=snapshot.accounts.length;
+ useEffect(()=>{
+  if(count<2)return;
+  if(index===count){const timer=window.setTimeout(()=>{setResetting(true);setIndex(0)},500);return()=>window.clearTimeout(timer)}
+  if(resetting){const frame=window.requestAnimationFrame(()=>setResetting(false));return()=>window.cancelAnimationFrame(frame)}
+  if(paused||selectedAccount)return;
+  const timer=window.setTimeout(()=>setIndex(i=>i+1),4000);return()=>window.clearTimeout(timer);
+ },[index,count,paused,selectedAccount,resetting]);
+ const rows=count>1?[...snapshot.accounts,snapshot.accounts[0]]:snapshot.accounts;
+ return <div className="mail-account-viewport" onMouseEnter={()=>setPaused(true)} onMouseLeave={()=>setPaused(false)} onFocusCapture={()=>setPaused(true)} onBlurCapture={e=>{if(!e.currentTarget.contains(e.relatedTarget as Node|null))setPaused(false)}}>
+  <div className={`mail-account-track${resetting||!animations?' is-still':''}`} style={{transform:`translateY(-${index*40}px)`}}>
+   {rows.map((a,i)=>{const status=snapshot.statuses.find(s=>s.accountId===a.id);return <div className="mail-account-slide" key={`${a.id}-${i}`} inert={i!==index} aria-hidden={i!==index}><button className="mail-inbox-account" aria-pressed={selectedAccount===a.id} title={a.enabled&&status?.message?status.message:a.email} onClick={()=>onSelectAccount?.(selectedAccount===a.id?'':a.id)}><strong>{a.email}</strong><span className={`mail-inbox-state is-${a.enabled?status?.state??'waiting':'paused'}`}>{mailStateLabel(a,status)}</span></button></div>})}
+  </div>
+ </div>;
 }
 function MailActionIcon({kind}:{kind:'refresh'|'settings'}){return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{kind==='refresh'?<><path d="M20 10a8 8 0 1 0 .2 4M20 4v6h-6"/></>:<><path d="m9 3-.7 2.2-2 .9-2.1-.6L2.7 8l1.5 1.7-.2 2.4L2.5 14l1.5 2.6 2.3-.4 1.8 1.3.4 2.3h3l1-2 2.3-.4 1.8 1.4 2.6-1.5-.5-2.3 1.1-2 .9-1.7-1.5-2.6-2.3.3-1.8-1.4-.3-2.3Z"/><circle cx="11" cy="11.5" r="3"/></>}</svg>}
-export function MailOtpCard({recent,active,notices,snapshot,copied,error,copy,onClose,onHover,selectedAccount='',onSelectAccount,onRefresh,onOpenSettings,refreshing=false}:{recent:boolean;active?:OtpNotice;notices:OtpNotice[];snapshot:MailSnapshot;copied:string;error:string;copy:(notice:OtpNotice)=>Promise<void>;onClose:()=>void;onHover?:(hover:boolean)=>void;selectedAccount?:string;onSelectAccount?:(id:string)=>void;onRefresh?:()=>void;onOpenSettings?:()=>void;refreshing?:boolean}){
+export function MailOtpCard({recent,active,notices,snapshot,copied,error,copy,onClose,onHover,selectedAccount='',onSelectAccount,onRefresh,onOpenSettings,refreshing=false,animations=true}:{recent:boolean;active?:OtpNotice;notices:OtpNotice[];snapshot:MailSnapshot;copied:string;error:string;copy:(notice:OtpNotice)=>Promise<void>;onClose:()=>void;onHover?:(hover:boolean)=>void;selectedAccount?:string;onSelectAccount?:(id:string)=>void;onRefresh?:()=>void;onOpenSettings?:()=>void;refreshing?:boolean;animations?:boolean}){
  return <aside className={`island-popover glass mail-otp-toast${recent?' mail-inbox-panel':''}`} data-main-hit-region aria-label={recent?'最近邮件':active?.code?'邮箱验证码':'新邮件'} onMouseEnter={()=>onHover?.(true)} onMouseLeave={()=>onHover?.(false)}>
   {!recent&&<button className="ui-icon-button mail-otp-close" aria-label={active?.code?'关闭验证码':'关闭新邮件提醒'} onClick={onClose}><CloseIcon/></button>}
   {recent?<>
    <header className="mail-inbox-header"><h3>邮箱</h3><div className="mail-inbox-actions"><button className={`mail-icon-action${refreshing?' is-refreshing':''}`} aria-label="刷新邮箱" title="刷新邮箱" aria-busy={refreshing} disabled={refreshing||!snapshot.accounts.some(a=>a.enabled)} onClick={onRefresh}><MailActionIcon kind="refresh"/></button><button className="mail-icon-action" aria-label="管理邮箱" title="管理邮箱" onClick={onOpenSettings}><MailActionIcon kind="settings"/></button><button className="mail-icon-action" aria-label="关闭邮箱" title="关闭" onClick={onClose}><CloseIcon/></button></div></header>
    {snapshot.accounts.length>0?<nav className="mail-inbox-accounts" aria-label="邮箱账户">
     {snapshot.accounts.length>1&&<button className="mail-inbox-all" aria-pressed={!selectedAccount} onClick={()=>onSelectAccount?.('')}>全部邮箱</button>}
-    {snapshot.accounts.map(a=>{const status=snapshot.statuses.find(s=>s.accountId===a.id);return <button key={a.id} className="mail-inbox-account" aria-pressed={selectedAccount===a.id} onClick={()=>onSelectAccount?.(selectedAccount===a.id?'':a.id)}><strong title={a.email}>{a.email}</strong><span className={`mail-inbox-state is-${a.enabled?status?.state??'waiting':'paused'}`}>{mailStateLabel(a,status)}</span>{a.enabled&&status?.message&&<small className="mail-inbox-issue" role="status">{status.message}</small>}</button>})}
+    <MailAccountTicker key={snapshot.accounts.map(a=>a.id).join(':')} snapshot={snapshot} selectedAccount={selectedAccount} onSelectAccount={onSelectAccount} animations={animations}/>
    </nav>:!error&&<p className="mail-otp-hint">尚未连接邮箱，请先在“管理邮箱”中添加。</p>}
    <span className="mail-otp-eyebrow mail-inbox-list-heading">最近邮件 · 最多 20 封</span>
    <div className="mail-inbox-list" role="list" aria-label="邮件列表">{notices.length?notices.map(n=><div className="mail-otp-recent-row" role="listitem" key={n.id}><div><strong title={n.sender}>{mailSenderLabel(n.sender)}</strong><p className="mail-notice-subject">{n.subject||'（无主题）'}</p><small>{new Date(n.receivedAt).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false})}{snapshot.accounts.length>1&&` · ${snapshot.accounts.find(a=>a.id===n.accountId)?.email??''}`}</small></div>{n.code&&<button className="mail-code-chip" onClick={()=>void copy(n)} aria-label={`复制验证码 ${n.code}`}>{copied===n.id?'已复制':n.code}</button>}</div>):<p className="mail-otp-hint">暂无已读取的邮件</p>}</div>
