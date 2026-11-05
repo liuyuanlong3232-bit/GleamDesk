@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-11-05
+
+- Redesign click-expanded HUD details while retaining the compact icon bar; center details beneath it and simplify enabled API account balances.
+- Keep DeepSeek currencies separate and preserve Claude model-specific quota names and Antigravity groups.
+- Read Doubao official quotas using the desktop client's active profile. With permission, keep a profile-bound Windows-encrypted login cache for up to seven days so quota queries work while the client holds its database open. Include reported subscription and incentive quotas without inventing missing values.
+- Add Kimi Code quota reading for current and legacy response formats. Parser tests pass; real-subscription compatibility has not been verified locally.
+
 ## [0.1.5] - 2026-11-01
 
 - Add GitHub, Skills, Hugging Face Spaces and Show HN daily recommendations with animated arrow paging; reopen on GitHub and retain source ranks, timestamps and cached results.

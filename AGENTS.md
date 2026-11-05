@@ -45,3 +45,4 @@ Windows 透明 HUD 的 Computer Use 可能同时返回 14×14 小区域与完整
 离线翻译资源可复用同版本开发副本的 `public/translation-models` 与 `public/translation-runtime`，仍须由 `npm run build` 重新校验；缺包先按锁文件运行 `npm ci`，不要跳过模型检查。
 豆包登录读取须按 `Local State` 的 `profile.last_used` 选择当前配置档，不能写死 `Default` 或跨档回退；赠送额度与订阅窗口分开读取，仅查询官方只读额度接口。
 豆包运行时可能独占 Cookies 数据库，首次退出后导入本机 DPAPI 加密缓存；DPAPI 测试需在正常 Windows 用户环境运行，沙箱失败不能判为加密实现错误。
+NSIS 安装后的 EXE 与便携 EXE 可能仅有 `__TAURI_BUNDLE_TYPE_VAR_UNK` → `NSS` 三字节差异；验签原安装包，并逐字节确认只有该唯一标记变化，不能直接把两种 EXE 的哈希不同判为安装损坏。
