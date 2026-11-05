@@ -4,6 +4,9 @@ use serde_json::Value;
 use crate::{cli_reader, provider_requests::{observed_unix_ms, RequestCache}};
 #[cfg(windows)]
 mod kimi;
+#[cfg(windows)]
+#[path="doubao_client.rs"]
+mod doubao;
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all="camelCase")]
@@ -231,7 +234,7 @@ fn metadata() -> Value {
     }
     #[cfg(not(windows))] { Value::Null }
 }
-fn load(app:Option<&tauri::AppHandle>) -> AgentSnapshot {
+fn load(_app:Option<&tauri::AppHandle>) -> AgentSnapshot {
     let metadata = metadata();
     let mut codex = executable("codex.exe").map(|path| match cli_reader::read_codex_usage(&path) {
         Ok((auth, quotas)) => codex_observation(&auth, &quotas),
@@ -262,8 +265,8 @@ fn load(app:Option<&tauri::AppHandle>) -> AgentSnapshot {
     };
     let mut antigravity=local("antigravity","Antigravity","antigravity");
     #[cfg(windows)] antigravity_quota(&mut antigravity);
-    let mut doubao=local("doubao","豆包","doubao");let member=app.map(|app|crate::doubao_membership::snapshot(app,true)).unwrap_or(Value::Null);
-    if member["available"]==true{doubao.login_status="verified";doubao.source="doubao-member-page";doubao.confidence="local";doubao.reason="";doubao.state="normal";doubao.plan=bounded_text(member.get("planName"));doubao.membership=Some(member);}
+    #[cfg(windows)] let doubao={use tauri::Manager;let cache_dir=_app.and_then(|app|app.path().app_data_dir().ok());let mut result=doubao::read(cache_dir.as_deref());result.installed=metadata["doubaoInstalled"]==true||result.login_status=="verified";result.running=metadata["doubaoRunning"]==true;result};
+    #[cfg(not(windows))] let doubao=local("doubao","豆包","doubao");
     #[cfg(windows)] let kimi=kimi::read();
     #[cfg(not(windows))] let kimi=account("kimi","Kimi Code");
     AgentSnapshot { accounts: vec![codex, claude, antigravity, doubao, kimi, account("gemini", "Gemini（预留）")], observed_at_unix_ms: observed_unix_ms() }

@@ -20,7 +20,6 @@ mod provider_requests;
 mod provider_diagnostics;
 mod cli_reader;
 mod agent_usage;
-mod doubao_membership;
 mod ollama;
 mod desktop_ingress;
 mod dock_window;
@@ -420,8 +419,6 @@ pub fn run() {
             daily_recommendations::mimo_connection_status,
             daily_recommendations::mimo_balance_open,
             daily_recommendations::mimo_balance_connect,
-            doubao_membership::doubao_membership_open,
-            doubao_membership::read_doubao_membership,
             agent_room::agent_room_chat_load,
             agent_room::workspace::agent_room_workspace_load,
             agent_room::workspace::agent_room_workspace_save_room,

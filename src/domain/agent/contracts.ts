@@ -39,6 +39,6 @@ export interface AgentQuotaAccount {
   cliDetected?: boolean;
   configurationDetected?: boolean;
   cacheDetected?: boolean;
-  membership?: {available:boolean;source?:string;planName?:string|null;expiryText?:string|null;benefits:Array<{label:string;detail:string}>;observedAtUnixMs?:number;cached?:boolean};
+  membership?: {available:boolean;source?:string;planName?:string|null;expiryText?:string|null;benefits:Array<{label:string;detail:string}>;observedAtUnixMs?:number;cached?:boolean;readIssue?:string};
   observedAt: string;
 }

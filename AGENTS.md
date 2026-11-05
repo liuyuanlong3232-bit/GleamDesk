@@ -43,3 +43,5 @@ Windows 透明 HUD 的 Computer Use 可能同时返回 14×14 小区域与完整
 主屏交互面板须放在 `.main-screen` 内并标记 `data-main-hit-region`，否则原生透明窗口裁剪会让面板在可访问树中存在却不可见、不可点击。
 每日推荐的英文简介自动使用本机离线模型翻译并缓存，保留原文；不接入付费翻译 API，不恢复独立 HUD 翻译按钮或已移除的邮箱模块。
 离线翻译资源可复用同版本开发副本的 `public/translation-models` 与 `public/translation-runtime`，仍须由 `npm run build` 重新校验；缺包先按锁文件运行 `npm ci`，不要跳过模型检查。
+豆包登录读取须按 `Local State` 的 `profile.last_used` 选择当前配置档，不能写死 `Default` 或跨档回退；赠送额度与订阅窗口分开读取，仅查询官方只读额度接口。
+豆包运行时可能独占 Cookies 数据库，首次退出后导入本机 DPAPI 加密缓存；DPAPI 测试需在正常 Windows 用户环境运行，沙箱失败不能判为加密实现错误。

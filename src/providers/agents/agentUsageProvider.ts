@@ -62,7 +62,7 @@ export function normalizeAgentUsage(snapshot: NativeSnapshot): AgentQuotaData {
 }
 export function createAgentUsageProvider(consent=false): Provider<AgentQuotaData> {
   return { id: "agent-quotas", name: "AI Agent Usage", kind: "agent", refreshIntervalMs: isTauri() && consent ? 300_000 : null,
-    backgroundRefreshIntervalMs: null, timeoutMs: 70_000, retryPolicy: { maxRetries: 0 }, cacheKey: `native-agents-v6:${consent}`,
+    backgroundRefreshIntervalMs: null, timeoutMs: 70_000, retryPolicy: { maxRetries: 0 }, cacheKey: `native-agents-v7:${consent}`,
     load: async () => {
       if (!consent) return {status:"unavailable",data:unknownAgentUsage("permission-required"),retryable:false};
       if (!isTauri()) return { status: "unavailable", data: unknownAgentUsage("unsupported-runtime"), retryable: false };

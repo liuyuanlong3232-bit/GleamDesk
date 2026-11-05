@@ -20,6 +20,10 @@ test("API connection cards separate saved configuration and billing from offline
 });
 import { normalizeAgentUsage, unknownAgentUsage, createAgentUsageProvider, agentClients, normalizeAgentRuntime, runningAgentClients } from "../src/providers/agents/agentUsageProvider";
 import {AgentConnectionsSettings} from "../src/components/AgentConnectionsSettings";
+test("Doubao connections reuse the desktop login without a separate member web window",()=>{
+ const html=renderToStaticMarkup(createElement(AgentConnectionsSettings));
+ assert.match(html,/豆包客户端.*登录/);assert.doesNotMatch(html,/连接豆包会员|读取豆包会员/);
+});
 test("Kimi quota reaches the HUD with its actual monthly window",()=>{
  const observedAtUnixMs=Date.now();
  const data=normalizeAgentUsage({observedAtUnixMs,accounts:[{id:"kimi",name:"Kimi Code",state:"normal",installed:true,running:true,loginStatus:"verified",plan:"Plus",usageType:"subscription",source:"kimi-code-api",confidence:"verified",reason:"",observedAtUnixMs,ordinaryUsageAllowed:null,windows:[{id:"limit_5h",usedPercent:30.6,windowDurationMins:300,resetsAtUnixMs:null,title:"5 小时额度"},{id:"limit_month_total",usedPercent:1.22,windowDurationMins:43200,resetsAtUnixMs:null,title:"每月额度"}]}]});

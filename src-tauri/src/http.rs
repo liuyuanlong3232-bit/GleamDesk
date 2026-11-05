@@ -257,6 +257,11 @@
         Ok((status, response))
     }
 
+    // Read-only account query. The explicit session is sent only to this fixed official endpoint.
+    pub(crate) fn post_doubao_quota(path:&str,headers:&str)->Result<(u32,Vec<u8>),String>{
+        if !["/alice/commerce/sale/subscription/quota/summary/?","/alice/commerce/sale/subscription/overview/?"].iter().any(|prefix|path.starts_with(prefix))||path.len()>32768||path.contains(['\r','\n','#']){return Err("豆包额度地址无效".into())}
+        post_request_json("www.doubao.com",443,true,path,headers,br#"{"product_line":"membership"}"#,std::time::Instant::now()+std::time::Duration::from_secs(15),&||Ok(()))
+    }
     // A single manually initiated inference request. No retry, redirect, cookies, or custom host.
     // Recompute the remaining absolute deadline before each potentially blocking operation.
     pub fn post_json(host_name: &str, path: &str, header_text: &str, body: &[u8], deadline: std::time::Instant,
@@ -297,7 +302,7 @@
         struct Headers(Vec<u16>);
         impl Drop for Headers { fn drop(&mut self) { self.0.fill(0); } }
         let mut headers = Headers(wide(header_text));
-        let agent = wide("AgentRoom/0.1"); let host = wide(host_name); let verb = wide("POST"); let target = wide(path);
+        let agent = wide("AgentRoom/0.1"); let host = wide(host_name); let verb = wide("POST"); let target = Headers(wide(path));
         let remaining = || -> Result<i32,String> {
             check()?;
             let millis = deadline.checked_duration_since(std::time::Instant::now()).ok_or("推理请求达到 60 秒总超时；未自动重试")?.as_millis();
@@ -322,7 +327,7 @@
         if connection.0.is_null() { return Err("无法连接推理服务".into()); }
         remaining()?;
         let flags=if secure {WINHTTP_FLAG_SECURE} else {0};
-        let request = Handle(unsafe { WinHttpOpenRequest(connection.0,verb.as_ptr(),target.as_ptr(),ptr::null(),ptr::null(),ptr::null(),flags) });
+        let request = Handle(unsafe { WinHttpOpenRequest(connection.0,verb.as_ptr(),target.0.as_ptr(),ptr::null(),ptr::null(),ptr::null(),flags) });
         if request.0.is_null() { return Err("无法创建推理请求".into()); }
         let redirect_policy = 0u32;
         let disable = 0x0000_0001u32 | 0x0000_0004u32; // WINHTTP_DISABLE_COOKIES | WINHTTP_DISABLE_AUTHENTICATION

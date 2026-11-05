@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { ProviderStatus } from "../types";
+import {doubaoReadIssueMessage} from "../presentation/quotaAdapter";
 import {dataStateLabel,formatDataUpdatedAt,observedDataState} from "../domain/providers/contracts";
 import type { LocalAiSnapshot } from "../domain/local/contracts";
 import { readCodexQuotaHistory, type CodexQuotaRecord } from "../services/historyStore";
@@ -21,7 +22,7 @@ export function membershipBenefitDetail(detail:string,observedAt?:number):string
 const agentIds = ["codex", "claude", "antigravity", "ollama", "doubao", "kimi"] as const;
 const names = { codex: "Codex", claude: "Claude Code", antigravity: "Antigravity", ollama: "Ollama", doubao: "豆包", kimi:"Kimi Code" };
 const glyphs = { codex: "✳", claude: "✺", antigravity: "▲", ollama: "◌", doubao: "豆", kimi:"K" };
-const sourceNames: Record<string, string> = { "codex-cli-official-rpc": "Codex CLI · 官方额度", "codex-cli": "Codex CLI", "claude-cli-auth-status": "Claude CLI · 登录状态", "claude-oauth-usage":"Claude 账户使用量", "claude-engine-get-usage":"Claude Code · 客户端额度", "antigravity-local-quota":"Antigravity 本机额度", "doubao-member-page":"豆包官方会员页", "kimi-code-api":"Kimi Code · 官方额度", "windows-client-metadata": "本机安装 / 进程", none: "没有可靠来源" };
+const sourceNames: Record<string, string> = { "codex-cli-official-rpc": "Codex CLI · 官方额度", "codex-cli": "Codex CLI", "claude-cli-auth-status": "Claude CLI · 登录状态", "claude-oauth-usage":"Claude 账户使用量", "claude-engine-get-usage":"Claude Code · 客户端额度", "antigravity-local-quota":"Antigravity 本机额度", "doubao-client-api":"豆包客户端 · 官方额度", "doubao-member-page":"豆包官方会员页", "kimi-code-api":"Kimi Code · 官方额度", "windows-client-metadata": "本机安装 / 进程", none: "没有可靠来源" };
 const confidenceNames = { verified: "已核实", local: "本地", estimated: "估算", unknown: "额度未知" };
 
 export function AIControlCenter({ agents, localAI, gpuName, simulationEnabled=false }: { agents: ProviderStatus[]; localAI?: LocalAiSnapshot | null; gpuName?: string|null; simulationEnabled?:boolean }) {
@@ -68,7 +69,7 @@ export function AIControlCenter({ agents, localAI, gpuName, simulationEnabled=fa
                 <span>{usageWindowTitle(window, id)}</span><b>{window.usedPercent === undefined ? "未知" : `剩余 ${Number((100-window.usedPercent).toFixed(1))}%`}</b>
                 <small>重置 {"resetsAt" in window && window.resetsAt ? new Date(window.resetsAt).toLocaleString("zh-CN", {month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"}) : "未知"}</small>
               </div>)}</div>
-            </> : id==="doubao"?<><p>{agent?.membership?.available?agent.membership.planName||"会员档位未提供":"豆包客户端运行中 · 会员待连接"}</p><small>{agent?.membership?.expiryText||"有效期未知"}</small>{agent?.membership?.benefits?.map((item,index)=><small key={index}>{membershipBenefitDetail(item.detail,agent?.membership?.observedAtUnixMs)}</small>)}<small>{agent?.membership?.available?`官方会员页${agent.membership.cached?" · 缓存快照":" · 页面读取"}${agent.membership.observedAtUnixMs?` · ${new Date(agent.membership.observedAtUnixMs).toLocaleString("zh-CN",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"})}`:""}`:"在连接设置打开官方会员权益并读取"}</small></>:<><p><i className="live-dot" />客户端运行中</p><small>登录未知 · 额度未知</small></>}
+            </> : id==="doubao"?<><p>{agent?.membership?.available?agent.membership.planName||"已连接":"豆包客户端运行中 · 额度待读取"}</p>{agent?.membership?.benefits?.map((item,index)=><small key={index}>{item.label} · {membershipBenefitDetail(item.detail,agent?.membership?.observedAtUnixMs)}</small>)}<small>{agent?.membership?.available?`官方额度查询${agent.membership.cached?" · 上次读取":""}${agent.membership.observedAtUnixMs?` · ${new Date(agent.membership.observedAtUnixMs).toLocaleString("zh-CN",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"})}`:""}`:doubaoReadIssueMessage(agent?.membership?.readIssue)||"在豆包客户端登录后自动读取"}</small></>:<><p><i className="live-dot" />客户端运行中</p><small>登录未知 · 额度未知</small></>}
             {agent?.ordinaryUsageAllowed === false && <small className="provider-hint">服务端当前不允许普通用量</small>}
 
           </>)}

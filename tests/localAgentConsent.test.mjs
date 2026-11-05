@@ -16,6 +16,7 @@ function fixture({defer=false}={}){
  const deps={react,'react/jsx-runtime':{jsx:(type,props)=>({type,props}),jsxs:(type,props)=>({type,props})},
   '@tauri-apps/api/core':{isTauri:()=>true,invoke:async(command,args)=>{calls.push({command,args});if(command==='read_agent_usage'){if(defer)await new Promise(r=>finish=r);return{accounts:[account]}}if(command==='read_ollama_status')return{serviceStatus:'online',runningModels:[]};if(command==='read_doubao_membership')return{available:false};throw Error('Unexpected command '+command)}},
   './AIControlCenter':{membershipBenefitDetail:v=>v},'./StatusHud':{HudLogo:()=>null},
+  '../presentation/quotaAdapter':{doubaoReadIssueMessage:()=>undefined},
   '../providers/agents/agentUsageProvider':{normalizeAgentUsage:v=>v,agentClients:[],unavailableAgentRuntime:()=>({available:false}),readAgentRuntime:async()=>{calls.push({command:'runtime-only'});return{available:true}},runningAgentClients:()=>[]},
   '../services/windowVisibility':{isWindowVisible:()=>true,subscribeWindowVisibility:()=>()=>{}},'../services/launcher/launcherService':{launchApplication:async()=>{throw Error('External launch not allowed')}}
  };
@@ -32,8 +33,8 @@ const accountCalls=f=>f.calls.filter(c=>c.command==='read_agent_usage'||c.comman
 test('opening AI settings while disabled only detects running apps, never reads accounts',async()=>{
  const f=fixture();f.render();await f.flush();const tree=f.render();assert.equal(elements(tree,'input')[0].props.checked,false);
  assert.ok(f.calls.some(c=>c.command==='runtime-only'));assert.equal(accountCalls(f).length,0);
- assert.equal(button(tree,'刷新连接状态').props.disabled,true);assert.equal(button(tree,'读取豆包会员').props.disabled,true);
- await button(tree,'刷新连接状态').props.onClick();await button(tree,'读取豆包会员').props.onClick();assert.equal(accountCalls(f).length,0);
+ assert.equal(button(tree,'刷新连接状态').props.disabled,true);assert.equal(button(tree,'读取豆包会员'),undefined);
+ await button(tree,'刷新连接状态').props.onClick();assert.equal(accountCalls(f).length,0);
  elements(tree,'input')[0].props.onChange({target:{checked:true}});assert.equal(f.changed,true);assert.equal(accountCalls(f).length,0);
 });
 test('explicit opt in passes consent; turning off hides account values and prevents further reads',async()=>{

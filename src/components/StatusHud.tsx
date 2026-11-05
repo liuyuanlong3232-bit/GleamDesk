@@ -26,7 +26,7 @@ import zcodeMark from "../assets/hud/zcode.png";
 import deepseekMark from "../assets/hud/deepseek.png";
 import gooseMark from "../assets/hud/goose.svg";
 import {AvatarArtwork} from "./AvatarArtwork";
-import {hudQuotaUsed,apiMoneyView} from "../presentation/quotaAdapter";
+import {hudQuotaUsed,apiMoneyView,doubaoReadIssueMessage} from "../presentation/quotaAdapter";
 import {usageWindowTitle} from "./AIControlCenter";
 import type {ProviderStatus,ApiConnectionSettings} from "../types";
 import {CloseIcon} from "./CloseIcon";
@@ -46,7 +46,7 @@ export function HudQuotaDetails({provider}:{provider?:ProviderStatus}){
  const windows=used===undefined?[]:provider?.usageWindows?.filter(window=>Number.isFinite(window.usedPercent)&&window.usedPercent>=0&&window.usedPercent<=100)??[];
  const rank=(window:{windowDurationMins?:number})=>window.windowDurationMins===300?0:window.windowDurationMins===10080?1:2;
  const rows=windows.length?[...windows].sort((a,b)=>rank(a)-rank(b)):[{id:"summary",title:"剩余额度",usedPercent:used,windowDurationMins:undefined}];
- if(used===undefined)return <div className="hud-panel-empty"><strong>额度未知</strong></div>;
+ if(used===undefined)return <div className="hud-panel-empty"><strong>额度未知</strong>{provider?.id==="doubao"&&doubaoReadIssueMessage(provider.membership?.readIssue)&&<p className="hud-panel-note">{doubaoReadIssueMessage(provider.membership?.readIssue)}</p>}</div>;
  return <div className="hud-quota-grid">{rows.map((window,index)=>{
   const remaining=Number((100-window.usedPercent!).toFixed(1));
   const title=provider?.id==="codex"?(window.windowDurationMins===300?"5 小时":window.windowDurationMins===10080?"周额度":usageWindowTitle(window,"codex")):usageWindowTitle(window,provider?.id??"");
