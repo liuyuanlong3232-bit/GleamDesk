@@ -28,10 +28,10 @@ pub struct Notice {id:String,account_id:String,sender:String,subject:String,code
 #[serde(rename_all="camelCase")]
 pub struct AccountStatus {account_id:String,state:String,message:String}
 #[derive(Serialize)]
-pub struct Snapshot {accounts:Vec<Account>,statuses:Vec<AccountStatus>,notices:Vec<Notice>}
+pub struct Snapshot {accounts:Vec<Account>,statuses:Vec<AccountStatus>,notices:Vec<Notice>,inbox:Vec<Notice>}
 struct Worker {cancel:Arc<AtomicBool>}
 #[derive(Default)]
-struct Registry {persist:Persist,workers:BTreeMap<String,Worker>,statuses:BTreeMap<String,AccountStatus>,notices:Vec<Notice>,path:Option<PathBuf>}
+struct Registry {persist:Persist,workers:BTreeMap<String,Worker>,statuses:BTreeMap<String,AccountStatus>,notices:Vec<Notice>,inbox:BTreeMap<String,Vec<Notice>>,path:Option<PathBuf>,last_refresh:Option<std::time::Instant>}
 #[derive(Default,Clone)]pub struct MailState(Arc<Mutex<Registry>>);
 static EDIT:Mutex<()>=Mutex::new(());
 static SECRETS:Mutex<()>=Mutex::new(());
@@ -77,7 +77,25 @@ pub fn add_authorized(app:&AppHandle,provider:Provider,secret:Secret)->Result<Ac
  {let mut reg=state.0.lock().map_err(|_|"邮箱状态不可用")?;reg.persist.accounts.push(account.clone());if let Err(error)=persist(&reg){reg.persist.accounts.pop();let _=clear_secret(&account.id);return Err(error)}}
  sync(app);Ok(account)
 }
-#[tauri::command]pub fn mail_otp_snapshot(state:tauri::State<'_,MailState>)->Result<Snapshot,String>{let mut reg=state.0.lock().map_err(|_|"邮箱状态不可用")?;reg.notices.retain(|n|n.expires_at>now_ms());if reg.path.is_none(){return Err("邮箱设置读取失败；原文件保持不变".into())}Ok(Snapshot{accounts:reg.persist.accounts.clone(),statuses:reg.statuses.values().cloned().collect(),notices:reg.notices.clone()})}
+#[tauri::command]
+pub fn mail_otp_snapshot(state:tauri::State<'_,MailState>)->Result<Snapshot,String>{
+ let mut reg=state.0.lock().map_err(|_|"邮箱状态不可用")?;let now=now_ms();
+ reg.notices.retain(|n|n.expires_at>now);
+ for rows in reg.inbox.values_mut(){for row in rows{if row.expires_at<=now{row.code=None}}}
+ if reg.path.is_none(){return Err("邮箱设置读取失败；原文件保持不变".into())}
+ Ok(Snapshot{accounts:reg.persist.accounts.clone(),statuses:reg.statuses.values().cloned().collect(),notices:reg.notices.clone(),inbox:reg.inbox.values().flatten().cloned().collect()})
+}
+#[tauri::command]
+pub fn mail_otp_refresh(app:AppHandle)->Result<(),String>{
+ let _edit=EDIT.lock().map_err(|_|"邮箱设置正在使用")?;let state=app.state::<MailState>();
+ {let mut reg=state.0.lock().map_err(|_|"邮箱状态不可用")?;
+  if reg.last_refresh.is_some_and(|last|last.elapsed()<Duration::from_secs(10)){return Err("正在刷新，请稍候再试".into())}
+  reg.last_refresh=Some(std::time::Instant::now());
+  for (_,worker) in std::mem::take(&mut reg.workers){worker.cancel.store(true,Ordering::SeqCst)}
+  reg.statuses.clear();
+ }
+ sync(&app);Ok(())
+}
 #[tauri::command]pub async fn mail_otp_add(app:AppHandle,provider:Provider,email:String,authorization:String,consent:bool)->Result<Account,String>{
  let _permit=crate::simulation::require_live()?;if !consent{return Err("请先同意本机保存授权并只读查收新邮件".into())}if provider.host().is_none(){return Err("此邮箱请使用官方网页登录".into())}validate_email(&email,provider)?;
  let secret=Secret{email,authorization,refresh_token:None,client_id:None,client_secret:None,expires_at_unix_ms:None};if secret.authorization.is_empty()||secret.authorization.len()>2048||secret.authorization.chars().any(char::is_control){return Err("请填写邮箱客户端授权码".into())}
@@ -103,16 +121,58 @@ pub fn mail_otp_update(app:AppHandle,id:String,enabled:bool,remove:bool)->Result
   let index=reg.persist.accounts.iter().position(|a|a.id==id).ok_or("邮箱账户不存在")?;
   let old=reg.persist.accounts.remove(index);let cursor=reg.persist.cursors.remove(&id);
   if let Err(e)=persist(&reg){reg.persist.accounts.insert(index,old);if let Some(c)=cursor{reg.persist.cursors.insert(id.clone(),c);}return Err(e)}
+  reg.inbox.remove(&id);
  }
  sync(&app);Ok(())
 }
 fn status(state:&MailState,account:&Account,cancel:&AtomicBool,value:&str,message:&str){if let Ok(mut reg)=state.0.lock(){if !cancel.load(Ordering::SeqCst){reg.statuses.insert(account.id.clone(),AccountStatus{account_id:account.id.clone(),state:value.into(),message:message.into()});}}}
 fn sync(app:&AppHandle){let state=app.state::<MailState>().inner().clone();let mut reg=match state.0.lock(){Ok(r)=>r,Err(_)=>return};let accounts=reg.persist.accounts.clone();for a in accounts.into_iter().filter(|a|a.enabled){if reg.workers.contains_key(&a.id){continue}let cancel=Arc::new(AtomicBool::new(false));reg.workers.insert(a.id.clone(),Worker{cancel:cancel.clone()});let state=state.clone();std::thread::spawn(move||worker(state,a,cancel));}}
-pub struct Incoming {pub id:String,pub sender:String,pub subject:String,pub body:String,pub received:u64}
+#[derive(Clone)]pub struct Incoming {pub id:String,pub sender:String,pub subject:String,pub body:String,pub received:u64}
 fn recognize(subject:&str,body:&str)->Option<String>{let first=extract::extract(subject,body,&[])?;let other=extract::extract(&subject.replace(&first.text," "),&body.replace(&first.text," "),&[]);if other.is_some_and(|other|other.text!=first.text){return None}Some(first.text)}
 pub fn accept_notice(account:&Account,item:Incoming,now:u64)->Option<Notice>{if item.received>now+60_000||now.saturating_sub(item.received)>300_000{return None}let code=recognize(&item.subject,&item.body);Some(Notice{id:format!("{}:{}",account.id,item.id),account_id:account.id.clone(),sender:item.sender.chars().filter(|c|!c.is_control()).take(80).collect(),subject:item.subject.chars().filter(|c|!c.is_control()).take(300).collect(),code,received_at:item.received,expires_at:item.received.saturating_add(300_000)})}
-fn commit(state:&MailState,a:&Account,cancel:&AtomicBool,cursor:Cursor,items:Vec<Incoming>)->Result<(),String>{let mut reg=state.0.lock().map_err(|_|"邮箱状态不可用")?;if cancel.load(Ordering::SeqCst){return Ok(())}let _permit=crate::simulation::require_live()?;let now=now_ms();reg.notices.retain(|n|n.expires_at>now);for item in items{if let Some(notice)=accept_notice(a,item,now){if !reg.notices.iter().any(|n|n.id==notice.id){reg.notices.push(notice)}}}if reg.notices.len()>30{let excess=reg.notices.len()-30;reg.notices.drain(..excess);}if reg.persist.cursors.get(&a.id)!=Some(&cursor){let old=reg.persist.cursors.insert(a.id.clone(),cursor);if let Err(e)=persist(&reg){if let Some(old)=old{reg.persist.cursors.insert(a.id.clone(),old);}else{reg.persist.cursors.remove(&a.id);}return Err(e)}}Ok(())}
-fn worker(state:MailState,a:Account,cancel:Arc<AtomicBool>){let mut delay=5;while !cancel.load(Ordering::SeqCst){if crate::simulation::require_live().is_err(){status(&state,&a,&cancel,"paused","模拟模式暂停查收");pause(&cancel,2);continue}status(&state,&a,&cancel,"connecting","");let result=(||{let mut secret=load_secret(&a.id)?;if secret.email!=a.email{return Err("账户与授权信息不匹配，请重新连接".into())}let cursor=state.0.lock().map_err(|_|"邮箱状态不可用")?.persist.cursors.get(&a.id).cloned().unwrap_or_default();if a.provider.host().is_some(){imap_reader::watch(&a,&secret,cursor,&cancel,|c,items|{commit(&state,&a,&cancel,c,items)?;status(&state,&a,&cancel,"ready","");Ok(())})}else{while !cancel.load(Ordering::SeqCst){let c=state.0.lock().map_err(|_|"邮箱状态不可用")?.persist.cursors.get(&a.id).cloned().unwrap_or_default();oauth::refresh_if_needed(&a,&mut secret,&state,&cancel)?;let (c,items)=api::poll(&a,&secret,c,&||{if cancel.load(Ordering::SeqCst){return Err("邮箱监听已停止".into())}crate::simulation::require_live()?.check()})?;commit(&state,&a,&cancel,c,items)?;status(&state,&a,&cancel,"ready","");pause(&cancel,30);}Ok(())}})();if let Err(message)=result{status(&state,&a,&cancel,"error",&message);pause(&cancel,delay);delay=(delay*2).min(300)}else{delay=5;}}}
+fn inbox_notice(a:&Account,item:Incoming,now:u64)->Notice{
+ let code=if item.received<=now+60_000&&now.saturating_sub(item.received)<=300_000{recognize(&item.subject,&item.body)}else{None};
+ Notice{id:format!("{}:{}",a.id,item.id),account_id:a.id.clone(),sender:item.sender.chars().filter(|c|!c.is_control()).take(80).collect(),subject:item.subject.chars().filter(|c|!c.is_control()).take(300).collect(),code,received_at:item.received,expires_at:item.received.saturating_add(300_000)}
+}
+fn store_inbox(reg:&mut Registry,a:&Account,rows:Vec<Incoming>,now:u64){
+ let mut rows=rows.into_iter().map(|item|inbox_notice(a,item,now)).collect::<Vec<_>>();rows.sort_by_key(|n|std::cmp::Reverse(n.received_at));rows.truncate(20);reg.inbox.insert(a.id.clone(),rows);
+}
+fn commit(state:&MailState,a:&Account,cancel:&AtomicBool,cursor:Cursor,items:Vec<Incoming>,summary:Option<Vec<Incoming>>)->Result<(),String>{
+ let mut reg=state.0.lock().map_err(|_|"邮箱状态不可用")?;if cancel.load(Ordering::SeqCst){return Ok(())}
+ let _permit=crate::simulation::require_live()?;let now=now_ms();reg.notices.retain(|n|n.expires_at>now);
+ if let Some(rows)=summary{store_inbox(&mut reg,a,rows,now)}
+ for item in items{
+  if let Some(notice)=accept_notice(a,item,now){
+   let rows=reg.inbox.entry(a.id.clone()).or_default();rows.retain(|n|n.id!=notice.id);rows.push(notice.clone());rows.sort_by_key(|n|std::cmp::Reverse(n.received_at));rows.truncate(20);
+   if !reg.notices.iter().any(|n|n.id==notice.id){reg.notices.push(notice)}
+  }
+ }
+ if reg.notices.len()>30{let excess=reg.notices.len()-30;reg.notices.drain(..excess);}
+ if reg.persist.cursors.get(&a.id)!=Some(&cursor){let old=reg.persist.cursors.insert(a.id.clone(),cursor);if let Err(e)=persist(&reg){if let Some(old)=old{reg.persist.cursors.insert(a.id.clone(),old);}else{reg.persist.cursors.remove(&a.id);}return Err(e)}}Ok(())
+}
+fn worker(state:MailState,a:Account,cancel:Arc<AtomicBool>){
+ let mut delay=5;
+ while !cancel.load(Ordering::SeqCst){
+  if crate::simulation::require_live().is_err(){status(&state,&a,&cancel,"paused","模拟模式暂停查收");pause(&cancel,2);continue}
+  status(&state,&a,&cancel,"connecting","");
+  let result=(||{
+   let mut secret=load_secret(&a.id)?;if secret.email!=a.email{return Err("账户与授权信息不匹配，请重新连接".into())}
+   let cursor=state.0.lock().map_err(|_|"邮箱状态不可用")?.persist.cursors.get(&a.id).cloned().unwrap_or_default();
+   if a.provider.host().is_some(){
+    imap_reader::watch(&a,&secret,cursor,&cancel,|c,items,summary|{commit(&state,&a,&cancel,c,items,summary)?;status(&state,&a,&cancel,"ready","");Ok(())})
+   }else{
+    let mut first=true;
+    while !cancel.load(Ordering::SeqCst){
+     let c=state.0.lock().map_err(|_|"邮箱状态不可用")?.persist.cursors.get(&a.id).cloned().unwrap_or_default();
+     oauth::refresh_if_needed(&a,&mut secret,&state,&cancel)?;
+     let (c,items,summary)=api::poll(&a,&secret,c,first,&||{if cancel.load(Ordering::SeqCst){return Err("邮箱监听已停止".into())}crate::simulation::require_live()?.check()})?;
+     commit(&state,&a,&cancel,c,items,summary)?;first=false;status(&state,&a,&cancel,"ready","");pause(&cancel,30);
+    }Ok(())
+   }
+  })();
+  if let Err(message)=result{status(&state,&a,&cancel,"error",&message);pause(&cancel,delay);delay=(delay*2).min(300)}else{delay=5;}
+ }
+}
 pub fn pause(cancel:&AtomicBool,seconds:u64){for _ in 0..seconds*5{if cancel.load(Ordering::SeqCst){break}std::thread::sleep(Duration::from_millis(200));}}
 
 #[cfg(test)]mod tests{use super::*;fn a()->Account{Account{id:"one".into(),provider:Provider::Qq,email:"a@qq.com".into(),enabled:true}}fn item(received:u64)->Incoming{Incoming{id:"42".into(),sender:"Example".into(),subject:"验证码".into(),body:"验证码：834921，5分钟内有效".into(),received}}
@@ -121,4 +181,6 @@ pub fn pause(cancel:&AtomicBool,seconds:u64){for _ in 0..seconds*5{if cancel.loa
 #[test]fn account_ids_and_email_validation_reject_injection(){assert!(!valid_id("../other"));assert!(validate_email("a@qq.com\r\nLOGIN",Provider::Qq).is_err());assert!(validate_email("a@gmail.com",Provider::Qq).is_err());}
 #[test]fn two_equally_likely_codes_are_not_guessed(){assert!(recognize("Verification code","Verification code: 834921\nVerification code: 765432").is_none());assert_eq!(recognize("Verification code","Your verification code is 834921. Order number: 765432"),Some("834921".into()));}
 #[test]fn ordinary_mail_is_a_subject_only_notification(){let mut mail=item(1000);mail.subject="本周安排".into();mail.body="请查看附件，不需要验证码。".into();let notice=accept_notice(&a(),mail,2000).expect("新邮件应提醒");assert_eq!(notice.subject,"本周安排");assert!(notice.code.is_none());let json=serde_json::to_string(&notice).unwrap();assert!(!json.contains("请查看附件"));}
+#[test]fn historical_inbox_headers_are_visible_without_becoming_notifications(){let mut reg=Registry::default();store_inbox(&mut reg,&a(),vec![item(1000)],400_000);assert_eq!(reg.inbox["one"][0].subject,"验证码");assert!(reg.inbox["one"][0].code.is_none());assert!(reg.notices.is_empty());}
+#[test]fn inbox_is_bounded_per_account_and_does_not_store_body(){let mut reg=Registry::default();let rows=(0..25).map(|i|{let mut m=item(1000+i);m.id=i.to_string();m}).collect();store_inbox(&mut reg,&a(),rows,2000);assert_eq!(reg.inbox["one"].len(),20);assert_eq!(reg.inbox["one"][0].received_at,1024);let json=serde_json::to_string(&reg.inbox).unwrap();assert!(!json.contains("5分钟内有效")&&!json.contains("authorization"));}
 }

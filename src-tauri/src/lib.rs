@@ -403,6 +403,7 @@ pub fn run() {
             let handler: fn(tauri::ipc::Invoke<tauri::Wry>) -> bool = tauri::generate_handler![
             simulation::set_simulation_mode,
             mail_otp::mail_otp_snapshot,
+            mail_otp::mail_otp_refresh,
             mail_otp::mail_otp_add,
             mail_otp::mail_otp_update,
             mail_otp::oauth::mail_oauth_connect,

@@ -111,7 +111,7 @@ export function HudMailButton({onOpen,onEnter,expanded=false}:{onOpen:()=>void;o
 }
 
 /** Reuses the main window's existing hit-region tracking; no native styles change. */
-export function StatusHud({monitorId,open,onDrag,onLeave,animations,children,mailEnabled=true,mailOpen=false,onCloseMail}:{mailEnabled?:boolean;mailOpen?:boolean;onCloseMail?:()=>void;monitorId:string;open:boolean;onDrag:()=>void;onLeave:()=>void;animations:boolean;children:ReactNode}){
+export function StatusHud({monitorId,open,onDrag,onLeave,animations,children,mailEnabled=true,mailOpen=false,onCloseMail,onOpenMailSettings}:{onOpenMailSettings?:()=>void;mailEnabled?:boolean;mailOpen?:boolean;onCloseMail?:()=>void;monitorId:string;open:boolean;onDrag:()=>void;onLeave:()=>void;animations:boolean;children:ReactNode}){
  const [recent,setRecent]=useState(false);
  const [menu,setMenu]=useState<{x:number;y:number}|null>(null),[exitError,setExitError]=useState("");
  const [exitConfirm,setExitConfirm]=useState(false),[exitBusy,setExitBusy]=useState(false),[exitCardHeight,setExitCardHeight]=useState(244);
@@ -145,7 +145,7 @@ export function StatusHud({monitorId,open,onDrag,onLeave,animations,children,mai
  onPointerCancel={()=>{const g=gesture.current;gesture.current=null;if(g?.started)setPlacement(g.original);setDragging(false);skipClick.current=false}}
  onClickCapture={event=>{if(skipClick.current){event.preventDefault();event.stopPropagation();skipClick.current=false}}}>
  {children}
- <MailOtpToast enabled={mailEnabled} blocked={open||Boolean(menu)||dragging} recent={recent||mailOpen} onCloseRecent={()=>{setRecent(false);onCloseMail?.()}}/>
+ <MailOtpToast onOpenSettings={()=>{setRecent(false);onCloseMail?.();onOpenMailSettings?.()}} enabled={mailEnabled} blocked={open||Boolean(menu)||dragging} recent={recent||mailOpen} onCloseRecent={()=>{setRecent(false);onCloseMail?.()}}/>
  <button className="hud-grip" disabled={exitConfirm||exitBusy} aria-label="移动主屏状态面板" title="拖到屏幕四边；右键打开菜单" onKeyDown={event=>{const edge=keyEdges[event.key];if(!edge)return;event.preventDefault();onDrag();const next={edge,offset:.5};setPlacement(next);save(next)}}>⠿</button>
  {menu&&!exitConfirm&&<div className="hud-context-menu glass" role="menu" aria-label="HUD 菜单" data-main-hit-region style={{left:Math.max(8,Math.min(menu.x,viewport.width-208)),top:Math.max(8,Math.min(menu.y,viewport.height-168))}} onKeyDown={event=>{if(event.key==="Tab")event.preventDefault();}}><strong>GleamDesk</strong><button type="button" role="menuitem" onClick={()=>{setMenu(null);setRecent(true)}}>最近邮件</button><button type="button" role="menuitem" className="hud-exit-action" onClick={()=>{setExitError("");setExitConfirm(true);}}>退出程序</button></div>}
  {menu&&exitConfirm&&<div className="hud-exit-confirm glass" role="alertdialog" aria-modal="true" aria-label="退出程序确认" aria-describedby="hud-exit-warning" data-main-hit-region style={{left:Math.max(8,Math.min(menu.x,viewport.width-336)),top:Math.max(8,Math.min(menu.y,viewport.height-exitCardHeight-8))}} onKeyDown={event=>{if(event.key!=="Tab")return;event.preventDefault();const buttons=Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>("button:not(:disabled)"));const index=buttons.indexOf(document.activeElement as HTMLButtonElement);buttons[(index+(event.shiftKey?-1:1)+buttons.length)%buttons.length]?.focus();}}>

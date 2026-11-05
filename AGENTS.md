@@ -44,6 +44,7 @@ Windows 透明 HUD 的 Computer Use 可能同时返回 14×14 小区域与完整
 每日推荐的英文简介自动使用本机离线模型翻译并缓存，保留原文；不接入付费翻译 API，不恢复独立 HUD 翻译按钮或完整邮箱模块。邮箱仅提供用户确认的新邮件提醒和验证码复制。
 邮箱验证码使用独立的 GleamDesk.MailOtp.* 凭据命名空间；不读取旧邮箱凭据。IMAP 只用 EXAMINE/BODY.PEEK，游标按账户和 UIDVALIDITY 隔离；邮件正文、验证码与提示历史只留内存，不能写入诊断或通知历史。真实邮箱验收需用户在设置页本人连接。
 预览 EXE 被占用时，可用临时 Tauri 配置的 mainBinaryName 在固定 target 中生成独立命名候选；不另建编译目录，启动候选前仍须退出共用配置的其他实例。
+HUD 邮箱面板的按钮须显式重置 appearance、背景和边框，避免 WebView 默认灰色按钮；长列表独立滚动，账户行不显示重复的邮箱类型介绍。
 离线翻译资源可复用同版本开发副本的 `public/translation-models` 与 `public/translation-runtime`，仍须由 `npm run build` 重新校验；缺包先按锁文件运行 `npm ci`，不要跳过模型检查。
 豆包登录读取须按 `Local State` 的 `profile.last_used` 选择当前配置档，不能写死 `Default` 或跨档回退；赠送额度与订阅窗口分开读取，仅查询官方只读额度接口。
 豆包运行时可能独占 Cookies 数据库，首次退出后导入本机 DPAPI 加密缓存；DPAPI 测试需在正常 Windows 用户环境运行，沙箱失败不能判为加密实现错误。

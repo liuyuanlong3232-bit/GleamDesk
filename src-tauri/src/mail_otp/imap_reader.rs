@@ -157,16 +157,22 @@ use std::sync::atomic::{AtomicBool,Ordering};
         Ok(())
     }
 
-pub fn watch(account:&Account,secret:&Secret,mut cursor:Cursor,cancel:&AtomicBool,mut accept:impl FnMut(Cursor,Vec<Incoming>)->Result<(),String>)->Result<(),String>{
+pub fn watch(account:&Account,secret:&Secret,mut cursor:Cursor,cancel:&AtomicBool,mut accept:impl FnMut(Cursor,Vec<Incoming>,Option<Vec<Incoming>>)->Result<(),String>)->Result<(),String>{
  let mut session=connect(account,&secret.authorization)?;
  let mailbox=session.examine("INBOX").map_err(|_|"无法只读打开收件箱")?;
  let validity=mailbox.uid_validity.ok_or("邮箱没有返回 UIDVALIDITY")?;
  if cursor.validity!=validity {cursor=Cursor{validity,..Cursor::default()};}
+ let check=||{crate::simulation::require_live()?.check()?;if cancel.load(Ordering::SeqCst){return Err("邮箱监听已停止".into())}Ok(())};
+ let summary=recent_headers(&mut session,mailbox.exists,&check)?;
+ // Initial inbox loading is not a new-mail notification. Existing cursors still catch up new arrivals.
+ if cursor.uid==0{cursor.uid=summary.iter().filter_map(|item|item.id.rsplit('-').next()?.parse::<u32>().ok()).max().unwrap_or(0);}
+ let summary=summary.into_iter().map(|mut item|{item.id=format!("{validity}-{}",item.id);item}).collect();
+ accept(cursor.clone(),Vec::new(),Some(summary))?;
  let idle_supported=session.capabilities().map_err(|_|"无法读取邮箱功能")?.has_str("IDLE");
  while !cancel.load(Ordering::SeqCst){
   let permit=crate::simulation::require_live()?;
   let (next,items)=read_batch(&mut session,&cursor,||{permit.check()?;if cancel.load(Ordering::SeqCst){return Err("邮箱监听已停止".into())}Ok(())})?;
-  accept(next.clone(),items)?;cursor=next;
+  accept(next.clone(),items,None)?;cursor=next;
   if cancel.load(Ordering::SeqCst){break}
   if idle_supported {
    // Short IDLE windows bound stop/remove latency; no detached socket survives indefinitely.
@@ -174,6 +180,21 @@ pub fn watch(account:&Account,secret:&Secret,mut cursor:Cursor,cancel:&AtomicBoo
   }else{super::pause(cancel,30);session.noop().map_err(|_|"邮箱连接已断开")?;}
  }
  let _=session.logout();Ok(())
+}
+
+fn recent_headers<S:Read+Write>(session:&mut imap::Session<S>,exists:u32,check:&impl Fn()->Result<(),String>)->Result<Vec<Incoming>,String>{
+ if exists==0{return Ok(Vec::new())}check()?;
+ let fetched=session.fetch(format!("{}:*",exists.saturating_sub(19).max(1)),"(UID INTERNALDATE RFC822.SIZE BODY.PEEK[HEADER])").map_err(|_|"无法读取最近邮件列表")?;
+ let mut items=Vec::new();
+ for mail in fetched.iter().take(20){
+  check()?;let uid=mail.uid.ok_or("邮件标识缺失")?;let received=mail.internal_date().map(|d|d.timestamp().max(0) as u64*1000).ok_or("邮件接收时间缺失")?;
+  let (sender,subject,_)=super::api::parse_mime(mail.header().unwrap_or_default()).unwrap_or_default();
+  let mut item=Incoming{id:uid.to_string(),sender,subject,body:String::new(),received};
+  if super::now_ms().saturating_sub(received)<=300_000&&mail.size.unwrap_or(u32::MAX)<=192*1024{
+   check()?;let data=session.uid_fetch(uid.to_string(),"(UID BODY.PEEK[])").map_err(|_|"无法只读读取验证码邮件")?;
+   if let Some((sender,subject,body))=data.iter().find(|f|f.uid==Some(uid)).and_then(|f|f.body()).and_then(super::api::parse_mime){item.sender=sender;item.subject=subject;item.body=body;}
+  }items.push(item);
+ }Ok(items)
 }
 
 
@@ -217,4 +238,10 @@ Ok((next,items))}
  #[test]fn reconnect_uses_uid_cursor_and_peek_without_marking_read(){let (cursor,items,commands)=run(0,150,true);assert_eq!(cursor.uid,42);assert_eq!(items.len(),1);assert_eq!(items[0].id,"7-42");assert!(commands.contains("UID SEARCH UID 42:*"));assert!(commands.contains("BODY.PEEK[]"));assert!(!commands.contains("STORE")&&!commands.contains("SELECT"));}
  #[test]fn old_mail_advances_cursor_without_reading_body(){let (cursor,items,commands)=run(400,100,false);assert_eq!(cursor.uid,42);assert!(items.is_empty());assert!(!commands.contains("BODY.PEEK[]"));}
  #[test]fn large_mail_still_notifies_from_headers_without_downloading_attachments(){let (cursor,items,commands)=run(0,300_000,false);assert_eq!(cursor.uid,42);assert_eq!(items.len(),1);assert_eq!(items[0].subject,"Login code");assert_eq!(items[0].sender,"Example");assert!(items[0].body.is_empty());assert!(!commands.contains("BODY.PEEK[]"));}
+ #[test]fn initial_inbox_load_fetches_old_headers_without_reading_body(){
+  let output=Arc::new(Mutex::new(Vec::new()));let header="From: Example\r\nSubject: Last week's mail\r\n\r\n";
+  let reply=format!("a1 OK login\r\n* 1 FETCH (UID 42 INTERNALDATE \"01-Jan-2020 00:00:00 +0000\" RFC822.SIZE 500000 BODY[HEADER] {{{}}}\r\n{header})\r\na2 OK fetch\r\n",header.len());
+  let mut session=imap::Client::new(Wire{input:IoCursor::new(reply.into_bytes()),output:output.clone()}).login("test","test").unwrap();
+  let rows=recent_headers(&mut session,1,&||Ok(())).unwrap();assert_eq!(rows.len(),1);assert_eq!(rows[0].subject,"Last week's mail");assert!(rows[0].body.is_empty());let commands=String::from_utf8(output.lock().unwrap().clone()).unwrap();assert!(commands.contains("FETCH 1:*"));assert!(!commands.contains("BODY.PEEK[]")&&!commands.contains("STORE"));
+ }
 }
