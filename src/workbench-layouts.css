@@ -892,4 +892,20 @@ html.workbench-console .notification-center .notification-preferences :is(select
  .main-screen .hud-expanded-panel .daily-translation-note{padding-inline:16px}
 }
 .main-screen .hud-motion-off .hud-expanded-panel :is(.hud-panel-body,.daily-page){animation:none}
+.main-screen .hud-island .mail-otp-toast{display:block;width:min(400px,calc(100vw - 32px));padding:24px;max-height:min(480px,calc(100vh - 180px));overflow:auto;border-radius:24px}
+.mail-otp-toast .mail-otp-close{position:absolute;right:12px;top:12px}
+.mail-otp-eyebrow{display:block;max-width:calc(100% - 32px);font-size:14px;font-weight:500;color:var(--theme-muted,#b8aeba);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mail-otp-code-row{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-block:12px 8px}
+.mail-otp-code-row .mail-otp-code{border:0;padding:0;background:none;color:inherit;font-size:36px;font-weight:600;letter-spacing:.08em;font-variant-numeric:tabular-nums;cursor:pointer}
+.mail-otp-copy{padding:8px 16px;border-radius:12px;background:rgba(var(--theme-line-rgb,255,255,255),.1);color:inherit;border:1px solid rgba(var(--theme-line-rgb,255,255,255),.12)}
+.mail-otp-address,.mail-otp-hint{font-size:12px;color:var(--theme-muted,#b8aeba);overflow-wrap:anywhere}
+.mail-otp-recent-row{display:flex;align-items:center;gap:16px;justify-content:space-between;padding-block:16px}
+.mail-otp-recent-row strong,.mail-otp-recent-row small{display:block;overflow-wrap:anywhere}.mail-otp-recent-row small{font-size:12px;color:var(--theme-muted,#b8aeba)}
+.mail-otp-recent-row button{font-size:20px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.mail-otp-settings .mail-otp-account{display:flex;gap:16px;align-items:center;padding:16px;border-radius:16px;background:rgba(var(--theme-line-rgb,255,255,255),.04);border:1px solid rgba(var(--theme-line-rgb,255,255,255),.1)}
+.mail-otp-account>div{flex:1;min-width:0}.mail-otp-account strong,.mail-otp-account small{display:block;overflow-wrap:anywhere}.mail-otp-account small{margin-top:4px;font-size:12px}
+.mail-otp-settings fieldset{display:grid;gap:16px;margin-top:16px;padding:20px;border-radius:16px;border:1px solid rgba(var(--theme-line-rgb,255,255,255),.12)}
+.mail-otp-settings .mail-otp-consent,.mail-otp-settings .mail-otp-switch{display:flex;align-items:center;gap:8px;font-size:12px}.mail-otp-settings input[type=checkbox]{width:auto;flex:none}.mail-otp-remove{display:flex;gap:8px}
+.mail-otp-toast button:focus-visible{outline:2px solid var(--theme-link,#ed8294);outline-offset:4px}
+@media(max-width:480px){.mail-otp-settings .mail-otp-account{flex-wrap:wrap}.mail-otp-code-row .mail-otp-code{font-size:30px}}
 @media(prefers-reduced-motion:reduce){.main-screen .hud-expanded-panel :is(.hud-panel-body,.daily-page){animation:none}.main-screen .hud-expanded-panel button{transition:none}}

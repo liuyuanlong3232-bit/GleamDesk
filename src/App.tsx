@@ -25,6 +25,7 @@ import { ApplicationManager } from "./components/ApplicationManager";
 import { SettingsDialog } from "./components/SettingsDialog";
 import {PersonalAvatarDialog} from "./components/RoomPortrait";
 import { StatusHud,HudLogo,HudQuotaDetails,HudWorkbenchButton,HudPanelHeading,HudPanelFooter,HudApiBalances } from "./components/StatusHud";
+import {MailOtpSettings} from './components/MailOtpSettings';
 import { hudQuotaUsed,apiHudSummary } from "./presentation/quotaAdapter";
 import {agentClients,readAgentRuntime,unavailableAgentRuntime,runningAgentClients} from "./providers/agents/agentUsageProvider";
 import { AgentConnectionsSettings } from "./components/AgentConnectionsSettings";
@@ -428,7 +429,7 @@ function MainScreen({
     <main className="main-screen scenic">
       <div className="scenic-haze" />
       <header className="main-top">
-        <StatusHud monitorId={monitors.find(monitor=>monitor.isPrimary)?.id??"primary"} open={islandOpen} animations={settings.animations} onDrag={()=>{setIslandOpen(false);setHudPinned(false)}} onLeave={()=>{if(!hudPinned)setIslandOpen(false)}}>
+        <StatusHud mailEnabled={!settings.simulationEnabled} monitorId={monitors.find(monitor=>monitor.isPrimary)?.id??"primary"} open={islandOpen} animations={settings.animations} onDrag={()=>{setIslandOpen(false);setHudPinned(false)}} onLeave={()=>{if(!hudPinned)setIslandOpen(false)}}>
           <div className={`status-island hud-icon-row glass ${animationManager.classFor(islandOpen ? "expand" : "collapse")}`} style={animationManager.style()}>
             {islandItems.map(({id, label, value, meta, badge, state, progress, quota}) => (
               <button key={id} className={`island-item island-${id} is-${state}${hudPinned&&islandOpen&&islandPanel===id?" is-opened":""}`} aria-label={`打开${label}详情`} aria-expanded={islandOpen && islandPanel === id} onMouseEnter={()=>{if(!hudPinned){setIslandPanel(id);setIslandOpen(true)}}} onFocus={()=>{if(!hudPinned){setIslandPanel(id);setIslandOpen(true)}}} onClick={() => { const closeCurrent = hudPinned && islandOpen && islandPanel === id; setIslandPanel(id); setHudPinned(!closeCurrent); setIslandOpen(!closeCurrent); }}>
@@ -960,6 +961,7 @@ function Dashboard({
 
       {settingsOpen && (
         <SettingsDialog selected={settingsModule} onSelect={(id) => { setSettingsModule(id); if (id === "diagnostics") setDiagnosticsOpen(true); }} onClose={() => setSettingsOpen(false)} pages={{
+          mail: (<MailOtpSettings/>),
           appearance: (
           <div className="settings-section">
             <fieldset className="settings-theme-picker"><legend>主题颜色</legend><div>{appThemes.map(theme=><button type="button" key={theme.id} aria-pressed={settings.theme===theme.id} onClick={()=>onSettingsChange({theme:theme.id})}><i aria-hidden="true" style={{background:theme.surface,color:theme.text,borderColor:theme.accent}}><b style={{background:theme.accent}}/><span>Aa</span></i><span>{theme.name}</span></button>)}</div></fieldset>
