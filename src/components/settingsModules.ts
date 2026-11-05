@@ -8,7 +8,7 @@ export const settingsModules = [
   { id: "updates", label: "版本与更新", icon: "↑", group: "系统", description: "检查并安装正式版本更新" },
   { id: "agents", label: "AI 客户端状态", icon: "◈", group: "数据连接", description: "订阅额度、运行状态与本地模型" },
   { id: "api", label: "API 余额与费用", icon: "↔", group: "数据连接", description: "查看连接状态，按需配置账户余额与费用读取" },
-  { id: "mail", label: "邮箱验证码", icon: "✉", group: "数据连接", description: "连接邮箱，在 HUD 提醒新验证码" },
+  { id: "mail", label: "邮箱提醒", icon: "✉", group: "数据连接", description: "新邮件提醒与验证码复制" },
   { id: "beszel", label: "VPS 连接", icon: "▤", group: "数据连接", description: "连接现有 Beszel Hub，查看服务器状态" },
   { id: "data", label: "数据来源", icon: "↥", group: "数据连接", description: "按需配置可选数据来源" },
   { id: "analysis", label: "AI 历史分析", icon: "✳", group: "数据连接", description: "选择推理服务并管理独立凭据" },

@@ -24,7 +24,7 @@ import {DataSourceConnectionsSettings} from "./components/DataSourceConnectionsS
 import { ApplicationManager } from "./components/ApplicationManager";
 import { SettingsDialog } from "./components/SettingsDialog";
 import {PersonalAvatarDialog} from "./components/RoomPortrait";
-import { StatusHud,HudLogo,HudQuotaDetails,HudWorkbenchButton,HudPanelHeading,HudPanelFooter,HudApiBalances } from "./components/StatusHud";
+import { StatusHud,HudLogo,HudQuotaDetails,HudWorkbenchButton,HudMailButton,HudPanelHeading,HudPanelFooter,HudApiBalances } from "./components/StatusHud";
 import {MailOtpSettings} from './components/MailOtpSettings';
 import { hudQuotaUsed,apiHudSummary } from "./presentation/quotaAdapter";
 import {agentClients,readAgentRuntime,unavailableAgentRuntime,runningAgentClients} from "./providers/agents/agentUsageProvider";
@@ -429,7 +429,7 @@ function MainScreen({
     <main className="main-screen scenic">
       <div className="scenic-haze" />
       <header className="main-top">
-        <StatusHud mailEnabled={!settings.simulationEnabled} monitorId={monitors.find(monitor=>monitor.isPrimary)?.id??"primary"} open={islandOpen} animations={settings.animations} onDrag={()=>{setIslandOpen(false);setHudPinned(false)}} onLeave={()=>{if(!hudPinned)setIslandOpen(false)}}>
+        <StatusHud mailEnabled={!settings.simulationEnabled} mailOpen={islandOpen&&hudPinned&&islandPanel==="mail"} onCloseMail={closeHudPanel} monitorId={monitors.find(monitor=>monitor.isPrimary)?.id??"primary"} open={islandOpen} animations={settings.animations} onDrag={()=>{setIslandOpen(false);setHudPinned(false)}} onLeave={()=>{if(!hudPinned)setIslandOpen(false)}}>
           <div className={`status-island hud-icon-row glass ${animationManager.classFor(islandOpen ? "expand" : "collapse")}`} style={animationManager.style()}>
             {islandItems.map(({id, label, value, meta, badge, state, progress, quota}) => (
               <button key={id} className={`island-item island-${id} is-${state}${hudPinned&&islandOpen&&islandPanel===id?" is-opened":""}`} aria-label={`打开${label}详情`} aria-expanded={islandOpen && islandPanel === id} onMouseEnter={()=>{if(!hudPinned){setIslandPanel(id);setIslandOpen(true)}}} onFocus={()=>{if(!hudPinned){setIslandPanel(id);setIslandOpen(true)}}} onClick={() => { const closeCurrent = hudPinned && islandOpen && islandPanel === id; setIslandPanel(id); setHudPinned(!closeCurrent); setIslandOpen(!closeCurrent); }}>
@@ -441,10 +441,11 @@ function MainScreen({
                 </span>
               </button>
             ))}
+            <HudMailButton expanded={islandOpen&&hudPinned&&islandPanel==="mail"} onEnter={()=>{if(!hudPinned)setIslandOpen(false)}} onOpen={()=>{const closing=islandOpen&&hudPinned&&islandPanel==="mail";setIslandPanel("mail");setIslandOpen(!closing);setHudPinned(!closing)}}/>
             <HudWorkbenchButton expanded={islandOpen&&hudPinned&&islandPanel==="workbench"} busy={workbenchScreens.loading} onEnter={()=>{if(islandPanel!=="workbench"){setIslandOpen(false);setHudPinned(false);}}} onOpen={()=>void chooseWorkbenchScreen()}/>
             <AppUpdateIndicator enabled={settings.checkUpdatesOnStartup!==false&&!settings.simulationEnabled} onOpen={()=>onDashboardAt("settings:updates")}/>
           </div>
-            <div className={`island-popover glass${hudPinned?" hud-expanded-panel":" hud-peek"}${hudPinned&&islandPanel==="daily"?" hud-daily-panel":""}`} hidden={!islandOpen} data-main-hit-region>
+            <div className={`island-popover glass${hudPinned?" hud-expanded-panel":" hud-peek"}${hudPinned&&islandPanel==="daily"?" hud-daily-panel":""}`} hidden={!islandOpen||islandPanel==="mail"} data-main-hit-region>
               {!hudPinned&&<><strong className="popover-title">{islandItems.find(item=>item.id===islandPanel)?.label}</strong><p className="hud-source-note">{[islandItems.find(item=>item.id===islandPanel)?.value,islandItems.find(item=>item.id===islandPanel)?.meta].filter(Boolean).join(" · ")}</p></>}
               <DailyOpenSource enabled={!settings.simulationEnabled} presentation="hud" hidden={!islandOpen||!hudPinned||islandPanel!=="daily"} onClose={()=>{setIslandOpen(false);setHudPinned(false)}}/>
               {hudPinned&&islandPanel==="workbench"&&<div className="hud-panel-body"><HudPanelHeading eyebrow="工作台" title="选择打开位置" onClose={closeHudPanel}/>{workbenchScreens.loading?<div className="hud-panel-empty" role="status">正在检测屏幕…</div>:workbenchScreens.error?<div className="hud-panel-empty"><p role="alert">{workbenchScreens.error}</p><button className="hud-panel-action" onClick={()=>void chooseWorkbenchScreen()}>重新检测</button></div>:<div className="hud-screen-options"><button onClick={()=>openWorkbenchScreen(true)}><span aria-hidden="true">▣</span><strong>主屏</strong><small>在主显示器打开</small></button>{workbenchScreens.hasSecondary&&<button onClick={()=>openWorkbenchScreen(false)}><span aria-hidden="true">▣</span><strong>副屏</strong><small>在副显示器打开</small></button>}</div>}</div>}

@@ -899,6 +899,8 @@ html.workbench-console .notification-center .notification-preferences :is(select
 .mail-otp-code-row .mail-otp-code{border:0;padding:0;background:none;color:inherit;font-size:36px;font-weight:600;letter-spacing:.08em;font-variant-numeric:tabular-nums;cursor:pointer}
 .mail-otp-copy{padding:8px 16px;border-radius:12px;background:rgba(var(--theme-line-rgb,255,255,255),.1);color:inherit;border:1px solid rgba(var(--theme-line-rgb,255,255,255),.12)}
 .mail-otp-address,.mail-otp-hint{font-size:12px;color:var(--theme-muted,#b8aeba);overflow-wrap:anywhere}
+.mail-notice-sender{display:block;margin-top:12px;padding-right:16px;font-size:16px;overflow-wrap:anywhere}
+.mail-notice-subject{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;margin-block:8px 12px;font-size:14px;line-height:1.5;overflow-wrap:anywhere}
 .mail-otp-recent-row{display:flex;align-items:center;gap:16px;justify-content:space-between;padding-block:16px}
 .mail-otp-recent-row strong,.mail-otp-recent-row small{display:block;overflow-wrap:anywhere}.mail-otp-recent-row small{font-size:12px;color:var(--theme-muted,#b8aeba)}
 .mail-otp-recent-row button{font-size:20px;font-variant-numeric:tabular-nums;white-space:nowrap}

@@ -189,11 +189,12 @@ fn read_batch<S:Read+Write>(session:&mut imap::Session<S>,cursor:&Cursor,check:i
    let fetch=fetched.iter().find(|f|f.uid==Some(uid)).ok_or("新邮件尚未可读")?;
    let received=fetch.internal_date().map(|d|d.timestamp().max(0) as u64*1000).ok_or("邮件缺少接收时间")?;
    next.uid=next.uid.max(uid);
-   if super::now_ms().saturating_sub(received)>300_000||fetch.size.unwrap_or(u32::MAX)>192*1024{continue}
+   if super::now_ms().saturating_sub(received)>300_000{continue}
+   let (sender,subject,_)=super::api::parse_mime(fetch.header().unwrap_or_default()).unwrap_or_default();
+   if fetch.size.unwrap_or(u32::MAX)>192*1024{items.push(Incoming{id:format!("{validity}-{uid}"),sender,subject,body:String::new(),received});continue}
    check()?;
    let fetched=session.uid_fetch(uid.to_string(),"(UID BODY.PEEK[])").map_err(|_|"无法只读读取验证码邮件")?;
-   let Some(raw)=fetched.iter().find(|f|f.uid==Some(uid)).and_then(|f|f.body())else{continue};
-   let Some((sender,subject,body))=super::api::parse_mime(raw)else{continue};
+   let (sender,subject,body)=fetched.iter().find(|f|f.uid==Some(uid)).and_then(|f|f.body()).and_then(super::api::parse_mime).unwrap_or((sender,subject,String::new()));
    items.push(Incoming{id:format!("{validity}-{uid}"),sender,subject,body,received});
   }
 
@@ -214,5 +215,6 @@ Ok((next,items))}
   let commands=String::from_utf8(output.lock().unwrap().clone()).unwrap();(cursor,items,commands)
  }
  #[test]fn reconnect_uses_uid_cursor_and_peek_without_marking_read(){let (cursor,items,commands)=run(0,150,true);assert_eq!(cursor.uid,42);assert_eq!(items.len(),1);assert_eq!(items[0].id,"7-42");assert!(commands.contains("UID SEARCH UID 42:*"));assert!(commands.contains("BODY.PEEK[]"));assert!(!commands.contains("STORE")&&!commands.contains("SELECT"));}
- #[test]fn old_or_large_mail_advances_cursor_without_reading_body(){for (age,size) in [(400,100),(0,300_000)]{let (cursor,items,commands)=run(age,size,false);assert_eq!(cursor.uid,42);assert!(items.is_empty());assert!(!commands.contains("BODY.PEEK[]"));}}
+ #[test]fn old_mail_advances_cursor_without_reading_body(){let (cursor,items,commands)=run(400,100,false);assert_eq!(cursor.uid,42);assert!(items.is_empty());assert!(!commands.contains("BODY.PEEK[]"));}
+ #[test]fn large_mail_still_notifies_from_headers_without_downloading_attachments(){let (cursor,items,commands)=run(0,300_000,false);assert_eq!(cursor.uid,42);assert_eq!(items.len(),1);assert_eq!(items[0].subject,"Login code");assert_eq!(items[0].sender,"Example");assert!(items[0].body.is_empty());assert!(!commands.contains("BODY.PEEK[]"));}
 }

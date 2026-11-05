@@ -29,11 +29,17 @@ pub fn poll(account:&Account,secret:&Secret,mut cursor:Cursor,check:&impl Fn()->
    let id=path_id(row["id"].as_str().ok_or("邮件标识缺失")?)?;if cursor.seen.iter().any(|s|s==id){continue}
    let message=get(account.provider,&format!("/gmail/v1/users/me/messages/{id}?format=metadata&metadataHeaders=Subject&metadataHeaders=From"),&secret.authorization)?;
    let received=message["internalDate"].as_str().and_then(|s|s.parse::<u64>().ok()).ok_or("邮件接收时间无效")?;
-   if super::now_ms().saturating_sub(received)<=300_000&&message["sizeEstimate"].as_u64().unwrap_or(u64::MAX)<=192*1024{
+   if super::now_ms().saturating_sub(received)<=300_000{
+    let header=|name:&str|message["payload"]["headers"].as_array().and_then(|rows|rows.iter().find(|h|h["name"].as_str().is_some_and(|s|s.eq_ignore_ascii_case(name)))).and_then(|h|h["value"].as_str()).unwrap_or("");
+    let (sender,subject,_)=parse_mime(format!("From: {}\r\nSubject: {}\r\n\r\n",header("From"),header("Subject")).as_bytes()).unwrap_or_default();
+    let mut item=Incoming{id:id.into(),sender,subject,body:String::new(),received};
+    if message["sizeEstimate"].as_u64().unwrap_or(u64::MAX)<=192*1024{
     check()?;
     let mut message=get(account.provider,&format!("/gmail/v1/users/me/messages/{id}?format=raw"),&secret.authorization)?;
     let mut encoded=message["raw"].take().as_str().unwrap_or("").to_owned();
-    if let Ok(mut raw)=URL_SAFE_NO_PAD.decode(&encoded).or_else(|_|URL_SAFE.decode(&encoded)){if let Some((sender,subject,body))=parse_mime(&raw){items.push(Incoming{id:id.into(),sender,subject,body,received})}raw.fill(0)}unsafe{encoded.as_bytes_mut().fill(0)}
+    if let Ok(mut raw)=URL_SAFE_NO_PAD.decode(&encoded).or_else(|_|URL_SAFE.decode(&encoded)){if let Some((sender,subject,body))=parse_mime(&raw){item.sender=sender;item.subject=subject;item.body=body;}raw.fill(0)}unsafe{encoded.as_bytes_mut().fill(0)}
+    }
+    items.push(item);
    }
    cursor.seen.push(id.into());
   }
@@ -46,7 +52,7 @@ pub fn poll(account:&Account,secret:&Secret,mut cursor:Cursor,check:&impl Fn()->
    if super::now_ms().saturating_sub(received)>300_000{cursor.seen.push(id.into());continue}
    check()?;
    let segment=id.bytes().map(|b|if b.is_ascii_alphanumeric()||b"_-".contains(&b){(b as char).to_string()}else{format!("%{b:02X}")}).collect::<String>();
-   let message=get(account.provider,&format!("/v1.0/me/mailFolders/inbox/messages/{segment}?$select=body"),&secret.authorization)?;
+   let message=match get(account.provider,&format!("/v1.0/me/mailFolders/inbox/messages/{segment}?$select=body"),&secret.authorization){Ok(value)=>value,Err(error) if error=="接口响应超过 512 KB，请缩小查询范围"=>Value::Null,Err(error)=>return Err(error)};
    let content=message["body"]["content"].as_str().unwrap_or("");let body=if message["body"]["contentType"].as_str().is_some_and(|s|s.eq_ignore_ascii_case("html")){super::extract::html_to_text(content)}else{content.to_owned()};
    let sender=row["from"]["emailAddress"]["name"].as_str().filter(|s|!s.is_empty()).or_else(||row["from"]["emailAddress"]["address"].as_str()).unwrap_or("Outlook").into();
    items.push(Incoming{id:id.into(),sender,subject:row["subject"].as_str().unwrap_or("").into(),body,received});cursor.seen.push(id.into());

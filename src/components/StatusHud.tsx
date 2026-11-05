@@ -99,15 +99,19 @@ function HudArtwork({id,label}:{id:string;label:string}){
  if(image)return <img src={image} alt="" className="hud-brand-image"/>;
  if(id==="vps"||id==="pc")return <svg className="hud-device-avatar" viewBox="0 0 48 48" fill="none" aria-hidden="true"><circle cx="24" cy="24" r="23" fill={id==="vps"?"#283b4a":"#443046"}/>{id==="vps"?<g stroke="#bbdcf0" strokeWidth="2.2" strokeLinecap="round"><rect x="12" y="11" width="24" height="12" rx="4"/><rect x="12" y="26" width="24" height="12" rx="4"/><path d="M18 17h.01M18 32h.01M25 17h5M25 32h5"/></g>:<g stroke="#f2c0d7" strokeWidth="2.2" strokeLinecap="round"><rect x="10" y="12" width="28" height="21" rx="4"/><path d="M18 39h12M24 33v6M17 22h.01M31 22h.01M20 27q4 3 8 0"/></g>}</svg>;
  if(id==="api")return <span className="hud-api-mark">API</span>;
+ if(id==="mail")return <svg className="hud-device-avatar" viewBox="0 0 48 48" fill="none" aria-hidden="true"><circle cx="24" cy="24" r="23" fill="#443046"/><g stroke="#f2c0d7" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="10" y="14" width="28" height="21" rx="5"/><path d="m12 17 12 10 12-10"/></g></svg>;
  return <span className="hud-letter-mark">{label.slice(0,1)}</span>;
 }
 
 export function HudWorkbenchButton({onOpen,onEnter,expanded=false,busy=false}:{onOpen:()=>void;onEnter:()=>void;expanded?:boolean;busy?:boolean}){
  return <button type="button" className="island-item island-workbench" aria-label="打开工作台" aria-expanded={expanded} disabled={busy} onMouseEnter={onEnter} onFocus={onEnter} onClick={onOpen}><span className="island-symbol" aria-hidden="true"><HudLogo id="workbench" label="工作台"/></span></button>;
 }
+export function HudMailButton({onOpen,onEnter,expanded=false}:{onOpen:()=>void;onEnter:()=>void;expanded?:boolean}){
+ return <button type="button" className={`island-item island-mail${expanded?' is-opened':''}`} aria-label="打开邮箱提醒" aria-expanded={expanded} title="邮箱提醒" onMouseEnter={onEnter} onClick={onOpen}><span className="island-symbol" aria-hidden="true"><HudLogo id="mail" label="邮箱"/></span></button>;
+}
 
 /** Reuses the main window's existing hit-region tracking; no native styles change. */
-export function StatusHud({monitorId,open,onDrag,onLeave,animations,children,mailEnabled=true}:{mailEnabled?:boolean;monitorId:string;open:boolean;onDrag:()=>void;onLeave:()=>void;animations:boolean;children:ReactNode}){
+export function StatusHud({monitorId,open,onDrag,onLeave,animations,children,mailEnabled=true,mailOpen=false,onCloseMail}:{mailEnabled?:boolean;mailOpen?:boolean;onCloseMail?:()=>void;monitorId:string;open:boolean;onDrag:()=>void;onLeave:()=>void;animations:boolean;children:ReactNode}){
  const [recent,setRecent]=useState(false);
  const [menu,setMenu]=useState<{x:number;y:number}|null>(null),[exitError,setExitError]=useState("");
  const [exitConfirm,setExitConfirm]=useState(false),[exitBusy,setExitBusy]=useState(false),[exitCardHeight,setExitCardHeight]=useState(244);
@@ -141,9 +145,9 @@ export function StatusHud({monitorId,open,onDrag,onLeave,animations,children,mai
  onPointerCancel={()=>{const g=gesture.current;gesture.current=null;if(g?.started)setPlacement(g.original);setDragging(false);skipClick.current=false}}
  onClickCapture={event=>{if(skipClick.current){event.preventDefault();event.stopPropagation();skipClick.current=false}}}>
  {children}
- <MailOtpToast enabled={mailEnabled} blocked={open||Boolean(menu)||dragging} recent={recent} onCloseRecent={()=>setRecent(false)}/>
+ <MailOtpToast enabled={mailEnabled} blocked={open||Boolean(menu)||dragging} recent={recent||mailOpen} onCloseRecent={()=>{setRecent(false);onCloseMail?.()}}/>
  <button className="hud-grip" disabled={exitConfirm||exitBusy} aria-label="移动主屏状态面板" title="拖到屏幕四边；右键打开菜单" onKeyDown={event=>{const edge=keyEdges[event.key];if(!edge)return;event.preventDefault();onDrag();const next={edge,offset:.5};setPlacement(next);save(next)}}>⠿</button>
- {menu&&!exitConfirm&&<div className="hud-context-menu glass" role="menu" aria-label="HUD 菜单" data-main-hit-region style={{left:Math.max(8,Math.min(menu.x,viewport.width-208)),top:Math.max(8,Math.min(menu.y,viewport.height-168))}} onKeyDown={event=>{if(event.key==="Tab")event.preventDefault();}}><strong>GleamDesk</strong><button type="button" role="menuitem" onClick={()=>{setMenu(null);setRecent(true)}}>最近验证码</button><button type="button" role="menuitem" className="hud-exit-action" onClick={()=>{setExitError("");setExitConfirm(true);}}>退出程序</button></div>}
+ {menu&&!exitConfirm&&<div className="hud-context-menu glass" role="menu" aria-label="HUD 菜单" data-main-hit-region style={{left:Math.max(8,Math.min(menu.x,viewport.width-208)),top:Math.max(8,Math.min(menu.y,viewport.height-168))}} onKeyDown={event=>{if(event.key==="Tab")event.preventDefault();}}><strong>GleamDesk</strong><button type="button" role="menuitem" onClick={()=>{setMenu(null);setRecent(true)}}>最近邮件</button><button type="button" role="menuitem" className="hud-exit-action" onClick={()=>{setExitError("");setExitConfirm(true);}}>退出程序</button></div>}
  {menu&&exitConfirm&&<div className="hud-exit-confirm glass" role="alertdialog" aria-modal="true" aria-label="退出程序确认" aria-describedby="hud-exit-warning" data-main-hit-region style={{left:Math.max(8,Math.min(menu.x,viewport.width-336)),top:Math.max(8,Math.min(menu.y,viewport.height-exitCardHeight-8))}} onKeyDown={event=>{if(event.key!=="Tab")return;event.preventDefault();const buttons=Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>("button:not(:disabled)"));const index=buttons.indexOf(document.activeElement as HTMLButtonElement);buttons[(index+(event.shiftKey?-1:1)+buttons.length)%buttons.length]?.focus();}}>
    <strong>退出 GleamDesk？</strong><p id="hud-exit-warning">请先保存正在编辑的内容。Dock、顶部 HUD 和工作台将一起关闭。</p>
    {exitError&&<p className="hud-exit-error" role="alert">{exitError}</p>}
