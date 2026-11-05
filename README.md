@@ -6,7 +6,7 @@
 
 A Windows workspace for HUD, Dock, system status, public data and Agent Room.
 
-[简体中文](README.zh-CN.md) · [Download for Windows](https://github.com/liuyuanlong3232-bit/GleamDesk/releases/tag/v0.1.5) · [User guide](docs/USAGE.md) · [Build](docs/BUILDING.md) · [Report an issue](https://github.com/liuyuanlong3232-bit/GleamDesk/issues)
+[简体中文](README.zh-CN.md) · [Download for Windows](https://github.com/liuyuanlong3232-bit/GleamDesk/releases/tag/v0.1.6) · [User guide](docs/USAGE.md) · [Build](docs/BUILDING.md) · [Report an issue](https://github.com/liuyuanlong3232-bit/GleamDesk/issues)
 
 ![Windows](https://img.shields.io/badge/platform-Windows-3165bb)
 ![Tauri 2](https://img.shields.io/badge/Tauri-2-24c8db)
@@ -55,17 +55,17 @@ Compact icons and status rings keep the desktop clear. Click to pin details, dra
 
 ## Get started
 
-Version 0.1.5 adds GitHub, Skills, Hugging Face Spaces and Show HN recommendations with arrow paging and offline English-to-Chinese translation, and uses standard Windows workbench controls. Mail and local development-task execution have been removed; Agent Room chat remains available. Versions 0.1.2 and earlier need one manual installation first.
+Version 0.1.6 redesigns click-expanded HUD details, simplifies API balances, preserves each client’s quota names, and adds Kimi Code quota reading. Doubao reuses the active desktop login with an authorized Windows-encrypted session cache, so its official quota can refresh while the client is running. Kimi has parser coverage; real-account compatibility still depends on the client and service. Versions 0.1.2 and earlier need one manual installation first.
 
-Download the Windows x64 packages from [GitHub Release v0.1.5](https://github.com/liuyuanlong3232-bit/GleamDesk/releases/tag/v0.1.5):
+Download the Windows x64 packages from [GitHub Release v0.1.6](https://github.com/liuyuanlong3232-bit/GleamDesk/releases/tag/v0.1.6):
 
 | File | Use |
 | --- | --- |
-| `GleamDesk_0.1.5_x64-setup.exe` | Installer for the current Windows user |
-| `GleamDesk_0.1.5_windows_x64_portable.zip` | Extract and run `GleamDesk.exe` without app installation |
+| `GleamDesk_0.1.6_x64-setup.exe` | Installer for the current Windows user |
+| `GleamDesk_0.1.6_windows_x64_portable.zip` | Extract and run `GleamDesk.exe` without app installation |
 | `SHA256SUMS.txt` | SHA-256 checksums for downloaded files |
 
-**0.1.5 has no Windows publisher signature.** Update signatures verify future in-app upgrades and do not replace a Windows publisher certificate. Windows may show an unknown-publisher warning. Checksums verify file integrity and do not replace publisher signatures. Both packages require WebView2 Runtime; setup downloads Microsoft's runtime installer if missing. Portable means installation-free: settings and history still use local AppData, rather than a self-contained profile beside the executable. Read [Windows package notes](docs/WINDOWS_PACKAGES.md).
+**0.1.6 has no Windows publisher signature.** Update signatures verify future in-app upgrades and do not replace a Windows publisher certificate. Windows may show an unknown-publisher warning. Checksums verify file integrity and do not replace publisher signatures. Both packages require WebView2 Runtime; setup downloads Microsoft's runtime installer if missing. Portable means installation-free: settings and history still use local AppData, rather than a self-contained profile beside the executable. Read [Windows package notes](docs/WINDOWS_PACKAGES.md).
 
 Build requirements: Windows 10/11, Node.js 22+, Rust stable, Visual Studio C++ Build Tools, Windows SDK and WebView2 Runtime. Native integrations target Windows; macOS and Linux releases are not provided or verified.
 

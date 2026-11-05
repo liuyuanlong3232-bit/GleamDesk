@@ -37,7 +37,8 @@ test("normal mode contains no fabricated Agent or API quotas; demos require expl
   assert.ok(providers.every((provider) => !provider.name.includes("演示")));
   const snapshots = await Promise.all(providers.map(async (provider) => ({ ...await provider.load(new AbortController().signal), providerId: provider.id, lastUpdated: null, lastSuccessAt: null })));
   const data = adaptProviderSnapshots(providers, snapshots);
-  assert.equal(data.providers.length, 9);
+  assert.equal(data.providers.length, 10);
+  assert.ok(data.providers.some(item=>item.id==="kimi"&&item.state==="unknown"));
   assert.equal(data.notices.length, 0, "unconfigured sources are unknown, not incident notices");
   assert.ok(data.providers.every((item) => item.state === "unknown" && item.percentage === undefined && item.balance === undefined && item.todayCost === undefined));
   assert.ok(providersFor(["api-balances"], undefined, { includeLiveProviders: false }).some((provider) => provider.name.includes("演示")));
