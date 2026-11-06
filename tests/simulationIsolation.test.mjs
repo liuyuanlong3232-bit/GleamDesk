@@ -92,5 +92,7 @@ test('推荐与设置均不再提供付费翻译入口',async()=>{
  let tree=f.render(()=>Connection(props));await f.flush();tree=f.render(()=>Connection(props));
  assert.ok(!elements(tree,'button').some(node=>text(node).includes('生成今日中文介绍')));
  const source=readFileSync('src/components/DailyOpenSource.tsx','utf8');assert.doesNotMatch(source,/generate_daily_recommendations|mimoDailyAuto/);
- assert.doesNotMatch(readFileSync('src-tauri/src/lib.rs','utf8'),/generate_daily_recommendations|mail_read_snapshot|mail_oauth/);
+ const native=readFileSync('src-tauri/src/lib.rs','utf8');
+ assert.doesNotMatch(native,/generate_daily_recommendations|mail_read_snapshot|\bmod mail;|\bmail::/);
+ assert.match(native,/mail_otp::oauth::mail_oauth_connect/);
 });

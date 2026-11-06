@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+## [0.1.7] - 2026-11-06
+
+- Add optional read-only email reminders and verification-code copying for QQ, 163, Gmail and Outlook. Keep authorization in a separate Windows credential namespace; keep message summaries and codes in memory.
+- Show mailbox icons, connection states and recent messages in the HUD. Move the account with the newest message to the top with a short animation. Old messages do not trigger arrival notifications.
+- Open the corresponding webmail site in the default browser by clicking a message; keep code copying independent. Browser login may still be required.
+- Use the mailbox width for all click-expanded HUD panels and adapt their width, position and scroll limits to available screen space.
+- QQ and 163 connection/list display and a 163 browser-open action were verified locally; Gmail/Outlook real-account flows and new-message arrival/copy remain only partially verified.
+
 ## [0.1.6] - 2026-11-05
 
 - Redesign click-expanded HUD details while retaining the compact icon bar; center details beneath it and simplify enabled API account balances.

@@ -10,6 +10,8 @@ Preferences, selected instruments, layouts, avatar media, message/history data a
 
 GleamDesk credentials use their own `GleamDesk.*` names. Legacy AgentRoom credentials are not used automatically. If detected, Settings → API balances and costs offers an explicit local import. Import copies supported API, chat, mail and VPS credentials without deleting the originals or replacing existing GleamDesk accounts. It does not test connections or enable automatic paid recommendations. Normal updates retain GleamDesk credentials, preferences, watchlists and history; the first transition to the separate credential store turns off automatic paid recommendations once, requiring renewed consent. No old application-data folders or browser profiles are imported by this action.
 
+Email reminders use separate `GleamDesk.MailOtp.*` credentials after the user connects an account. IMAP/API access is read-only; mail bodies, summaries and verification codes stay in memory. The local mailbox file contains account settings and read cursors only. Clicking a message opens a fixed official webmail URL in the default browser without including message content or credentials; browser login and storage are separate from GleamDesk.
+
 ## Local AI clients: opt in before account and usage reads
 
 Settings → AI connections provides **“允许读取本机 AI 账号与用量”**. It defaults to **off**, including an existing profile that has not recorded this choice. This is separate from ordinary installed/running application detection, which remains available for the Dock and HUD. Running-process detection can inspect executable names and command lines to distinguish clients; it returns derived client IDs and counts, not their command lines.
