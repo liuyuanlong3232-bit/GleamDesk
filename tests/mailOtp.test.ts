@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {nextOtp,remainingOtpTime,mailStateLabel,mailSenderLabel,type OtpNotice} from '../src/services/mailOtp';
+import {nextOtp,remainingOtpTime,mailStateLabel,mailSenderLabel,mailAccountsByLatest,type OtpNotice,type MailSnapshot} from '../src/services/mailOtp';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {MailOtpCard} from '../src/components/MailOtpToast';
@@ -58,4 +58,19 @@ test('sender display uses the readable name while retaining bare address fallbac
  assert.equal(mailSenderLabel('"Example Team" <team@example.com>'),'Example Team');
  assert.equal(mailSenderLabel('team@example.com'),'team@example.com');
  assert.equal(mailSenderLabel(''),'未知发件人');
+});
+test('latest incoming mail moves its account first without mutating configured order',()=>{
+ const snapshot:MailSnapshot={accounts:[{id:'a',email:'demo@163.com',provider:'mail163',enabled:true},{id:'b',email:'demo@qq.com',provider:'qq',enabled:true},{id:'c',email:'demo@gmail.com',provider:'gmail',enabled:true}],statuses:[],notices:[],inbox:[{...notice('older',500),accountId:'a',receivedAt:10},{...notice('new',500),accountId:'b',receivedAt:20}]};
+ assert.deepEqual(mailAccountsByLatest(snapshot).map(a=>a.id),['b','a','c']);
+ assert.deepEqual(snapshot.accounts.map(a=>a.id),['a','b','c']);
+ snapshot.notices=[{...notice('next',600),accountId:'c',receivedAt:30}];
+ assert.deepEqual(mailAccountsByLatest(snapshot).map(a=>a.id),['c','b','a']);
+});
+test('account order stays stable for equal dates, no mail or expired notification removal',()=>{
+ const snapshot:MailSnapshot={accounts:[{id:'a',email:'demo@163.com',provider:'mail163',enabled:true},{id:'b',email:'demo@qq.com',provider:'qq',enabled:true}],statuses:[],notices:[]};
+ assert.deepEqual(mailAccountsByLatest(snapshot).map(a=>a.id),['a','b']);
+ snapshot.inbox=[{...notice('one',1),accountId:'b',receivedAt:10},{...notice('two',1),accountId:'a',receivedAt:10}];
+ assert.deepEqual(mailAccountsByLatest(snapshot).map(a=>a.id),['a','b']);
+ snapshot.inbox[0].receivedAt=20;
+ assert.deepEqual(mailAccountsByLatest(snapshot).map(a=>a.id),['b','a']);
 });
