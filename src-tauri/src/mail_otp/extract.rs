@@ -23,7 +23,7 @@ fn strong() -> &'static Regex {
     R.get_or_init(|| {
         Regex::new(concat!(
             r"(?i)验证码|校验码|确认码|动态码|动态密码|安全码|登录码|激活码|",
-            r"一次性(?:密码|口令)|otp|one[-\s]?time\s+(?:code|password|passcode)|",
+            r"一次性(?:密码|口令|代码)|单次代码|安全代码|otp|one[-\s]?time\s+(?:code|password|passcode)|",
             r"verification\s+code|security\s+code|auth(?:entication)?\s+code|",
             r"passcode|\bcode\b|認証コード|인증번호"
         ))
