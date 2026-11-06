@@ -776,7 +776,7 @@ html.workbench-console .notification-center .notification-preferences :is(select
 
 /* Click-expanded HUD details only; the icon bar and hover previews stay unchanged. */
 .main-screen .hud-island .island-popover.hud-expanded-panel{
- width:min(560px,calc(100vw - 32px));padding:24px;max-height:calc(100dvh - 180px);
+ width:min(var(--hud-detail-width,440px),calc(100vw - 32px),var(--hud-panel-available-width,100vw));padding:24px;max-height:var(--hud-panel-available-height,calc(100dvh - 180px));
  background:var(--theme-surface,#1b181f);border:1px solid rgba(var(--theme-line-rgb,255,255,255),.1);
  box-shadow:0 16px 40px #00000030;backdrop-filter:none;font:14px/1.5 var(--font-ui);
  --hud-panel-muted:var(--theme-muted,#bdb2c0);--hud-panel-inset:rgba(var(--theme-line-rgb,255,255,255),.04);
@@ -842,7 +842,7 @@ html.workbench-console .notification-center .notification-preferences :is(select
 .main-screen .hud-expanded-panel .hud-screen-options>button>span{font-size:24px;color:var(--hud-panel-accent);line-height:1}
 .main-screen .hud-expanded-panel .hud-screen-options strong{font-size:16px;font-weight:500}
 .main-screen .hud-expanded-panel .hud-screen-options small{font-size:12px;color:var(--hud-panel-muted)}
-.main-screen .hud-island .island-popover.hud-expanded-panel.hud-daily-panel{width:min(600px,calc(100vw - 32px));padding:0}
+.main-screen .hud-island .island-popover.hud-expanded-panel.hud-daily-panel{padding:0}
 .main-screen .hud-expanded-panel .daily-opensource-hud{max-height:calc(100dvh - 180px);background:transparent}
 .main-screen .hud-expanded-panel .daily-opensource-hud>header{padding:24px 24px 16px;gap:8px}
 .main-screen .hud-expanded-panel .daily-opensource-hud>header strong{font-size:20px;line-height:1.4;letter-spacing:0}
@@ -892,4 +892,56 @@ html.workbench-console .notification-center .notification-preferences :is(select
  .main-screen .hud-expanded-panel .daily-translation-note{padding-inline:16px}
 }
 .main-screen .hud-motion-off .hud-expanded-panel :is(.hud-panel-body,.daily-page){animation:none}
+.main-screen .hud-island .mail-otp-toast{display:block;width:min(400px,calc(100vw - 32px));padding:24px;max-height:min(480px,calc(100vh - 180px));overflow:auto;border-radius:24px}
+.mail-otp-toast .mail-otp-close{position:absolute;right:12px;top:12px}
+.mail-otp-eyebrow{display:block;max-width:calc(100% - 32px);font-size:14px;font-weight:500;color:var(--theme-muted,#b8aeba);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mail-otp-code-row{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-block:12px 8px}
+.mail-otp-code-row .mail-otp-code{border:0;padding:0;background:none;color:inherit;font-size:36px;font-weight:600;letter-spacing:.08em;font-variant-numeric:tabular-nums;cursor:pointer}
+.mail-otp-copy{padding:8px 16px;border-radius:12px;background:rgba(var(--theme-line-rgb,255,255,255),.1);color:inherit;border:1px solid rgba(var(--theme-line-rgb,255,255,255),.12)}
+.mail-otp-address,.mail-otp-hint{font-size:12px;color:var(--theme-muted,#b8aeba);overflow-wrap:anywhere}
+.mail-notice-sender{display:block;margin-top:12px;padding-right:16px;font-size:16px;overflow-wrap:anywhere}
+.mail-notice-subject{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;margin-block:8px 12px;font-size:14px;line-height:1.5;overflow-wrap:anywhere}
+.mail-otp-toast button{appearance:none;-webkit-appearance:none;border:0;background:transparent;color:inherit;font:inherit;box-shadow:none}
+.main-screen .hud-island .mail-inbox-panel{display:flex;flex-direction:column;width:min(var(--hud-detail-width,440px),calc(100vw - 32px),var(--hud-panel-available-width,100vw));max-height:min(560px,var(--hud-panel-available-height,calc(100dvh - 180px)));overflow:hidden;background:var(--theme-surface,#1b181f)}
+.mail-inbox-header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:16px;flex:none}
+.mail-inbox-header h3{margin:0;font-size:20px;font-weight:600;line-height:28px}
+.mail-inbox-actions{display:flex;align-items:center;gap:4px}
+.mail-otp-toast .mail-icon-action,.mail-otp-toast .mail-otp-close{display:grid;place-items:center;width:32px;height:32px;padding:8px;border-radius:12px;color:var(--theme-muted,#b8aeba);background:transparent;transition:background .18s ease,color .18s ease}
+.mail-icon-action svg{width:16px;height:16px;display:block}
+.mail-otp-toast .mail-icon-action:hover,.mail-otp-toast .mail-otp-close:hover{background:rgba(var(--theme-line-rgb,255,255,255),.08);color:var(--theme-fg,#f5f2f3)}
+.mail-icon-action:disabled{opacity:.35;cursor:default}.mail-icon-action.is-refreshing svg{animation:daily-refresh-spin 1s linear infinite}
+.mail-inbox-accounts{display:grid;gap:4px;margin-bottom:16px;max-height:180px;overflow:auto;flex:none}
+.mail-account-list{position:relative;display:grid;gap:4px}
+.mail-account-icon{display:grid;place-items:center;width:24px;height:24px;flex:none;color:#e8ad35}
+.mail-account-icon svg{width:24px;height:24px;display:block}
+.mail-account-icon[data-provider=mail163]{color:#d34d53}.mail-account-icon[data-provider=outlook]{color:#2789d5}
+.mail-otp-toast .mail-inbox-all{justify-self:start;padding:4px 12px;margin-bottom:4px;border-radius:999px;font-size:12px;line-height:20px;color:var(--theme-muted,#b8aeba);background:rgba(var(--theme-line-rgb,255,255,255),.04);border:1px solid transparent}
+.mail-otp-toast .mail-inbox-all[aria-pressed=true]{color:var(--theme-link,#ed8294);background:rgba(var(--theme-accent-rgb,194,38,63),.1);border-color:rgba(var(--theme-accent-rgb,194,38,63),.18)}
+.mail-otp-toast .mail-inbox-account{display:flex;align-items:center;gap:12px;justify-content:space-between;width:100%;min-height:40px;padding:8px 12px;text-align:left;background:transparent;border:1px solid transparent;border-radius:12px;color:inherit;transition:background .18s ease,border-color .18s ease}
+.mail-otp-toast .mail-inbox-account:hover{background:rgba(var(--theme-line-rgb,255,255,255),.06)}
+.mail-otp-toast .mail-inbox-account[aria-pressed=true]{border-color:rgba(var(--theme-accent-rgb,194,38,63),.22);background:rgba(var(--theme-accent-rgb,194,38,63),.08)}
+.mail-inbox-account strong{min-width:0;flex:1;font-size:14px;font-weight:500;line-height:20px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.mail-inbox-state{flex:none;font-size:12px;line-height:20px;color:var(--theme-muted,#b8aeba)}.mail-inbox-state.is-ready{color:var(--theme-positive,#73c6a4)}.mail-inbox-state.is-error,.mail-inbox-issue{color:var(--theme-error,#ef9a9a)}
+.mail-inbox-account .mail-inbox-issue{flex-basis:100%;font-size:12px;line-height:16px;overflow-wrap:anywhere}
+.mail-inbox-list-heading{margin-bottom:8px;flex:none;font-size:12px}
+.mail-inbox-list{min-height:0;overflow:auto;flex:1;overscroll-behavior:contain;padding-right:8px}
+.mail-otp-recent-row{display:flex;align-items:center;gap:16px;justify-content:space-between;padding:12px;border-radius:12px;transition:background .18s ease}
+.mail-otp-recent-row:hover{background:rgba(var(--theme-line-rgb,255,255,255),.035)}
+.mail-otp-toast .mail-notice-open{display:block;flex:1;min-width:0;width:100%;padding:0;text-align:left;cursor:pointer}
+.mail-otp-recent-row strong{display:block;font-size:14px;font-weight:600;line-height:20px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.mail-otp-recent-row .mail-notice-subject{margin-block:4px;font-size:14px;line-height:20px;-webkit-line-clamp:2;color:var(--theme-fg,#f5f2f3)}
+.mail-otp-recent-row small{display:block;font-size:12px;line-height:16px;color:var(--theme-muted,#b8aeba);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.mail-otp-toast .mail-code-chip,.mail-otp-toast .mail-otp-copy{flex:none;padding:8px 12px;font-size:16px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:.06em;white-space:nowrap;border-radius:8px;background:rgba(var(--theme-accent-rgb,194,38,63),.1);color:var(--theme-link,#ed8294);border:1px solid rgba(var(--theme-accent-rgb,194,38,63),.16)}
+.mail-inbox-list::-webkit-scrollbar,.mail-inbox-accounts::-webkit-scrollbar{width:4px;height:4px}
+.mail-inbox-list::-webkit-scrollbar-track,.mail-inbox-accounts::-webkit-scrollbar-track{background:transparent}
+.mail-inbox-list::-webkit-scrollbar-thumb,.mail-inbox-accounts::-webkit-scrollbar-thumb{background:rgba(var(--theme-line-rgb,255,255,255),.16);border-radius:999px;min-height:32px}
+.mail-inbox-list:hover::-webkit-scrollbar-thumb,.mail-inbox-accounts:hover::-webkit-scrollbar-thumb{background:rgba(var(--theme-line-rgb,255,255,255),.3)}
+.mail-inbox-list::-webkit-scrollbar-button,.mail-inbox-accounts::-webkit-scrollbar-button{display:none;width:0;height:0}
+@media(prefers-reduced-motion:reduce){.mail-otp-toast button,.mail-otp-recent-row{transition:none}.mail-icon-action.is-refreshing svg{animation:none}}
+.mail-otp-settings .mail-otp-account{display:flex;gap:16px;align-items:center;padding:16px;border-radius:16px;background:rgba(var(--theme-line-rgb,255,255,255),.04);border:1px solid rgba(var(--theme-line-rgb,255,255,255),.1)}
+.mail-otp-account>div{flex:1;min-width:0}.mail-otp-account strong,.mail-otp-account small{display:block;overflow-wrap:anywhere}.mail-otp-account small{margin-top:4px;font-size:12px}
+.mail-otp-settings fieldset{display:grid;gap:16px;margin-top:16px;padding:20px;border-radius:16px;border:1px solid rgba(var(--theme-line-rgb,255,255,255),.12)}
+.mail-otp-settings .mail-otp-consent,.mail-otp-settings .mail-otp-switch{display:flex;align-items:center;gap:8px;font-size:12px}.mail-otp-settings input[type=checkbox]{width:auto;flex:none}.mail-otp-remove{display:flex;gap:8px}
+.mail-otp-toast button:focus-visible{outline:2px solid var(--theme-link,#ed8294);outline-offset:4px}
+@media(max-width:480px){.mail-otp-settings .mail-otp-account{flex-wrap:wrap}.mail-otp-code-row .mail-otp-code{font-size:30px}}
 @media(prefers-reduced-motion:reduce){.main-screen .hud-expanded-panel :is(.hud-panel-body,.daily-page){animation:none}.main-screen .hud-expanded-panel button{transition:none}}

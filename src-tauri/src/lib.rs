@@ -13,6 +13,7 @@ mod hardware;
 mod gpu;
 mod notifications;
 mod credentials;
+mod mail_otp;
 mod api_usage;
 mod analysis;
 mod analysis_history;
@@ -377,6 +378,8 @@ pub fn run() {
         .manage(hardware::HardwareSampler::default())
         .manage(api_usage::ApiUsageState::default())
         .manage(agent_usage::AgentUsageState::default())
+        .manage(mail_otp::MailState::default())
+        .manage(mail_otp::oauth::OAuthState::default())
         .manage(ollama::OllamaState::default())
         .manage(analysis::AnalysisState::default())
         .manage(beszel::BeszelState::default())
@@ -399,6 +402,12 @@ pub fn run() {
             }
             let handler: fn(tauri::ipc::Invoke<tauri::Wry>) -> bool = tauri::generate_handler![
             simulation::set_simulation_mode,
+            mail_otp::mail_otp_snapshot,
+            mail_otp::mail_otp_refresh,
+            mail_otp::mail_otp_add,
+            mail_otp::mail_otp_update,
+            mail_otp::oauth::mail_oauth_connect,
+            mail_otp::oauth::mail_oauth_cancel,
             beszel::read_vps_location,
             webapps::webapp_mount,
             network_tools::network_tool_run,
@@ -533,6 +542,8 @@ pub fn run() {
             }
         })
         .setup(|app| {
+            // No account is connected until its owner explicitly adds and enables it.
+            if mail_otp::start(app.handle()).is_err(){eprintln!("邮箱验证码设置未载入；原文件保持不变");}
             // Install before either transparent desktop window becomes visible.
             for label in ["main", "dock"] {
                 if let Some(window) = app.handle().get_window(label) {

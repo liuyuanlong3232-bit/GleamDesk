@@ -442,6 +442,13 @@ fn shell_open(target: &str, arguments: &str, directory: Option<&str>) -> Result<
     })
 }
 
+pub(crate) fn open_mail_authorization(url:&str)->Result<(),String>{
+    let parsed=tauri::Url::parse(url).map_err(|_|"邮箱授权地址无效")?;
+    if parsed.scheme()!="https"||!matches!((parsed.host_str(),parsed.path()),(Some("accounts.google.com"),"/o/oauth2/v2/auth")|(Some("login.microsoftonline.com"),"/common/oauth2/v2.0/authorize")){return Err("邮箱授权地址无效".into())}
+    #[cfg(windows)]{shell_open(url,"",None)}
+    #[cfg(not(windows))]{Err("邮箱登录需要 Windows 桌面版".into())}
+}
+
 #[cfg(windows)]
 fn launch_native(application: &LauncherApplication) -> Result<LaunchResult, String> {
     let target = application.target.trim();

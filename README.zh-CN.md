@@ -2,7 +2,7 @@
 
 **让状态常驻，让工作更轻。**
 
-[English](README.md) · [Windows 下载](https://github.com/liuyuanlong3232-bit/GleamDesk/releases/tag/v0.1.6) · [使用指南](docs/USAGE.md) · [编译说明](docs/BUILDING.md) · [问题反馈](https://github.com/liuyuanlong3232-bit/GleamDesk/issues)
+[English](README.md) · [Windows 下载](https://github.com/liuyuanlong3232-bit/GleamDesk/releases/tag/v0.1.7) · [使用指南](docs/USAGE.md) · [编译说明](docs/BUILDING.md) · [问题反馈](https://github.com/liuyuanlong3232-bit/GleamDesk/issues)
 
 基于 Tauri、React、TypeScript 和 Rust 的 Windows 桌面工作台，将顶部 HUD、Dock、系统资源、公开数据和 Agent Room 放在一起。
 
@@ -46,17 +46,17 @@
 
 ## 开始使用
 
-0.1.6 重设计 HUD 点击展开面板，精简 API 余额并保留各客户端的额度名称，新增 Kimi Code 额度读取。豆包改为复用当前桌面账号，通过已授权的 Windows 本机加密登录缓存查询官方额度，客户端运行时也可更新。Kimi 已通过解析测试，真实账号兼容性仍需对应客户端与服务支持。0.1.2 及更早版本需要先手动安装一次包含更新模块的版本。
+0.1.7 新增只读邮箱提醒、验证码复制和最近邮件摘要。HUD 邮箱账号以图标逐行排列，最新来信账号自动置顶，点击邮件用默认浏览器打开邮箱网站。各点击展开面板统一为邮箱宽度，并按屏幕可用空间自适应。QQ、163 已做本机连接验收；Gmail、Outlook 尚未完成真实账号验收。0.1.2 及更早版本需要先手动安装一次包含更新模块的版本。
 
-从 [GitHub Release v0.1.6](https://github.com/liuyuanlong3232-bit/GleamDesk/releases/tag/v0.1.6) 下载 Windows x64 版本：
+从 [GitHub Release v0.1.7](https://github.com/liuyuanlong3232-bit/GleamDesk/releases/tag/v0.1.7) 下载 Windows x64 版本：
 
 | 文件 | 使用方式 |
 | --- | --- |
-| `GleamDesk_0.1.6_x64-setup.exe` | 安装版，仅为当前用户安装 |
-| `GleamDesk_0.1.6_windows_x64_portable.zip` | 免安装版，解压后运行 `GleamDesk.exe` |
+| `GleamDesk_0.1.7_x64-setup.exe` | 安装版，仅为当前用户安装 |
+| `GleamDesk_0.1.7_windows_x64_portable.zip` | 免安装版，解压后运行 `GleamDesk.exe` |
 | `SHA256SUMS.txt` | 下载文件的 SHA-256 校验值 |
 
-**0.1.6 尚无 Windows 发行者签名**，已提供的更新签名用于校验后续应用内升级，不能代替 Windows 发行者证书，Windows 可能提示“未知发布者”。SHA-256 用于核对文件完整性，不能替代发布者签名。两种版本均需要 WebView2 Runtime；安装版在缺失时下载官方运行库。免安装版仍将个人设置和历史保存在本机 AppData，不是随文件夹携带的独立配置。详见 [Windows 安装说明](docs/WINDOWS_PACKAGES.md)。
+**0.1.7 尚无 Windows 发行者签名**，已提供的更新签名用于校验后续应用内升级，不能代替 Windows 发行者证书，Windows 可能提示“未知发布者”。SHA-256 用于核对文件完整性，不能替代发布者签名。两种版本均需要 WebView2 Runtime；安装版在缺失时下载官方运行库。免安装版仍将个人设置和历史保存在本机 AppData，不是随文件夹携带的独立配置。详见 [Windows 安装说明](docs/WINDOWS_PACKAGES.md)。
 
 需要自行编译时，准备 Windows、Node.js 22、Rust stable、Visual Studio C++ 构建工具和 WebView2 Runtime：
 

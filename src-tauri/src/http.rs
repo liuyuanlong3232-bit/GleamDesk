@@ -38,6 +38,15 @@
         "服务 网络连接失败或请求超时".into()
     }
 
+    pub(crate) fn mail_otp_get(host:&str,path:&str,headers:&str)->Result<(u32,Vec<u8>),String>{
+        let allowed=(host=="gmail.googleapis.com"&&path.starts_with("/gmail/v1/users/me/"))||(host=="graph.microsoft.com"&&(path.starts_with("/v1.0/me/mailFolders/inbox/messages")||path=="/v1.0/me?$select=mail,userPrincipalName"));
+        if !allowed||path.len()>4096||path.contains(['\r','\n','#']){return Err("邮箱读取地址无效".into())}
+        get_request(host,443,true,path,headers,true,512*1024,&||Ok(()))
+    }
+    pub(crate) fn post_mail_oauth(host:&str,path:&str,body:&[u8],deadline:std::time::Instant)->Result<(u32,Vec<u8>),String>{
+        if !matches!((host,path),("oauth2.googleapis.com","/token")|("login.microsoftonline.com","/common/oauth2/v2.0/token"))||body.len()>16384{return Err("邮箱授权地址无效".into())}
+        post_request_json(host,443,true,path,"Content-Type: application/x-www-form-urlencoded\r\nAccept: application/json\r\n",body,deadline,&||Ok(()))
+    }
     pub fn get(host_name: &str, port: u16, secure: bool, path: &str, header_text: &str) -> Result<(u32, Vec<u8>), String> {
         get_request(host_name,port,secure,path,header_text,false,MAX_RESPONSE_BYTES,&||Ok(()))
     }
