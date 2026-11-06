@@ -776,7 +776,7 @@ html.workbench-console .notification-center .notification-preferences :is(select
 
 /* Click-expanded HUD details only; the icon bar and hover previews stay unchanged. */
 .main-screen .hud-island .island-popover.hud-expanded-panel{
- width:min(560px,calc(100vw - 32px));padding:24px;max-height:calc(100dvh - 180px);
+ width:min(var(--hud-detail-width,440px),calc(100vw - 32px),var(--hud-panel-available-width,100vw));padding:24px;max-height:var(--hud-panel-available-height,calc(100dvh - 180px));
  background:var(--theme-surface,#1b181f);border:1px solid rgba(var(--theme-line-rgb,255,255,255),.1);
  box-shadow:0 16px 40px #00000030;backdrop-filter:none;font:14px/1.5 var(--font-ui);
  --hud-panel-muted:var(--theme-muted,#bdb2c0);--hud-panel-inset:rgba(var(--theme-line-rgb,255,255,255),.04);
@@ -842,7 +842,7 @@ html.workbench-console .notification-center .notification-preferences :is(select
 .main-screen .hud-expanded-panel .hud-screen-options>button>span{font-size:24px;color:var(--hud-panel-accent);line-height:1}
 .main-screen .hud-expanded-panel .hud-screen-options strong{font-size:16px;font-weight:500}
 .main-screen .hud-expanded-panel .hud-screen-options small{font-size:12px;color:var(--hud-panel-muted)}
-.main-screen .hud-island .island-popover.hud-expanded-panel.hud-daily-panel{width:min(600px,calc(100vw - 32px));padding:0}
+.main-screen .hud-island .island-popover.hud-expanded-panel.hud-daily-panel{padding:0}
 .main-screen .hud-expanded-panel .daily-opensource-hud{max-height:calc(100dvh - 180px);background:transparent}
 .main-screen .hud-expanded-panel .daily-opensource-hud>header{padding:24px 24px 16px;gap:8px}
 .main-screen .hud-expanded-panel .daily-opensource-hud>header strong{font-size:20px;line-height:1.4;letter-spacing:0}
@@ -902,7 +902,7 @@ html.workbench-console .notification-center .notification-preferences :is(select
 .mail-notice-sender{display:block;margin-top:12px;padding-right:16px;font-size:16px;overflow-wrap:anywhere}
 .mail-notice-subject{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;margin-block:8px 12px;font-size:14px;line-height:1.5;overflow-wrap:anywhere}
 .mail-otp-toast button{appearance:none;-webkit-appearance:none;border:0;background:transparent;color:inherit;font:inherit;box-shadow:none}
-.main-screen .hud-island .mail-inbox-panel{display:flex;flex-direction:column;width:min(440px,calc(100vw - 32px));max-height:min(560px,calc(100dvh - 180px));overflow:hidden;background:var(--theme-surface,#1b181f)}
+.main-screen .hud-island .mail-inbox-panel{display:flex;flex-direction:column;width:min(var(--hud-detail-width,440px),calc(100vw - 32px),var(--hud-panel-available-width,100vw));max-height:min(560px,var(--hud-panel-available-height,calc(100dvh - 180px)));overflow:hidden;background:var(--theme-surface,#1b181f)}
 .mail-inbox-header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:16px;flex:none}
 .mail-inbox-header h3{margin:0;font-size:20px;font-weight:600;line-height:28px}
 .mail-inbox-actions{display:flex;align-items:center;gap:4px}
