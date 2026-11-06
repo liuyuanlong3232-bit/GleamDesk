@@ -927,7 +927,7 @@ html.workbench-console .notification-center .notification-preferences :is(select
 .mail-inbox-list{min-height:0;overflow:auto;flex:1;overscroll-behavior:contain;padding-right:8px}
 .mail-otp-recent-row{display:flex;align-items:center;gap:16px;justify-content:space-between;padding:12px;border-radius:12px;transition:background .18s ease}
 .mail-otp-recent-row:hover{background:rgba(var(--theme-line-rgb,255,255,255),.035)}
-.mail-otp-recent-row>div{flex:1;min-width:0}
+.mail-otp-toast .mail-notice-open{display:block;flex:1;min-width:0;width:100%;padding:0;text-align:left;cursor:pointer}
 .mail-otp-recent-row strong{display:block;font-size:14px;font-weight:600;line-height:20px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .mail-otp-recent-row .mail-notice-subject{margin-block:4px;font-size:14px;line-height:20px;-webkit-line-clamp:2;color:var(--theme-fg,#f5f2f3)}
 .mail-otp-recent-row small{display:block;font-size:12px;line-height:16px;color:var(--theme-muted,#b8aeba);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}

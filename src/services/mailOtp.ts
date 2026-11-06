@@ -1,9 +1,16 @@
 import {invoke,isTauri} from '@tauri-apps/api/core';
+import {launchApplication} from './launcher/launcherService';
 export type MailProvider='qq'|'mail163'|'gmail'|'outlook';
 export interface MailAccount {id:string;provider:MailProvider;email:string;enabled:boolean}
 export interface OtpNotice {id:string;accountId:string;sender:string;subject:string;code:string|null;receivedAt:number;expiresAt:number}
 export interface MailSnapshot {accounts:MailAccount[];statuses:{accountId:string;state:string;message:string}[];notices:OtpNotice[];inbox?:OtpNotice[]}
 export const mailProviders:Record<MailProvider,string>={qq:'QQ 邮箱',mail163:'163 邮箱',gmail:'Gmail',outlook:'Outlook'};
+export function mailWebUrl(provider:MailProvider){
+ const urls:Record<MailProvider,string>={qq:'https://mail.qq.com/',mail163:'https://mail.163.com/',gmail:'https://mail.google.com/mail/u/0/#inbox',outlook:'https://outlook.live.com/mail/0/inbox'};
+ if(!Object.hasOwn(urls,provider))throw new Error('不支持的邮箱类型');
+ return urls[provider];
+}
+export function openMailWebsite(provider:MailProvider){return launchApplication({id:`mail-web-${provider}`,name:mailProviders[provider],icon:'',type:'url',target:mailWebUrl(provider),pinned:false,order:0});}
 export function mailAccountsByLatest(snapshot:MailSnapshot){
  const latest=new Map<string,number>();
  for(const mail of [...(snapshot.inbox??[]),...snapshot.notices])latest.set(mail.accountId,Math.max(latest.get(mail.accountId)??0,mail.receivedAt));

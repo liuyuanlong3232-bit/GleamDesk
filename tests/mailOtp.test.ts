@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {nextOtp,remainingOtpTime,mailStateLabel,mailSenderLabel,mailAccountsByLatest,type OtpNotice,type MailSnapshot} from '../src/services/mailOtp';
+import {nextOtp,remainingOtpTime,mailStateLabel,mailSenderLabel,mailAccountsByLatest,mailWebUrl,type OtpNotice,type MailSnapshot,type MailProvider} from '../src/services/mailOtp';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {MailOtpCard} from '../src/components/MailOtpToast';
@@ -58,6 +58,11 @@ test('sender display uses the readable name while retaining bare address fallbac
  assert.equal(mailSenderLabel('"Example Team" <team@example.com>'),'Example Team');
  assert.equal(mailSenderLabel('team@example.com'),'team@example.com');
  assert.equal(mailSenderLabel(''),'未知发件人');
+});
+test('webmail opens fixed official HTTPS pages without message or credential parameters',()=>{
+ const expected={qq:'https://mail.qq.com/',mail163:'https://mail.163.com/',gmail:'https://mail.google.com/mail/u/0/#inbox',outlook:'https://outlook.live.com/mail/0/inbox'};
+ for(const [provider,url] of Object.entries(expected))assert.equal(mailWebUrl(provider as MailProvider),url);
+ assert.throws(()=>mailWebUrl('constructor' as MailProvider));
 });
 test('latest incoming mail moves its account first without mutating configured order',()=>{
  const snapshot:MailSnapshot={accounts:[{id:'a',email:'demo@163.com',provider:'mail163',enabled:true},{id:'b',email:'demo@qq.com',provider:'qq',enabled:true},{id:'c',email:'demo@gmail.com',provider:'gmail',enabled:true}],statuses:[],notices:[],inbox:[{...notice('older',500),accountId:'a',receivedAt:10},{...notice('new',500),accountId:'b',receivedAt:20}]};
