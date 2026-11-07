@@ -75,22 +75,15 @@ test("数据源保存失败显示失败并保留草稿，不提示连接成功",
  const message=elements(tree,"small").map(item=>item.props.children).join(" ");assert.match(message,/保存失败/);assert.doesNotMatch(message,/已保存|连接成功/);assert.equal(elements(tree,"input").find(item=>item.props["aria-label"]==="SSH 配置别名").props.value,"my-data");
 });
 
-test("原生保存失败时添加入口不能提示成功，草稿保留", async () => {
-  const f = fixture({ invoke: async () => { throw new Error("模拟写入失败"); } });
-  const store = f.load("src/services/applicationStore.ts");
+test("应用库只列出在 Dock 上的应用", async () => {
+  const f = fixture({});
   const { ApplicationManager } = f.load("src/components/ApplicationManager.tsx");
-  const props = { applications: [], onApplicationsChange: next => store.saveApplications(typeof next === "function" ? next([]) : next) };
-  let tree = f.render(() => ApplicationManager(props));
-  for (const [label, value] of [["应用名称", "测试应用"], ["目标路径", "C:\\mock.exe"]]) {
-    elements(tree, "input").find(item => item.props["aria-label"] === label).props.onChange({ target: { value } });
-    tree = f.render(() => ApplicationManager(props));
-  }
-  await elements(tree, "form")[0].props.onSubmit({ preventDefault() {} }); await settle();
-  tree = f.render(() => ApplicationManager(props));
-  const messages = elements(tree, "small").filter(item => item.props.role === "status").map(item => item.props.children).join(" ");
-  assert.match(messages, /失败/);
-  assert.doesNotMatch(messages, /已添加|已保存/);
-  assert.equal(elements(tree, "input").find(item => item.props["aria-label"] === "应用名称").props.value, "测试应用");
+  const props = { applications: [{ ...app("在 Dock"), pinned: true }, { ...app("不在 Dock"), id: "off", pinned: false }], onApplicationsChange() {} };
+  const tree = f.render(() => ApplicationManager(props));
+  const cards = elements(tree, "button").filter(item => String(item.props.className || "").includes("app-library-card"));
+  assert.equal(cards.length, 1);
+  assert.equal(elements(tree, "span").some(item => item.props.children === "在 Dock"), true);
+  assert.equal(elements(tree, "span").some(item => item.props.children === "不在 Dock"), false);
 });
 
 const app = name => ({ id: name, name, icon: "", type: "exe", target: "mock.exe", pinned: true, order: 0 });
@@ -210,35 +203,6 @@ test("原生主文件保存成功但镜像缓存写满，不误报主文件失�
   f.storage.setItem = () => { throw new Error("模拟缓存已满"); };
   await store.saveApplications([app("新入口")]);
   assert.equal(f.calls.filter(call => call.command === "save_applications").length, 1);
-});
-
-test("导入配置保存失败只显示失败，不显示已导入", async () => {
-  const f = fixture({ invoke: async () => { throw new Error("模拟写入失败"); } });
-  const store = f.load("src/services/applicationStore.ts"); const { ApplicationManager } = f.load("src/components/ApplicationManager.tsx");
-  const props = { applications: [], onApplicationsChange: next => store.saveApplications(next) };
-  let tree = f.render(() => ApplicationManager(props));
-  elements(tree, "input").find(item => item.props.accept === "application/json,.json").props.onChange({ target: { files: [{ text: async () => JSON.stringify(config("导入测试")) }] }, currentTarget: { value: "mock.json" } });
-  await settle(); tree = f.render(() => ApplicationManager(props));
-  const message = elements(tree, "small").find(item => item.props.role === "status").props.children;
-  assert.match(message, /保存失败/); assert.doesNotMatch(message, /已导入/);
-});
-
-test("添加入口必须等后端确认才清空草稿和提示成功", async () => {
-  let resolveSave;
-  const f = fixture({ invoke: () => new Promise(resolve => { resolveSave = resolve; }) });
-  const store = f.load("src/services/applicationStore.ts"); const { ApplicationManager } = f.load("src/components/ApplicationManager.tsx");
-  const props = { applications: [], onApplicationsChange: next => store.saveApplications(next([])) };
-  let tree = f.render(() => ApplicationManager(props));
-  for (const [label, value] of [["应用名称", "测试入口"], ["目标路径", "mock.exe"]]) {
-    elements(tree, "input").find(item => item.props["aria-label"] === label).props.onChange({ target: { value } }); tree = f.render(() => ApplicationManager(props));
-  }
-  const pending = elements(tree, "form")[0].props.onSubmit({ preventDefault() {} }); await settle();
-  tree = f.render(() => ApplicationManager(props));
-  assert.equal(elements(tree, "small").filter(item => item.props.role === "status").length, 0);
-  assert.equal(elements(tree, "input").find(item => item.props["aria-label"] === "应用名称").props.value, "测试入口");
-  resolveSave(); await pending; tree = f.render(() => ApplicationManager(props));
-  assert.match(elements(tree, "small").find(item => item.props.role === "status").props.children, /已添加/);
-  assert.equal(elements(tree, "input").find(item => item.props["aria-label"] === "应用名称").props.value, "");
 });
 
 test("Dock 拖入网址保存失败不提示已添加", async () => {

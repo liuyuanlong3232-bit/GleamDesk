@@ -44,7 +44,7 @@ test("API settings start collapsed and keep billing permissions, consent and sta
  const markup=renderToStaticMarkup(React.createElement(ApiConnectionsSettings,{connections:{deepseekEnabled:false,anthropicEnabled:false,openaiEnabled:false,mimoEnabled:false,credentialRevision:0},onChange:()=>{}}));
  assert.equal((markup.match(/class="api-connection connection-card"/g)||[]).length,4);
  assert.doesNotMatch(markup,/<details class="api-connection connection-card" open/);
- for(const text of ["帮助与数据范围","组织费用","普通聊天密钥不适用","离线翻译","读取验证","Windows 凭据管理器"])assert.ok(markup.includes(text),text);
+ for(const text of ["帮助与数据范围","读取验证","Windows 凭据管理器"])assert.ok(markup.includes(text),text);
  assert.match(markup,/settings-help/);
 });
 

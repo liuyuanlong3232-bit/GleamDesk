@@ -11,12 +11,12 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { SettingsDialog } from "../src/components/SettingsDialog";
 import { ApiConnectionsSettings } from "../src/components/ApiConnectionsSettings";
 import { settingsModules, type SettingsModuleId } from "../src/components/settingsModules";
-test("API connection cards separate saved configuration and billing from offline recommendations",()=>{
+test("API connection cards stay collapsed and keep permissions and consent copy",()=>{
  const html=renderToStaticMarkup(createElement(ApiConnectionsSettings,{connections:defaultSettings.apiConnections,onChange:()=>undefined}));
  assert.equal((html.match(/class="api-connection connection-card"/g)??[]).length,4);
- assert.match(html,/聊天室的模型和聊天密钥/);assert.match(html,/普通聊天密钥不适用/);
- assert.match(html,/每日推荐使用离线翻译/);assert.doesNotMatch(html,/每日推荐 · 付费功能|每天最多 1 次请求/);assert.match(html,/官方账户余额/);
- assert.match(html,/点击连接即同意读取/);assert.doesNotMatch(html,/连接成功/);
+ assert.match(html,/聊天室的模型和密钥/);assert.match(html,/帮助与数据范围/);
+ assert.match(html,/官方账户余额/);assert.match(html,/读取验证/);
+ assert.doesNotMatch(html,/每日推荐 · 付费功能|每天最多 1 次请求/);assert.doesNotMatch(html,/连接成功/);
 });
 import { normalizeAgentUsage, unknownAgentUsage, createAgentUsageProvider, agentClients, normalizeAgentRuntime, runningAgentClients } from "../src/providers/agents/agentUsageProvider";
 import {AgentConnectionsSettings} from "../src/components/AgentConnectionsSettings";
@@ -63,7 +63,8 @@ test("HUD roster follows start and stop and every supported client has original 
  assert.deepEqual(runningAgentClients(snapshot,now+30001),[]);
  for(const client of agentClients){const html=renderToStaticMarkup(createElement(HudLogo,{id:client.id,label:client.name}));assert.doesNotMatch(html,/hud-letter-mark/);assert.match(html,/hud-brand-image|hud-brand-mask/);if(html.includes('hud-brand-mask'))assert.match(html,/mask-image:url\(&quot;/)}
  const settings=renderToStaticMarkup(createElement(AgentConnectionsSettings));
- assert.match(settings,/22 款/);assert.doesNotMatch(settings,/新增客户端先识别|不会购买订阅/);assert.match(settings,/运行状态待识别/);assert.doesNotMatch(settings,/运行中 · 已连接/);
+ for(const name of ["豆包","Codex","Claude Code","Antigravity","Cursor","Kimi Code"])assert.ok(settings.includes(name),name);
+ assert.doesNotMatch(settings,/更多客户端/);assert.match(settings,/运行状态待识别/);assert.doesNotMatch(settings,/运行中 · 已连接/);
 });
 import { createOllamaProvider, unavailableLocalAI } from "../src/providers/local/ollamaProvider";
 import { presentAgentQuotas, hudQuotaUsed } from "../src/presentation/quotaAdapter";

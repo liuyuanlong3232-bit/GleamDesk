@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import {useApplicationStatus} from "../services/launcher/useApplicationStatus";
 import {confirmedRunning} from "../services/launcher/applicationStatus";
 import { isTauri } from "@tauri-apps/api/core";
@@ -101,7 +101,7 @@ export function ApplicationDock({ applications, presentation = "shelf", onLaunch
     };
   }, [menu]);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     if (!menu) { setMenuPos(null); return; }
     const place = () => {
       const width = menuRef.current?.offsetWidth || 188;

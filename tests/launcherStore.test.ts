@@ -34,11 +34,42 @@ test("application import does not keep machine-local icon paths", () => {
   assert.equal(imported?.[0].icon, "");
 });
 
-test("fresh launcher config keeps the original Dock entries but marks them unconfigured", () => {
-  const apps = defaultApplications();
-  assert.equal(apps.length, 11);
-  assert.equal(apps.slice(0,8).every((app) => app.pinned && app.target.length === 0), true);
-  assert.deepEqual(apps.slice(8).map(app=>app.name),["Ollama","Qwen","DeepSeek Local"]);
+const sampleApp = (id: string, name: string, order: number, pinned = true) => ({
+  id, name, icon: "", type: "exe" as const, target: `${id}.exe`, pinned, order,
+  glyph: name.slice(0, 1).toUpperCase(), color: "#67b5ff",
+});
+
+test("fresh launcher config starts empty so no placeholder entries are created", () => {
+  assert.deepEqual(defaultApplications(), []);
+});
+
+test("Dock sorting and removal survive version2 import without restoring removed local entries",()=>{
+  const apps=[sampleApp("wechat","微信",0),sampleApp("qq","QQ",1),sampleApp("builtin-qwen","Qwen",2)];
+  const reordered=reorderDockApplications(apps,"qq","wechat");
+  assert.deepEqual(reordered.slice(0,2).map(app=>app.id),["qq","wechat"]);
+  const removed=reordered.filter(app=>app.id!=="builtin-qwen");
+  const saved={version:2,apps:removed};
+  const restored=migrateLocalAiEntries(saved,parseApplicationImport(saved)!);
+  assert.equal(restored.some(app=>app.id==="builtin-qwen"),false);
+  assert.deepEqual(restored.map(app=>app.id),removed.map(app=>app.id));
+  assert.equal(migrateLocalAiEntries({version:1},apps.slice(0,2)).length,5);
+});
+
+test("application manager arrows update saved order before normalization", () => {
+  const apps = reorderDockApplications([sampleApp("qq","QQ",0),sampleApp("wechat","微信",1)], "qq", "wechat");
+  const moved = moveApplication(apps, "wechat", -1);
+  assert.deepEqual(normalizeApplications(moved).slice(0, 2).map(app => app.id), ["wechat", "qq"]);
+  const restored = parseApplicationImport({version:2,apps:moved})!;
+  assert.deepEqual(restored.map(app => app.id), moved.map(app => app.id));
+  assert.equal(moveApplication(restored,"missing",-1).length, restored.length);
+});
+
+test("reordering normalizes saved order without changing launch targets", () => {
+  const apps = [sampleApp("wechat","微信",1), sampleApp("qq","QQ",0)];
+  const reordered = normalizeApplications([{ ...apps[0], order: 0 }, { ...apps[1], order: 1 }]);
+  assert.deepEqual(reordered.map((app) => app.id), ["wechat", "qq"]);
+  assert.deepEqual(reordered.map((app) => app.order), [0, 1]);
+  assert.deepEqual(reordered.map((app) => app.target), ["wechat.exe", "qq.exe"]);
 });
 
 test("Dock URL drop rejects executable schemes and keeps case-sensitive URL targets distinct",()=>{
@@ -49,34 +80,6 @@ test("Dock URL drop rejects executable schemes and keeps case-sensitive URL targ
   const apps=mergeDroppedApplications([], [first,second]);
   assert.equal(apps.length,2);
   assert.equal(mergeDroppedApplications(apps,[applicationFromUrl(first.target)]).length,2);
-});
-
-test("Dock sorting and removal survive version2 import without restoring removed local entries",()=>{
-  const apps=defaultApplications();
-  const reordered=reorderDockApplications(apps,"qq","wechat");
-  assert.deepEqual(reordered.slice(0,2).map(app=>app.id),["qq","wechat"]);
-  const removed=reordered.filter(app=>app.id!=="builtin-qwen");
-  const saved={version:2,apps:removed};
-  const restored=migrateLocalAiEntries(saved,parseApplicationImport(saved)!);
-  assert.equal(restored.some(app=>app.id==="builtin-qwen"),false);
-  assert.deepEqual(restored.map(app=>app.id),removed.map(app=>app.id));
-  assert.equal(migrateLocalAiEntries({version:1},apps.slice(0,8)).length,11);
-});
-
-test("application manager arrows update saved order before normalization", () => {
-  const apps = reorderDockApplications(defaultApplications(), "qq", "wechat");
-  const moved = moveApplication(apps, "wechat", -1);
-  assert.deepEqual(normalizeApplications(moved).slice(0, 2).map(app => app.id), ["wechat", "qq"]);
-  const restored = parseApplicationImport({version:2,apps:moved})!;
-  assert.deepEqual(restored.map(app => app.id), moved.map(app => app.id));
-  assert.equal(moveApplication(restored,"missing",-1).length, restored.length);
-});
-
-test("reordering normalizes saved order without changing launch targets", () => {
-  const apps = defaultApplications();
-  const reordered = normalizeApplications([{ ...apps[1], order: 0 }, { ...apps[0], order: 1 }]);
-  assert.deepEqual(reordered.map((app) => app.id), ["qq", "wechat"]);
-  assert.deepEqual(reordered.map((app) => app.order), [0, 1]);
 });
 
 test("Dock magnification is bounded, symmetric and resets without pointer input", async () => {
