@@ -50,3 +50,4 @@ HUD 展开面板须同时保留 CSS 视口宽度上限和侧边可用空间限�
 豆包登录读取须按 `Local State` 的 `profile.last_used` 选择当前配置档，不能写死 `Default` 或跨档回退；赠送额度与订阅窗口分开读取，仅查询官方只读额度接口。
 豆包运行时可能独占 Cookies 数据库，首次退出后导入本机 DPAPI 加密缓存；DPAPI 测试需在正常 Windows 用户环境运行，沙箱失败不能判为加密实现错误。
 NSIS 安装后的 EXE 与便携 EXE 可能仅有 `__TAURI_BUNDLE_TYPE_VAR_UNK` → `NSS` 三字节差异；验签原安装包，并逐字节确认只有该唯一标记变化，不能直接把两种 EXE 的哈希不同判为安装损坏。
+从 Codex（MSIX）直接启动的进程可能把 AppData 写入 `Packages\OpenAI.Codex_*\LocalCache`；仅核对环境变量或 EXE 路径不足以证明使用了日用配置。启动验收须确认进程无包身份（`GetPackageFullName` 返回 15700），并核对配置文件句柄的真实路径；发现重定向时，保留两边数据后恢复到正常目录，不从代理进程直接启动日用实例。

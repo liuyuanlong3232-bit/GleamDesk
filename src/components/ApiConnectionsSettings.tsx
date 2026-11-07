@@ -45,7 +45,6 @@ function Connection({ source, connections, onChange,simulationEnabled=false }: {
   return <details className="api-connection connection-card">
     <summary><strong>{name}</strong><span className="connection-state">{configured === null ? "正在检查保存状态" : configured ? "凭据已保存" : "未配置"}</span></summary>
     <div className="connection-card-body">
-    <p className="connection-purpose-note">{source === "anthropic" || source === "openai" ? "组织费用 · 需管理密钥，普通聊天密钥不适用。" : source === "mimo" ? "模型连接验证和账户余额；每日推荐使用离线翻译。" : "账户余额 · 不发送聊天消息。"}</p>
     <label className="settings-toggle">{source === "mimo" ? "启用 MiMo 连接与本机用量读取" : "启用自动读取"}<input type="checkbox" checked={connections[key] === true} onChange={(event) => onChange({ ...connections, [key]: event.target.checked })} /></label>
     <label>{source === "anthropic" || source === "openai" ? "组织管理凭据" : "API 密钥"}<input type="password" autoComplete="new-password" value={secret} disabled={!isTauri() || busy} placeholder={configured ? "已保存 · 输入新凭据以替换" : "输入密钥，仅保存在本机"} onChange={(event) => setSecret(event.target.value)} /></label>
     <div className="settings-actions"><button disabled={!isTauri() || busy || !secret.trim()} onClick={() => void act("save")}>安全保存</button><button disabled={simulationEnabled || !isTauri() || busy || !configured} onClick={() => void act("test")}>读取验证</button>{configured && <button disabled={busy} onClick={() => void act("clear")}>删除凭据</button>}</div>
@@ -65,7 +64,7 @@ export function ApiConnectionsSettings({ connections, onChange,simulationEnabled
     <Connection source="anthropic" connections={connections} onChange={onChange} simulationEnabled={simulationEnabled} />
     <Connection source="mimo" connections={connections} onChange={onChange} simulationEnabled={simulationEnabled} />
     <Connection source="openai" connections={connections} onChange={onChange} simulationEnabled={simulationEnabled} />
-    <details className="settings-help"><summary>接入帮助</summary><p>这里管理余额与费用读取。聊天室的模型和聊天密钥，在 Agent Room 的成员设置中配置。</p><p>密钥保存在 Windows Credential Manager；应用配置和历史只保存读取结果。</p><p>尚未配置的服务保持停用；保存密钥或读取验证成功后启用。AI 客户端订阅在“AI 客户端状态”中查看。</p></details>
+    <small>密钥只保存在 Windows 凭据管理器。DeepSeek 读余额，其余读组织费用；聊天室的模型和密钥在 Agent Room 里配置。</small>
   </div>;
 }
 

@@ -21,19 +21,9 @@ export function readCachedApplications(): ApplicationItem[] {
   return raw === null ? defaultApplications() : readApplicationConfig(JSON.parse(raw));
 }
 
-const starterApps: Array<Pick<ApplicationItem, "id" | "name" | "glyph" | "color">> = [
-  { id: "wechat", name: "微信", glyph: "微", color: "#32c878" },
-  { id: "qq", name: "QQ", glyph: "Q", color: "#39a9ff" },
-  { id: "edge", name: "Edge", glyph: "e", color: "#32c6cf" },
-  { id: "vscode", name: "VS Code", glyph: "<>", color: "#46a5f5" },
-  { id: "terminal", name: "Terminal", glyph: ">_", color: "#bcc5d6" },
-  { id: "codex", name: "Codex", glyph: "✳", color: "#dce7f6" },
-  { id: "claude", name: "Claude", glyph: "✺", color: "#ff9b69" },
-  { id: "chatgpt", name: "ChatGPT", glyph: "◎", color: "#65d6a5" },
-];
-
 export function defaultApplications(): ApplicationItem[] {
-  return addLocalAiEntries(starterApps.map((app, order) => ({ ...app, icon: "", type: "exe", target: "", pinned: true, order })));
+  // 首次启动不预置任何占位图标：Dock 空着，由界面引导用户拖入或打开应用库。
+  return [];
 }
 const localEntries = [{id:"builtin-ollama",name:"Ollama",glyph:"◌"},{id:"builtin-qwen",name:"Qwen",glyph:"Q"},{id:"builtin-deepseek-local",name:"DeepSeek Local",glyph:"D"}];
 function addLocalAiEntries(apps:ApplicationItem[]):ApplicationItem[]{

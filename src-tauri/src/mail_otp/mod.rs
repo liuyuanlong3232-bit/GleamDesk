@@ -180,6 +180,14 @@ pub fn pause(cancel:&AtomicBool,seconds:u64){for _ in 0..seconds*5{if cancel.loa
 #[test]fn accounts_and_cursors_never_contain_codes_or_authorization(){let p=Persist{accounts:vec![a()],cursors:BTreeMap::new()};let json=serde_json::to_string(&p).unwrap();assert!(!json.contains("authorization")&&!json.contains("code")&&!json.contains("body"));}
 #[test]fn account_ids_and_email_validation_reject_injection(){assert!(!valid_id("../other"));assert!(validate_email("a@qq.com\r\nLOGIN",Provider::Qq).is_err());assert!(validate_email("a@gmail.com",Provider::Qq).is_err());}
 #[test]fn two_equally_likely_codes_are_not_guessed(){assert!(recognize("Verification code","Verification code: 834921\nVerification code: 765432").is_none());assert_eq!(recognize("Verification code","Your verification code is 834921. Order number: 765432"),Some("834921".into()));}
+#[test]fn chinese_one_time_security_codes_are_recognized(){
+ for (subject,body) in [
+  ("你的一次性代码","你好！\n我们已收到你要求获得 Microsoft 帐户所用的一次性代码的申请。\n你的一次性代码为: 834921\n仅在官方网站或应用上输入此代码。不要与任何人共享。"),
+  ("你的一次性代码","请使用以下安全代码验证你的身份：834921。"),
+  ("你的一次性代码","你的单次代码为：834921。"),
+  ("Microsoft 帐户安全代码","安全代码：834921"),
+ ]{assert_eq!(recognize(subject,body),Some("834921".into()));}
+}
 #[test]fn ordinary_mail_is_a_subject_only_notification(){let mut mail=item(1000);mail.subject="本周安排".into();mail.body="请查看附件，不需要验证码。".into();let notice=accept_notice(&a(),mail,2000).expect("新邮件应提醒");assert_eq!(notice.subject,"本周安排");assert!(notice.code.is_none());let json=serde_json::to_string(&notice).unwrap();assert!(!json.contains("请查看附件"));}
 #[test]fn historical_inbox_headers_are_visible_without_becoming_notifications(){let mut reg=Registry::default();store_inbox(&mut reg,&a(),vec![item(1000)],400_000);assert_eq!(reg.inbox["one"][0].subject,"验证码");assert!(reg.inbox["one"][0].code.is_none());assert!(reg.notices.is_empty());}
 #[test]fn inbox_is_bounded_per_account_and_does_not_store_body(){let mut reg=Registry::default();let rows=(0..25).map(|i|{let mut m=item(1000+i);m.id=i.to_string();m}).collect();store_inbox(&mut reg,&a(),rows,2000);assert_eq!(reg.inbox["one"].len(),20);assert_eq!(reg.inbox["one"][0].received_at,1024);let json=serde_json::to_string(&reg.inbox).unwrap();assert!(!json.contains("5分钟内有效")&&!json.contains("authorization"));}
