@@ -945,3 +945,28 @@ html.workbench-console .notification-center .notification-preferences :is(select
 .mail-otp-toast button:focus-visible{outline:2px solid var(--theme-link,#ed8294);outline-offset:4px}
 @media(max-width:480px){.mail-otp-settings .mail-otp-account{flex-wrap:wrap}.mail-otp-code-row .mail-otp-code{font-size:30px}}
 @media(prefers-reduced-motion:reduce){.main-screen .hud-expanded-panel :is(.hud-panel-body,.daily-page){animation:none}.main-screen .hud-expanded-panel button{transition:none}}
+
+/* ── 统一滚动条（内容面板 / 列表）────────────────────────────────────────
+   方案 E：8px、透明轨道、无箭头，平时不可见，指针进入该区域才淡显。
+   只作用于“内容型面板/列表”。以下保持原样，不要合并进来：
+   · Dock 横向条、工作台左侧图标栏 —— 太窄，显形会遮住图标；
+   · 邮件列表/账户 —— 已有 4px 专用样式；
+   · 带 scrollbar-gutter:stable 的表格（自选表头/行）—— 靠 gutter 对齐。
+   调粗细只改 8px；调明暗只改 .2（常态）/ .38（悬停）。 */
+:is(.settings-navigation,.settings-module-content,.application-manager-overlay,.notification-center,.notification-center-list,.notification-preferences,.history-analysis-panel,.workspace-content,.research-news-list,.research-alert-list,.news-feed,.news-focus-list,.room-chat-scroll,.room-studio-sidebar,.dns-api-tool,.dashboard-avatar-panel,.wb-design-page){scrollbar-width:auto;scrollbar-color:auto}
+:is(.settings-navigation,.settings-module-content,.application-manager-overlay,.notification-center,.notification-center-list,.notification-preferences,.history-analysis-panel,.workspace-content,.research-news-list,.research-alert-list,.news-feed,.news-focus-list,.room-chat-scroll,.room-studio-sidebar,.dns-api-tool,.dashboard-avatar-panel,.wb-design-page)::-webkit-scrollbar{width:8px;height:8px}
+:is(.settings-navigation,.settings-module-content,.application-manager-overlay,.notification-center,.notification-center-list,.notification-preferences,.history-analysis-panel,.workspace-content,.research-news-list,.research-alert-list,.news-feed,.news-focus-list,.room-chat-scroll,.room-studio-sidebar,.dns-api-tool,.dashboard-avatar-panel,.wb-design-page)::-webkit-scrollbar-track{background:transparent}
+:is(.settings-navigation,.settings-module-content,.application-manager-overlay,.notification-center,.notification-center-list,.notification-preferences,.history-analysis-panel,.workspace-content,.research-news-list,.research-alert-list,.news-feed,.news-focus-list,.room-chat-scroll,.room-studio-sidebar,.dns-api-tool,.dashboard-avatar-panel,.wb-design-page)::-webkit-scrollbar-thumb{background:transparent;border-radius:999px}
+:is(.settings-navigation,.settings-module-content,.application-manager-overlay,.notification-center,.notification-center-list,.notification-preferences,.history-analysis-panel,.workspace-content,.research-news-list,.research-alert-list,.news-feed,.news-focus-list,.room-chat-scroll,.room-studio-sidebar,.dns-api-tool,.dashboard-avatar-panel,.wb-design-page):hover::-webkit-scrollbar-thumb{background:rgba(var(--theme-line-rgb,255,255,255),.2)}
+:is(.settings-navigation,.settings-module-content,.application-manager-overlay,.notification-center,.notification-center-list,.notification-preferences,.history-analysis-panel,.workspace-content,.research-news-list,.research-alert-list,.news-feed,.news-focus-list,.room-chat-scroll,.room-studio-sidebar,.dns-api-tool,.dashboard-avatar-panel,.wb-design-page)::-webkit-scrollbar-thumb:hover{background:rgba(var(--theme-line-rgb,255,255,255),.38)}
+:is(.settings-navigation,.settings-module-content,.application-manager-overlay,.notification-center,.notification-center-list,.notification-preferences,.history-analysis-panel,.workspace-content,.research-news-list,.research-alert-list,.news-feed,.news-focus-list,.room-chat-scroll,.room-studio-sidebar,.dns-api-tool,.dashboard-avatar-panel,.wb-design-page)::-webkit-scrollbar-button{display:none;width:0;height:0}
+
+/* AI 客户端连接清单：一行一个，只显示连接状态，不展示额度明细 */
+.agent-connection-list { display: flex; flex-direction: column; gap: 6px; margin: 14px 0 4px; }
+.agent-connection-setting { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border: 1px solid rgba(var(--theme-line-rgb,255,255,255),.1); border-radius: 12px; background: rgba(var(--theme-surface-rgb,24,22,29),.22); }
+.agent-connection-row { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.agent-connection-row > strong { flex: 0 0 auto; color: var(--theme-fg,#f5f2f3); font-size: 13px; font-weight: 600; }
+.agent-connection-row > small { min-width: 0; margin-left: auto; overflow: hidden; color: var(--theme-muted,#cbc5ca); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.agent-connection-dot { flex: 0 0 8px; width: 8px; height: 8px; border-radius: 50%; border: 1px solid rgba(var(--theme-line-rgb,255,255,255),.45); background: transparent; }
+.agent-connection-setting.is-connected .agent-connection-dot { border-color: transparent; background: #48d9a0; box-shadow: 0 0 6px rgba(72,217,160,.55); }
+.agent-connection-note { color: var(--theme-muted,#aaa3ad); font-size: 11px; }

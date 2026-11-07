@@ -35,7 +35,7 @@ export interface NativeSnapshot {
     cliDetected?: boolean; configurationDetected?: boolean|null; cacheDetected?: boolean|null;
     windows: Array<{ id: string; usedPercent: number; windowDurationMins: number | null; resetsAtUnixMs: number | null; title?:string|null }> }>;
 }
-const names = [["codex", "Codex"], ["claude", "Claude Code"], ["antigravity", "Antigravity"], ["doubao", "豆包"], ["kimi", "Kimi Code"], ["gemini", "Gemini（预留）"]];
+const names = [["codex", "Codex"], ["claude", "Claude Code"], ["antigravity", "Antigravity"], ["doubao", "豆包"], ["kimi", "Kimi Code"], ["cursor", "Cursor"]];
 export function unknownAgentUsage(reason: AgentAvailabilityReason = "no-source"): AgentQuotaData {
   return { type: "agent-quotas", mode: "live", accounts: names.map(([id, name]) => ({ id, name, state: "unknown", observedAt: "", availabilityReason: reason, source: "none", confidence: "unknown", loginStatus: "unknown", usageWindows: [] })) };
 }

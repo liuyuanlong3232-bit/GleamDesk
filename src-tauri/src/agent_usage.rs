@@ -4,6 +4,8 @@ use serde_json::Value;
 use crate::{cli_reader, provider_requests::{observed_unix_ms, RequestCache}};
 #[cfg(windows)]
 mod kimi;
+mod claude_oauth;
+mod cursor;
 #[cfg(windows)]
 #[path="doubao_client.rs"]
 mod doubao;
@@ -250,8 +252,23 @@ fn load(_app:Option<&tauri::AppHandle>) -> AgentSnapshot {
         Err(_) => { let mut result = account("claude", "Claude Code"); result.installed = true; result.source = "claude-cli-auth-status"; result.reason = "read-failed"; result }
     }).unwrap_or_else(|| account("claude", "Claude Code"));
     claude.running = metadata["claudeRunning"].as_bool().unwrap_or(false);
-    if claude.login_status=="configured" && claude.usage_type!="api" {
-        if let Some(path)=executable("claude.exe") {match cli_reader::read_claude_usage(&path){Ok(value)=>apply_claude_usage(&mut claude,&value),Err(_)=>claude.reason="read-failed"}}
+    if claude.usage_type!="api" {
+        // 订阅额度走官方账号的 OAuth 用量端点，与主流开源实现一致；
+        // 读不到就保持「未连接 / 额度不可用」，不回退到已废弃的 CLI 内部协议。
+        let oauth=claude_oauth::read();
+        if let Some(plan)=oauth.plan.clone(){claude.plan=Some(plan)}
+        if !oauth.windows.is_empty(){
+            claude.windows=oauth.windows;
+            claude.source="claude-oauth-usage";
+            claude.confidence="verified";
+            claude.state="normal";
+            claude.login_status="verified";
+            claude.reason="";
+            claude.installed=true;
+        } else if claude.login_status!="verified"&&oauth.login_status=="not-logged-in"{
+            claude.login_status="not-logged-in";
+            if claude.reason.is_empty(){claude.reason="not-logged-in"}
+        }
     }
     let local = |id: &str, name: &str, key: &str| {
         let mut result = account(id, name);
@@ -269,7 +286,9 @@ fn load(_app:Option<&tauri::AppHandle>) -> AgentSnapshot {
     #[cfg(not(windows))] let doubao=local("doubao","豆包","doubao");
     #[cfg(windows)] let kimi=kimi::read();
     #[cfg(not(windows))] let kimi=account("kimi","Kimi Code");
-    AgentSnapshot { accounts: vec![codex, claude, antigravity, doubao, kimi, account("gemini", "Gemini（预留）")], observed_at_unix_ms: observed_unix_ms() }
+    #[cfg(windows)] let cursor=cursor::read();
+    #[cfg(not(windows))] let cursor=account("cursor","Cursor");
+    AgentSnapshot { accounts: vec![codex, claude, antigravity, doubao, kimi, cursor], observed_at_unix_ms: observed_unix_ms() }
 }
 #[tauri::command]
 pub async fn read_agent_usage(app:tauri::AppHandle,state: tauri::State<'_, AgentUsageState>,force:Option<bool>,consent:Option<bool>) -> Result<AgentSnapshot, String> {
@@ -373,13 +392,6 @@ mod tests {
         }
     }
     #[test]
-    fn claude_engine_quota_requires_readings_not_just_a_plan(){
-        let mut result=claude_observation(&serde_json::json!({"loggedIn":true,"subscriptionType":"pro"}));
-        apply_claude_usage(&mut result,&serde_json::json!({"rate_limits_available":false,"subscription_type":"pro"}));assert!(result.windows.is_empty());assert_eq!(result.confidence,"unknown");
-        apply_claude_usage(&mut result,&serde_json::json!({"rate_limits_available":true,"subscription_type":"max","rate_limits":{"five_hour":{"utilization":0,"resets_at":"2026-10-15T12:00:00Z"},"seven_day":{"utilization":37},"seven_day_opus":{"utilization":101},"limits":[{"kind":"weekly_scoped","percent":70,"scope":{"model":{"display_name":"Fable"}}}]}}));
-        assert_eq!(result.plan.as_deref(),Some("max"));assert_eq!(result.source,"claude-engine-get-usage");assert_eq!(result.windows.len(),3);assert_eq!(result.windows[0].used_percent,0.);assert!(result.windows[0].resets_at_unix_ms.is_some());assert_eq!(result.confidence,"verified");
-    }
-    #[test]
     fn antigravity_summary_follows_upstream_envelopes_union_values_and_bucket_names(){
         let groups=serde_json::json!([{"displayName":"Gemini Models","buckets":[{"bucketId":"gemini_weekly","displayName":"Weekly Limit","remaining":{"case":"remainingFraction","value":0.25},"resetTime":"2026-10-20T00:00:00Z"},{"bucketId":"gemini-five-hour","displayName":"Five Hour Limit","remainingFraction":1.0},{"bucketId":"disabled","disabled":true,"remainingFraction":0}]}]);
         for value in [serde_json::json!({"groups":groups}),serde_json::json!({"summary":{"groups":groups}}),serde_json::json!({"response":{"groups":groups}})]{let rows=antigravity_summary(&value).unwrap();assert_eq!(rows.len(),2);assert_eq!(rows[0].used_percent,75.);assert_eq!(rows[0].window_duration_mins,Some(10080));assert_eq!(rows[1].used_percent,0.);assert_eq!(rows[1].window_duration_mins,Some(300));assert!(rows[0].title.as_ref().unwrap().contains("Weekly Limit"));}
@@ -397,16 +409,10 @@ mod tests {
         assert!(antigravity_status(&Value::Null).1.is_empty());
     }
     #[test]
-    fn claude_scoped_limits_replace_legacy_family_and_failure_clears_windows(){
-        let mut result=claude_observation(&serde_json::json!({"loggedIn":true}));apply_claude_usage(&mut result,&serde_json::json!({"rate_limits_available":true,"rate_limits":{"five_hour":{"utilization":10},"seven_day_opus":{"utilization":20},"limits":[{"kind":"weekly_scoped","scope":{"model":{"display_name":"Opus"}},"percent":30}]}}));
-        assert_eq!(result.windows.len(),2);assert_eq!(result.windows[1].used_percent,30.);
-        apply_claude_usage(&mut result,&serde_json::json!({"rate_limits_available":false}));assert!(result.windows.is_empty());assert_eq!(result.confidence,"unknown");
-    }
-    #[test]
     #[ignore = "read-only inspection of installed clients and existing Codex account"]
     fn inspect_native_agent_sources_without_returning_credentials() {
         let snapshot = load(None);
-        assert_eq!(snapshot.accounts.len(), 5);
+        assert_eq!(snapshot.accounts.len(), 6);
         let json = serde_json::to_string(&snapshot).unwrap();
         assert!(!json.contains("email") && !json.contains("access_token") && !json.contains("accountId"));
         println!("{}", json);
@@ -418,27 +424,6 @@ pub(crate) fn timestamp_ms(value:&Value)->Option<u64>{
     let connection=rusqlite::Connection::open_in_memory().ok()?;
     let seconds:Option<i64>=connection.query_row("SELECT unixepoch(?1)",[text],|row|row.get(0)).ok()?;
     u64::try_from(seconds?).ok()?.checked_mul(1000)
-}
-
-// Adapted from Agent HUD Open ClaudeUsage / ClaudeEngineUsage (Apache-2.0).
-fn apply_claude_usage(result:&mut AgentObservation,payload:&Value){
-    result.windows.clear();result.confidence="unknown";result.state="unknown";
-    if payload["rate_limits_available"]!=true{result.reason="no-quota-source";return}
-    result.plan=bounded_text(payload.get("subscription_type")).or_else(||result.plan.take());
-    let usage=&payload["rate_limits"];
-    for (key,label,minutes) in [("five_hour","5 小时额度",300),("seven_day","周额度",10080),("seven_day_sonnet","Sonnet 周额度",10080),("seven_day_opus","Opus 周额度",10080)]{
-        let row=&usage[key];let Some(percent)=row["utilization"].as_f64().filter(|value|value.is_finite()&&(0.0..=100.0).contains(value))else{continue;};
-        result.windows.push(UsageWindow{id:key.into(),used_percent:percent,window_duration_mins:Some(minutes),resets_at_unix_ms:timestamp_ms(&row["resets_at"]),title:Some(label.into())});
-    }
-    for row in usage["limits"].as_array().into_iter().flatten().take(16){
-        if row["kind"]!="weekly_scoped"{continue}
-        let Some(percent)=valid_percent(&row["percent"])else{continue};
-        let model=&row["scope"]["model"];let Some(name)=bounded_text(model.get("display_name")).or_else(||bounded_text(model.get("id")))else{continue};
-        let family=name.to_lowercase();let id=if family.contains("sonnet"){"seven_day_sonnet".into()}else if family.contains("opus"){"seven_day_opus".into()}else{format!("weekly:{family}")};
-        let window=UsageWindow{id:id.clone(),used_percent:percent,window_duration_mins:Some(10080),resets_at_unix_ms:timestamp_ms(&row["resets_at"]),title:Some(format!("{name} 周额度"))};
-        if let Some(previous)=result.windows.iter_mut().find(|window|window.id==id){*previous=window}else{result.windows.push(window)}
-    }
-    finish_quota(result,"claude-engine-get-usage");
 }
 
 fn valid_percent(value:&Value)->Option<f64>{value.as_f64().filter(|value|value.is_finite()&&(0.0..=100.0).contains(value))}

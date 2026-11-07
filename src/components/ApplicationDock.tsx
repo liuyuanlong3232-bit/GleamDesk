@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import {useApplicationStatus} from "../services/launcher/useApplicationStatus";
 import {confirmedRunning} from "../services/launcher/applicationStatus";
 import { isTauri } from "@tauri-apps/api/core";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import type { ApplicationItem } from "../types";
-import { starterDockIcons } from "../services/launcher/dockPresentation";
 import { dockMagnification } from "../services/launcher/dockMagnification";
 import { readApplicationIcon } from "../services/iconStore";
 import { revealApplication } from "../services/launcher/launcherService";
@@ -24,7 +23,9 @@ interface ApplicationDockProps {
 
 export function ApplicationDock({ applications, presentation = "shelf", onLaunch, onManage, onAvatar, onApplicationsChange, onMenuVisibilityChange, onActivityChange, statusVisible=true }: ApplicationDockProps) {
   const statuses=useApplicationStatus(applications,statusVisible);
-  const [menu, setMenu] = useState<{ id: string | null; x: number; y: number } | null>(null);
+  const [menu, setMenu] = useState<{ id: string | null } | null>(null);
+  const [menuPos, setMenuPos] = useState<{ left: number; bottom: number } | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const [iconTarget, setIconTarget] = useState<string | null>(null);
   const dock = useRef<HTMLDivElement>(null);
   const iconInput = useRef<HTMLInputElement>(null);
@@ -32,6 +33,7 @@ export function ApplicationDock({ applications, presentation = "shelf", onLaunch
   const [dropMessage,setDropMessage] = useState("");
   const [busy,setBusy] = useState(false);
   const [sorting,setSorting]=useState(false);
+  const [dragHint,setDragHint]=useState<{id:string;target:string}|null>(null);
   const incoming = useRef(false);
   const magnificationFrame = useRef<number | null>(null);
   const pointerPosition = useRef<number | null>(null);
@@ -99,6 +101,26 @@ export function ApplicationDock({ applications, presentation = "shelf", onLaunch
     };
   }, [menu]);
 
+  useLayoutEffect(() => {
+    if (!menu) { setMenuPos(null); return; }
+    const place = () => {
+      const width = menuRef.current?.offsetWidth || 188;
+      const anchor = menu.id ? dock.current?.querySelector<HTMLElement>(`[data-dock-id="${CSS.escape(menu.id)}"]`) : null;
+      const rect = anchor?.getBoundingClientRect();
+      const viewportWidth = window.innerWidth, viewportHeight = window.innerHeight;
+      const centerX = rect ? rect.left + rect.width / 2 : viewportWidth / 2;
+      const top = rect ? rect.top : viewportHeight - 72;
+      setMenuPos({
+        left: Math.min(Math.max(8, centerX - width / 2), Math.max(8, viewportWidth - width - 8)),
+        bottom: Math.max(8, viewportHeight - top + 8),
+      });
+    };
+    place();
+    const frame = requestAnimationFrame(place);
+    window.addEventListener("resize", place);
+    return () => { cancelAnimationFrame(frame); window.removeEventListener("resize", place); };
+  }, [menu]);
+
   useEffect(() => { onMenuVisibilityChange?.(Boolean(menu)); }, [menu, onMenuVisibilityChange]);
   useEffect(()=>{onActivityChange?.(busy||dragOver||sorting||Boolean(dropMessage));},[busy,dragOver,sorting,dropMessage,onActivityChange]);
 
@@ -137,10 +159,10 @@ export function ApplicationDock({ applications, presentation = "shelf", onLaunch
   };
 
   return <>
-    <div ref={dock} className={`dock glass${presentation === "quick-launch" ? " app-dock" : ""}${dragOver?" dock-drop-active":""}`} aria-label="应用 Dock" aria-busy={busy}
+    <div ref={dock} className={`dock glass${presentation === "quick-launch" ? " app-dock" : ""}${dragOver?" dock-drop-active":""}${sorting?" is-sorting":""}`} aria-label="应用 Dock" aria-busy={busy}
       onPointerMove={event => magnify(event.clientX)}
       onPointerLeave={() => magnify(null)}
-      onContextMenu={event=>{if((event.target as HTMLElement).closest(".dock-item"))return;event.preventDefault();setMenu({id:null,x:Math.max(8,Math.min(event.clientX,window.innerWidth-220)),y:Math.max(8,Math.min(event.clientY,window.innerHeight-100))});}}
+      onContextMenu={event=>{if((event.target as HTMLElement).closest(".dock-item"))return;event.preventDefault();setMenu({id:null});}}
       onDragOver={event=>{event.preventDefault();setDragOver(!Array.from(event.dataTransfer.types).includes("application/x-codex-dock"));}}
       onDragLeave={event=>{if(!event.currentTarget.contains(event.relatedTarget as Node))setDragOver(false);}}
       onDrop={async event=>{
@@ -151,7 +173,7 @@ export function ApplicationDock({ applications, presentation = "shelf", onLaunch
       }}>
       {pinnedApps.map((application) => (
         <button
-          className="dock-item"
+          className={`dock-item${dragHint?.id===application.id?" is-dragging":""}${dragHint&&dragHint.id!==application.id&&dragHint.target===application.id?" is-drop-target":""}`}
           key={application.id}
           data-dock-id={application.id}
           draggable={!busy&&!isTauri()}
@@ -159,44 +181,44 @@ export function ApplicationDock({ applications, presentation = "shelf", onLaunch
           onPointerMove={event=>{
             const drag=pointerDrag.current;if(!drag||drag.id!==application.id)return;
             if(!drag.active&&Math.hypot(event.clientX-drag.startX,event.clientY-drag.startY)>6){drag.active=true;setSorting(true);event.currentTarget.setPointerCapture(event.pointerId);}
-            if(drag.active){const target=document.elementFromPoint(event.clientX,event.clientY)?.closest<HTMLElement>("[data-dock-id]");if(target?.dataset.dockId)drag.target=target.dataset.dockId;}
+            if(drag.active){const target=document.elementFromPoint(event.clientX,event.clientY)?.closest<HTMLElement>("[data-dock-id]");if(target?.dataset.dockId)drag.target=target.dataset.dockId;setDragHint(current=>current&&current.id===drag.id&&current.target===drag.target?current:{id:drag.id,target:drag.target});}
           }}
-          onPointerUp={event=>{const drag=pointerDrag.current;pointerDrag.current=null;setSorting(false);if(event.currentTarget.hasPointerCapture(event.pointerId))event.currentTarget.releasePointerCapture(event.pointerId);if(drag?.active){suppressClick.current=true;event.preventDefault();void persist(current=>reorderDockApplications(current,drag.id,drag.target));}}}
-          onPointerCancel={()=>{pointerDrag.current=null;setSorting(false);}}
-          onLostPointerCapture={()=>{pointerDrag.current=null;setSorting(false);}}
+          onPointerUp={event=>{const drag=pointerDrag.current;pointerDrag.current=null;setSorting(false);setDragHint(null);if(event.currentTarget.hasPointerCapture(event.pointerId))event.currentTarget.releasePointerCapture(event.pointerId);if(drag?.active){suppressClick.current=true;event.preventDefault();void persist(current=>reorderDockApplications(current,drag.id,drag.target));}}}
+          onPointerCancel={()=>{pointerDrag.current=null;setSorting(false);setDragHint(null);}}
+          onLostPointerCapture={()=>{pointerDrag.current=null;setSorting(false);setDragHint(null);}}
           onDragStart={event=>{event.dataTransfer.setData("application/x-codex-dock",application.id);event.dataTransfer.effectAllowed="move";}}
           onDragOver={event=>event.preventDefault()}
           onDrop={event=>{const id=event.dataTransfer.getData("application/x-codex-dock");if(id){event.preventDefault();event.stopPropagation();setDragOver(false);void persist(current=>reorderDockApplications(current,id,application.id));}}}
           onClick={() => {if(suppressClick.current){suppressClick.current=false;return;}onLaunch(application);}}
-          onContextMenu={(event) => { event.preventDefault(); setMenu({ id: application.id, x: Math.max(8, Math.min(event.clientX, window.innerWidth - 220)), y: Math.max(8, Math.min(event.clientY, window.innerHeight - 250)) }); }}
+          onContextMenu={(event) => { event.preventDefault(); setMenu({ id: application.id }); }}
           aria-label={application.target ? `打开 ${application.name}` : `配置 ${application.name}`}
         >
           <AppGlyph application={application} unadornedImage={presentation === "quick-launch"} />
           {confirmedRunning(statuses[application.id])&&<span className="dock-running-dot" aria-label="检测到运行进程" title={statuses[application.id].basis==="path"?"按程序路径确认正在运行":"按配置的进程名称匹配"}/>}
         </button>
       ))}
+      {pinnedApps.length===0 && <button type="button" className="dock-empty" onClick={()=>onManage()}>拖入应用，或打开应用库</button>}
     </div>
     {(dropMessage||busy||dragOver)&&<div className="dock-drop-message glass" role="status" data-dock-hit-region="">{busy?"正在读取名称、路径和原始图标…":dragOver?"放到 Dock 添加入口":dropMessage}</div>}
     <input ref={iconInput} className="visually-hidden" type="file" accept=".png,.svg,.ico,image/png,image/svg+xml,image/x-icon" onChange={(event) => { void selectIcon(event.target.files?.[0]); event.currentTarget.value = ""; }} />
-    {menu && !item && <div className="app-context-menu glass" role="menu" data-dock-hit-region={presentation === "quick-launch" ? "" : undefined} style={{ left: menu.x, top: menu.y }} onPointerDown={(event) => event.stopPropagation()}>
-      <strong>应用管理</strong>
-      <button role="menuitem" onClick={() => { setMenu(null); onManage(); }}>添加或管理应用</button>
+    {menu && !item && <div ref={menuRef} className="app-context-menu glass" role="menu" data-dock-hit-region={presentation === "quick-launch" ? "" : undefined} style={{ left: menuPos?.left ?? 0, bottom: menuPos?.bottom ?? 0, visibility: menuPos ? "visible" : "hidden" }} onPointerDown={(event) => event.stopPropagation()}>
+      <strong>Dock</strong>
+      <button role="menuitem" onClick={() => { setMenu(null); onManage(); }}>应用库…</button>
       {onAvatar&&<button role="menuitem" onClick={() => { setMenu(null); onAvatar(); }}>更换我的头像</button>}
     </div>}
-    {menu && item && <div className="app-context-menu glass" role="menu" data-dock-hit-region={presentation === "quick-launch" ? "" : undefined} style={{ left: menu.x, top: menu.y }} onPointerDown={(event) => event.stopPropagation()}>
-      <strong>{item.name}</strong>
+    {menu && item && <div ref={menuRef} className="app-context-menu glass" role="menu" data-dock-hit-region={presentation === "quick-launch" ? "" : undefined} style={{ left: menuPos?.left ?? 0, bottom: menuPos?.bottom ?? 0, visibility: menuPos ? "visible" : "hidden" }} onPointerDown={(event) => event.stopPropagation()}>
+      <strong title={item.name}>{item.name}</strong>
       <button role="menuitem" onClick={() => { setMenu(null); onLaunch(item); }}>打开</button>
-      <button role="menuitem" onClick={() => { void persist((current) => current.map((app) => app.id === item.id ? { ...app, pinned: !app.pinned } : app)); setMenu(null); }}>{item.pinned ? "取消固定到 Dock" : "固定到 Dock"}</button>
-      <button role="menuitem" onClick={() => { setIconTarget(item.id); setMenu(null); iconInput.current?.click(); }}>修改图标</button>
+      <button role="menuitem" onClick={() => { setIconTarget(item.id); setMenu(null); iconInput.current?.click(); }}>更换图标</button>
       <button role="menuitem" disabled={!item.target || item.type === "url" || item.type === "command"} onClick={() => { setMenu(null); void revealApplication(item).catch((error) => window.alert(error instanceof Error ? error.message : "无法打开应用位置")); }}>打开所在位置</button>
-      <button role="menuitem" onClick={() => { setMenu(null); onManage(); }}>添加或管理应用</button>
-      <button role="menuitem" className="danger-action" onClick={() => { void persist((current) => current.filter((app) => app.id !== item.id)); setMenu(null); }}>删除</button>
+      <span className="app-context-separator" aria-hidden="true" />
+      <button role="menuitem" onClick={() => { setMenu(null); void persist((current) => current.map((app) => app.id === item.id ? { ...app, pinned: false } : app)); }}>从 Dock 移除</button>
     </div>}
   </>;
 }
 
 export function AppGlyph({ application, unadornedImage = false }: { application: ApplicationItem; unadornedImage?: boolean }) {
-  const icon = application.icon || starterDockIcons[application.id];
+  const icon = application.icon;
   if (icon) return unadornedImage
     ? <img className="app-icon-plain" src={icon} alt="" draggable={false} />
     : <span className="app-icon app-image-icon" style={{ "--app-color": application.color ?? "#67b5ff" } as CSSProperties}><img src={icon} alt="" /></span>;
