@@ -60,17 +60,15 @@ test("validates and remaps imported layouts to the current monitor", () => {
 });
 import {dragHudPlacement,hudPosition,loadHudPlacement,saveHudPlacement} from "../src/providers/layoutStore";
 
-test("HUD free movement preserves its grab point, stays inside the desktop and reloads",()=>{
+test("HUD restores edge placement when loading an A5 free-position record",()=>{
  const values=new Map<string,string>(),old=globalThis.localStorage;
  Object.defineProperty(globalThis,"localStorage",{configurable:true,value:{getItem:(key:string)=>values.get(key)??null,setItem:(key:string,value:string)=>values.set(key,value)}});
  try {
   const viewport={width:1536,height:864},size={width:500,height:74};
-  const moved=dragHudPlacement({x:680,y:350},viewport,{edge:"top",offset:1},size,.5,{x:80,y:30});
-  assert.deepEqual(hudPosition(moved,size,viewport),{x:600,y:320});assert.ok(moved.free);
-  saveHudPlacement("free",moved);assert.deepEqual(loadHudPlacement("free"),moved);
-  const small=hudPosition(moved,size,{width:800,height:600});assert.ok(small.x>=16&&small.y>=16&&small.x+500<=784&&small.y+74<=536);
-  const bounded=dragHudPlacement({x:-100,y:900},viewport,moved,size,.5,{x:80,y:30}),position=hudPosition(bounded,size,viewport);
-  assert.equal(position.x,16);assert.ok(position.y+74<=800);
+  values.set("codex-desktop.hud-position.v1.free",JSON.stringify({edge:"top",offset:.4,free:{x:.6,y:.5}}));
+  const restored=loadHudPlacement("free");assert.deepEqual(restored,{edge:"top",offset:.4});
+  assert.equal(hudPosition(restored,size,viewport).y,16);
+  saveHudPlacement("free",restored);assert.deepEqual(JSON.parse(values.get("codex-desktop.hud-position.v1.free")!),{edge:"top",offset:.4});
  }finally{Object.defineProperty(globalThis,"localStorage",{configurable:true,value:old});}
 });
 
