@@ -1,5 +1,5 @@
 import {normalizeTheme,themeAccent} from "../presentation/theme";
-import type { AppSettings, OverviewCardId } from "../types";
+import type { AppSettings, OverviewCardId, OverviewCardSizes } from "../types";
 import { logEvent } from "../services/appLogger";
 import { normalizeNotificationPreferences } from "../services/notifications/policy";
 import { normalizeRemoteAnalysisSettings } from "../domain/analysis/remoteSettings";
@@ -11,8 +11,18 @@ export function normalizeOverviewCardOrder(value:unknown):OverviewCardId[] {
     ? [...value] as OverviewCardId[] : ["agents","api","vps"];
 }
 
+export function normalizeOverviewCardSizes(value:unknown):OverviewCardSizes {
+  const source=value&&typeof value==="object"&&!Array.isArray(value)?value as Record<string,unknown>:{};
+  const size=(id:OverviewCardId)=>{
+    const raw=source[id],item=raw&&typeof raw==="object"?raw as Record<string,unknown>:{};
+    return {columns:Math.round(clamp(item.columns,3,12,4)),height:Math.max(216,Math.min(720,Math.round(clamp(item.height,216,720,240)/24)*24))};
+  };
+  return {agents:size("agents"),api:size("api"),vps:size("vps")};
+}
+
 export const defaultSettings: AppSettings = {
   workbenchOverviewOrder: ["agents","api","vps"],
+  workbenchOverviewSizes: normalizeOverviewCardSizes(null),
   credentialNamespaceVersion: 1,
   checkUpdatesOnStartup: true,
   displayName: "",
@@ -52,6 +62,7 @@ export function loadSettings(): AppSettings {
     if (!value) return { ...defaultSettings };
     return {
       workbenchOverviewOrder: normalizeOverviewCardOrder(value.workbenchOverviewOrder),
+      workbenchOverviewSizes: normalizeOverviewCardSizes(value.workbenchOverviewSizes),
       credentialNamespaceVersion: 1,
       displayName: typeof value.displayName==="string"?value.displayName.replace(/[\u0000-\u001f\u007f]/g,"").trim().slice(0,32):"",
       theme: normalizeTheme(value.theme),

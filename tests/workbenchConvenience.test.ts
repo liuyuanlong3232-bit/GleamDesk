@@ -8,7 +8,7 @@ import {renderToStaticMarkup} from "react-dom/server";
 import {WorkbenchOverview} from "../src/components/WorkbenchOverview";
 import {emptyDashboardData} from "../src/providers/dashboardAdapter";
 import {presentApiUsage} from "../src/presentation/quotaAdapter";
-import {normalizeOverviewCardOrder,loadSettings,saveSettings,defaultSettings} from "../src/providers/settingsStore";
+import {normalizeOverviewCardOrder,normalizeOverviewCardSizes,loadSettings,saveSettings,defaultSettings} from "../src/providers/settingsStore";
 const memory=()=>{const values=new Map<string,string>();return {values,getItem:(key:string)=>values.get(key)??null,setItem:(key:string,value:string)=>{values.set(key,value);}};};
 const rooms:ChatRoom[]=[{id:"room-a",name:"研究室",members:["GPT"],mode:"group"},{id:"room-b",name:"灵感室",members:["GPT"],mode:"free"}];
 test("first-use overview omits unconfigured API cards and VPS schedules but keeps Windows health",()=>{
@@ -42,6 +42,24 @@ test("overview order validates and round-trips through existing settings without
  Object.defineProperty(globalThis,"localStorage",{configurable:true,value:store});
  try {saveSettings({...defaultSettings,theme:"moss",displayName:"我的名字",workbenchOverviewOrder:["vps","agents","api"]});const loaded=loadSettings();assert.deepEqual(loaded.workbenchOverviewOrder,["vps","agents","api"]);assert.equal(loaded.theme,"moss");assert.equal(loaded.displayName,"我的名字");}
  finally{Object.defineProperty(globalThis,"localStorage",{configurable:true,value:previous});}
+});
+
+test("overview card sizes recover legacy settings, bound unsafe values and round-trip with order",()=>{
+ const defaults={agents:{columns:4,height:240},api:{columns:4,height:240},vps:{columns:4,height:240}};
+ for(const value of [undefined,null,[],"broken"])assert.deepEqual(normalizeOverviewCardSizes(value),defaults);
+ assert.deepEqual(normalizeOverviewCardSizes({agents:{columns:99,height:9999},api:{columns:-2,height:-50},vps:{columns:NaN,height:Infinity}}),{agents:{columns:12,height:720},api:{columns:3,height:216},vps:{columns:4,height:240}});
+ const sizes=normalizeOverviewCardSizes({agents:{columns:7,height:312},api:{columns:5,height:288},vps:{columns:12,height:360}});
+ const store=memory(),previous=globalThis.localStorage;
+ Object.defineProperty(globalThis,"localStorage",{configurable:true,value:store});
+ try {saveSettings({...defaultSettings,workbenchOverviewOrder:["api","vps","agents"],workbenchOverviewSizes:sizes});const loaded=loadSettings();assert.deepEqual(loaded.workbenchOverviewSizes,sizes);assert.deepEqual(loaded.workbenchOverviewOrder,["api","vps","agents"]);}
+ finally{Object.defineProperty(globalThis,"localStorage",{configurable:true,value:previous});}
+});
+
+test("overview applies saved sizes to the correct cards and keeps real values",()=>{
+ const data=emptyDashboardData();data.providers=presentApiUsage([{id:"deepseek",name:"DeepSeek",state:"normal",currency:"CNY",balance:7.44,sourceUrl:"https://api.deepseek.com/user/balance",observedAt:new Date().toISOString()}],"normal");
+ const html=renderToStaticMarkup(createElement(WorkbenchOverview,{data,cardOrder:["api","vps","agents"],cardSizes:{agents:{columns:4,height:240},api:{columns:8,height:312},vps:{columns:4,height:240}},vpsInterval:30,onNotifications:()=>{},onRoom:()=>{},onConnections:()=>{}}));
+ assert.match(html,/data-overview-card="api"[^>]*--card-columns:8[^>]*--card-height:312px/);assert.match(html,/7\.44/);
+ assert.ok(html.indexOf('data-overview-card="api"')<html.indexOf('data-overview-card="vps"'));
 });
 test("recent conversations track actual opens, deduplicate and exclude notes",()=>{
  const store=memory();assert.deepEqual(loadRecentScopes(store),[]);

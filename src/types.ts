@@ -95,8 +95,10 @@ export interface ApplicationConfig {
 }
 
 export type OverviewCardId = "agents" | "api" | "vps";
+export type OverviewCardSizes = Record<OverviewCardId,{columns:number;height:number}>;
 export interface AppSettings {
   workbenchOverviewOrder?: OverviewCardId[];
+  workbenchOverviewSizes?: OverviewCardSizes;
   credentialNamespaceVersion?: 1;
   checkUpdatesOnStartup?: boolean;
   displayName: string;
