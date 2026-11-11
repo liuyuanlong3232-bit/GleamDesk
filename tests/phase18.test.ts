@@ -125,7 +125,7 @@ test("HUD recommendation uses the approved avatar and workbench keeps technical 
  const icon=renderToStaticMarkup(createElement(HudLogo,{id:"daily",label:"每日开源推荐"}));assert.match(icon,/class="hud-brand-image hud-daily-avatar"/);assert.match(icon,/avatar-art-daily/);assert.match(icon,/src="data:image\/png;base64,/);assert.doesNotMatch(icon,/hud-daily-mark/);assert.match(icon,/hud-bot-eyes/);
  const provider:ProviderStatus={id:"codex",name:"Codex",kind:"agent",state:"normal",running:true,confidence:"verified",source:"codex-cli-official-rpc",detail:"内部接口实现说明",lastUpdated:"2026-10-15T00:00:00Z",usageWindows:[{id:"5h",windowDurationMins:300,usedPercent:20}]};
  const card=renderToStaticMarkup(createElement(AIControlCenter,{agents:[provider]}));assert.match(card,/剩余 80%/);assert.doesNotMatch(card,/内部接口实现说明|Codex CLI · 官方额度|显示规则|额度范围/);
- const {WorkbenchOverview}=await import("../src/components/WorkbenchOverview"),{emptyDashboardData}=await import("../src/providers/dashboardAdapter");const data=emptyDashboardData();data.providers=[provider];
+ const {WorkbenchOverview}=await import("../src/components/WorkbenchOverview"),{emptyDashboardData}=await import("../src/providers/dashboardAdapter");const data=emptyDashboardData();data.providers=[{...provider,lastUpdated:new Date().toISOString()}];
  const page=renderToStaticMarkup(createElement(WorkbenchOverview,{data,onNotifications:()=>{},onRoom:()=>{},onConnections:()=>{},vpsInterval:60}));assert.match(page,/剩余 80%/);assert.doesNotMatch(page,/真实数据模式|codex-cli-official-rpc|缺少可靠记录|设计稿样例|独立任务调度器/);
  const simulated=renderToStaticMarkup(createElement(WorkbenchOverview,{data,simulationEnabled:true,onNotifications:()=>{},onRoom:()=>{},onConnections:()=>{},vpsInterval:60}));assert.match(simulated,/模拟数据/);
 });

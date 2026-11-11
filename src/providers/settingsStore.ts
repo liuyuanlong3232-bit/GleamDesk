@@ -5,23 +5,25 @@ import { normalizeNotificationPreferences } from "../services/notifications/poli
 import { normalizeRemoteAnalysisSettings } from "../domain/analysis/remoteSettings";
 
 const storageKey = "codex-desktop.settings.v1";
+const overviewIds:OverviewCardId[]=["agents","api","vps","activity","todos","updates","health"];
 
 export function normalizeOverviewCardOrder(value:unknown):OverviewCardId[] {
-  return Array.isArray(value)&&value.length===3&&new Set(value).size===3&&value.every(id=>["agents","api","vps"].includes(id))
-    ? [...value] as OverviewCardId[] : ["agents","api","vps"];
+  return Array.isArray(value)&&new Set(value).size===value.length&&value.every(id=>overviewIds.includes(id))
+    ? [...value,...overviewIds.filter(id=>!value.includes(id))] : [...overviewIds];
 }
 
 export function normalizeOverviewCardSizes(value:unknown):OverviewCardSizes {
   const source=value&&typeof value==="object"&&!Array.isArray(value)?value as Record<string,unknown>:{};
   const size=(id:OverviewCardId)=>{
     const raw=source[id],item=raw&&typeof raw==="object"?raw as Record<string,unknown>:{};
-    return {columns:Math.round(clamp(item.columns,3,12,4)),height:Math.max(216,Math.min(720,Math.round(clamp(item.height,216,720,240)/24)*24))};
+    const defaults={agents:[4,240,216],api:[4,240,216],vps:[4,240,216],activity:[7,384,240],todos:[5,240,168],updates:[7,144,96],health:[5,288,216]}[id];
+    return {columns:Math.round(clamp(item.columns,3,12,defaults[0])),height:Math.max(defaults[2],Math.min(720,Math.round(clamp(item.height,defaults[2],720,defaults[1])/24)*24))};
   };
-  return {agents:size("agents"),api:size("api"),vps:size("vps")};
+  return Object.fromEntries(overviewIds.map(id=>[id,size(id)])) as OverviewCardSizes;
 }
 
 export const defaultSettings: AppSettings = {
-  workbenchOverviewOrder: ["agents","api","vps"],
+  workbenchOverviewOrder: normalizeOverviewCardOrder(null),
   workbenchOverviewSizes: normalizeOverviewCardSizes(null),
   credentialNamespaceVersion: 1,
   checkUpdatesOnStartup: true,

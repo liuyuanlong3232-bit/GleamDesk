@@ -520,7 +520,7 @@ test("design overview uses the new hero/feed/sidebar/hardware frame with real su
  const React=await import("react"),{renderToStaticMarkup}=await import("react-dom/server"),{WorkbenchOverview}=await import("../src/components/WorkbenchOverview"),{emptyDashboardData}=await import("../src/providers/dashboardAdapter");
  const data=emptyDashboardData();data.providers=[{id:"deepseek",name:"DeepSeek",kind:"api",state:"normal",lastUpdated:new Date().toISOString(),balance:7.44,currency:"CNY",apiAmountScope:"balance",apiReadStatus:"normal",sourceUrl:"https://api.deepseek.com/user/balance"}];
  const html=renderToStaticMarkup(React.createElement(WorkbenchOverview,{data,onNotifications:()=>{},onRoom:()=>{},onConnections:()=>{},vpsInterval:60}));
- for(const marker of ["wb-home-hero-grid","wb-home-feed","wb-sidebar"])assert.match(html,new RegExp(marker));
+ for(const marker of ["wb-home-hero-grid","wb-home-feed","wb-overview-modules"])assert.match(html,new RegExp(marker));
  assert.doesNotMatch(html,/wb-home-hardware|wb-hardware-grid|本机电脑/);
  assert.doesNotMatch(html,/Holle Felix/);assert.match(html,/wb-personal-title[^>]*>我的工作台/);assert.doesNotMatch(html,/wb-time-greeting|今日焦点|当前通知脉搏/);assert.doesNotMatch(html,/<h1>工作台<\/h1>/);assert.match(html,/7.44/);assert.doesNotMatch(html,/宁德时代|洛杉矶|宏观利率哨兵|MOCK_DATA|widget-grid/);
 });

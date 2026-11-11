@@ -94,7 +94,7 @@ export interface ApplicationConfig {
   apps: ApplicationItem[];
 }
 
-export type OverviewCardId = "agents" | "api" | "vps";
+export type OverviewCardId = "agents" | "api" | "vps" | "activity" | "todos" | "updates" | "health";
 export type OverviewCardSizes = Record<OverviewCardId,{columns:number;height:number}>;
 export interface AppSettings {
   workbenchOverviewOrder?: OverviewCardId[];

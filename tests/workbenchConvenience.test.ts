@@ -11,6 +11,8 @@ import {presentApiUsage} from "../src/presentation/quotaAdapter";
 import {normalizeOverviewCardOrder,normalizeOverviewCardSizes,loadSettings,saveSettings,defaultSettings} from "../src/providers/settingsStore";
 const memory=()=>{const values=new Map<string,string>();return {values,getItem:(key:string)=>values.get(key)??null,setItem:(key:string,value:string)=>{values.set(key,value);}};};
 const rooms:ChatRoom[]=[{id:"room-a",name:"研究室",members:["GPT"],mode:"group"},{id:"room-b",name:"灵感室",members:["GPT"],mode:"free"}];
+const extraOrder=["activity","todos","updates","health"];
+const extraSizes={activity:{columns:7,height:384},todos:{columns:5,height:240},updates:{columns:7,height:144},health:{columns:5,height:288}};
 test("first-use overview omits unconfigured API cards and VPS schedules but keeps Windows health",()=>{
  const data=emptyDashboardData();data.providers=presentApiUsage([{id:"deepseek",name:"DeepSeek",state:"unknown",currency:"CNY",observedAt:"",availabilityReason:"not-enabled"},{id:"openai",name:"OpenAI API",state:"unknown",currency:"USD",observedAt:"",availabilityReason:"unconfigured"}],"unavailable");
  const html=renderToStaticMarkup(createElement(WorkbenchOverview,{data,vpsInterval:30,onNotifications:()=>{},onRoom:()=>{},onConnections:()=>{}}));
@@ -27,7 +29,7 @@ test("clear overview shows weekly-only quota without inventing a five-hour windo
  const html=renderToStaticMarkup(createElement(WorkbenchOverview,{data,vpsInterval:30,onNotifications:()=>{},onRoom:()=>{},onConnections:()=>{}}));
  assert.match(html,/Antigravity/);assert.match(html,/剩余 73%/);assert.match(html,/周额度/);
  assert.doesNotMatch(html,/5 小时|今日焦点|当前通知脉搏|wb-donut|wb-time-greeting|查看明细|wb-overview-detail/);
- assert.match(html,/调整布局/);assert.match(html,/便签与待办/);
+ assert.match(html,/调整布局/);assert.match(html,/<h2>待办<\/h2>/);assert.doesNotMatch(html,/随手记|便签与待办|<textarea/);
 });
 test("clear overview suppresses expired quotas and offline VPS gauges",()=>{
  const data=emptyDashboardData();data.providers=[{id:"codex",name:"Codex",kind:"agent",state:"normal",confidence:"verified",lastUpdated:new Date(Date.now()-600000).toISOString(),usageWindows:[{id:"primary",windowDurationMins:300,usedPercent:13}]}];
@@ -37,21 +39,21 @@ test("clear overview suppresses expired quotas and offline VPS gauges",()=>{
 });
 test("overview order validates and round-trips through existing settings without dropping other choices",()=>{
  for(const value of [undefined,null,[],["api","api","vps"],["api","vps","unknown"],"api"])
-  assert.deepEqual(normalizeOverviewCardOrder(value),["agents","api","vps"]);
+  assert.deepEqual(normalizeOverviewCardOrder(value),["agents","api","vps",...extraOrder]);
  const store=memory(),previous=globalThis.localStorage;
  Object.defineProperty(globalThis,"localStorage",{configurable:true,value:store});
- try {saveSettings({...defaultSettings,theme:"moss",displayName:"我的名字",workbenchOverviewOrder:["vps","agents","api"]});const loaded=loadSettings();assert.deepEqual(loaded.workbenchOverviewOrder,["vps","agents","api"]);assert.equal(loaded.theme,"moss");assert.equal(loaded.displayName,"我的名字");}
+ try {saveSettings({...defaultSettings,theme:"moss",displayName:"我的名字",workbenchOverviewOrder:["vps","agents","api"]});const loaded=loadSettings();assert.deepEqual(loaded.workbenchOverviewOrder,["vps","agents","api",...extraOrder]);assert.equal(loaded.theme,"moss");assert.equal(loaded.displayName,"我的名字");}
  finally{Object.defineProperty(globalThis,"localStorage",{configurable:true,value:previous});}
 });
 
 test("overview card sizes recover legacy settings, bound unsafe values and round-trip with order",()=>{
- const defaults={agents:{columns:4,height:240},api:{columns:4,height:240},vps:{columns:4,height:240}};
+ const defaults={agents:{columns:4,height:240},api:{columns:4,height:240},vps:{columns:4,height:240},...extraSizes};
  for(const value of [undefined,null,[],"broken"])assert.deepEqual(normalizeOverviewCardSizes(value),defaults);
- assert.deepEqual(normalizeOverviewCardSizes({agents:{columns:99,height:9999},api:{columns:-2,height:-50},vps:{columns:NaN,height:Infinity}}),{agents:{columns:12,height:720},api:{columns:3,height:216},vps:{columns:4,height:240}});
+ assert.deepEqual(normalizeOverviewCardSizes({agents:{columns:99,height:9999},api:{columns:-2,height:-50},vps:{columns:NaN,height:Infinity}}),{agents:{columns:12,height:720},api:{columns:3,height:216},vps:{columns:4,height:240},...extraSizes});
  const sizes=normalizeOverviewCardSizes({agents:{columns:7,height:312},api:{columns:5,height:288},vps:{columns:12,height:360}});
  const store=memory(),previous=globalThis.localStorage;
  Object.defineProperty(globalThis,"localStorage",{configurable:true,value:store});
- try {saveSettings({...defaultSettings,workbenchOverviewOrder:["api","vps","agents"],workbenchOverviewSizes:sizes});const loaded=loadSettings();assert.deepEqual(loaded.workbenchOverviewSizes,sizes);assert.deepEqual(loaded.workbenchOverviewOrder,["api","vps","agents"]);}
+ try {saveSettings({...defaultSettings,workbenchOverviewOrder:["api","vps","agents"],workbenchOverviewSizes:sizes});const loaded=loadSettings();assert.deepEqual(loaded.workbenchOverviewSizes,sizes);assert.deepEqual(loaded.workbenchOverviewOrder,["api","vps","agents",...extraOrder]);}
  finally{Object.defineProperty(globalThis,"localStorage",{configurable:true,value:previous});}
 });
 
@@ -60,6 +62,8 @@ test("overview applies saved sizes to the correct cards and keeps real values",(
  const html=renderToStaticMarkup(createElement(WorkbenchOverview,{data,cardOrder:["api","vps","agents"],cardSizes:{agents:{columns:4,height:240},api:{columns:8,height:312},vps:{columns:4,height:240}},vpsInterval:30,onNotifications:()=>{},onRoom:()=>{},onConnections:()=>{}}));
  assert.match(html,/data-overview-card="api"[^>]*--card-columns:8[^>]*--card-height:312px/);assert.match(html,/7\.44/);
  assert.ok(html.indexOf('data-overview-card="api"')<html.indexOf('data-overview-card="vps"'));
+ for(const id of ["activity","todos","updates","health"])assert.match(html,new RegExp(`data-overview-card="${id}"`));
+ assert.doesNotMatch(html,/wb-move-handle|wb-card-reorder/);
 });
 test("recent conversations track actual opens, deduplicate and exclude notes",()=>{
  const store=memory();assert.deepEqual(loadRecentScopes(store),[]);

@@ -729,11 +729,9 @@ html.workbench-console .notification-center .notification-preferences :is(select
 }
 @media(max-width:600px){.workbench-search-backdrop{padding:24px 12px}.workbench-search>header{padding:14px}.workbench-search>header>input{font-size:16px}.workbench-search-results>button{gap:8px}}
 .wb-notes>header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px}
-.wb-notes-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px}
-.wb-note-field,.wb-todos form{display:flex;flex-direction:column;gap:10px;min-width:0;font-size:14px;color:var(--theme-muted,#d5c5d6)}
-.wb-note-field textarea,.wb-todos input:not([type=checkbox]){width:100%;box-sizing:border-box;min-width:0;border:1px solid rgba(var(--theme-line-rgb,255,255,255),0.129412);border-radius:12px;background:var(--theme-page,#100e1455);color:var(--theme-fg,#eee4ef);padding:10px 12px;font:14px/1.7 var(--font-ui)}
-.wb-note-field textarea{resize:vertical;min-height:180px;max-height:400px}
-.wb-note-field textarea:focus,.wb-todos input:focus{outline:1px solid #c77a9d}
+.wb-todos form{display:flex;flex-direction:column;gap:10px;min-width:0;font-size:14px;color:var(--theme-muted,#d5c5d6)}
+.wb-todos input:not([type=checkbox]){width:100%;box-sizing:border-box;min-width:0;border:1px solid rgba(var(--theme-line-rgb,255,255,255),0.129412);border-radius:12px;background:var(--theme-page,#100e1455);color:var(--theme-fg,#eee4ef);padding:10px 12px;font:14px/1.7 var(--font-ui)}
+.wb-todos input:focus{outline:1px solid #c77a9d}
 .wb-todos form>div{display:flex;gap:8px}.wb-todos form button{flex-shrink:0}
 .wb-todos ul{list-style:none;margin:12px 0 0;padding:0;max-height:220px;overflow:auto;scrollbar-width:thin}
 .wb-todos li{display:flex;align-items:center;gap:8px;min-height:40px;border-bottom:1px solid rgba(var(--theme-line-rgb,255,255,255),0.047059)}
@@ -743,7 +741,6 @@ html.workbench-console .notification-center .notification-preferences :is(select
 /* Match numeric headings to their values in the remaining statistics tables. */
 .history-analysis-panel tr>:not(:first-child),.provider-request-diagnostics tr>:not(:first-child){text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .dns-api-results tr>:last-child{text-align:right;font-variant-numeric:tabular-nums}
-@media(max-width:1200px){.wb-notes-grid{grid-template-columns:minmax(0,1fr)}}
 .main-screen .hud-island.hud-has-menu .status-island{pointer-events:none}
 .main-screen .hud-context-menu.glass{position:fixed;z-index:80;display:flex;flex-direction:column;gap:6px;width:min(200px,calc(100vw - 16px));padding:10px;border:1px solid var(--theme-border,#65505e);border-radius:16px;background:rgba(var(--theme-surface-rgb,24,22,29),.97);color:var(--theme-fg,#f5f2f3);box-shadow:0 12px 32px #0005;backdrop-filter:blur(18px)}
 .main-screen .hud-context-menu>strong{padding:4px 8px;font-size:13px;color:var(--theme-fg,#f5f2f3)}
@@ -1023,8 +1020,6 @@ html.workbench-console .notification-center .notification-preferences :is(select
 .wb-activity-mark {width:32px;height:32px;display:grid;place-items:center;background:var(--theme-soft,#34242f);border-radius:10px;color:var(--theme-link,#e0576d);flex:none;font-size:18px}
 .wb-home-clear .wb-activity-row>button {flex:none;font-size:12px;padding:6px 10px}
 .wb-home-clear .wb-notes {padding:24px}
-.wb-home-clear .wb-notes-grid {grid-template-columns:minmax(0,1fr);gap:20px}
-.wb-home-clear .wb-note-field textarea {min-height:116px;resize:vertical}
 .wb-home-clear .wb-notes>header {gap:8px;flex-wrap:wrap;margin-bottom:20px}
 .wb-home-clear .wb-notes>header small {font-size:11px}
 .wb-overview-links {display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
@@ -1083,4 +1078,20 @@ html.workbench-console .notification-center .notification-preferences :is(select
 .is-layout-interacting {user-select:none}
 .wb-summary-slot:is(.is-resize,.is-keyboard)>.wb-summary-card {outline:2px solid var(--theme-accent,#c2263f);outline-offset:2px}
 .wb-home-clear .is-move .wb-move-handle {cursor:grabbing}
-@container(max-width:680px) {.wb-home-clear .wb-summary-slot {grid-column:1/-1}}
+@container(max-width:680px) {.wb-home-clear .wb-home-hero-grid {grid-template-columns:minmax(0,1fr)}.wb-home-clear .wb-summary-slot {grid-column:1/-1}}
+
+/* All overview modules share one grid; edit mode uses the card surface, without move handles. */
+.wb-overview-modules>.wb-summary-slot {animation:none}
+.wb-home-clear.is-layout-editing .wb-overview-modules>.wb-summary-slot {height:var(--card-height,240px);cursor:grab;touch-action:none}
+.wb-overview-modules>.wb-summary-slot.is-move {cursor:grabbing}
+.wb-overview-modules>.wb-summary-slot:focus-visible {outline:2px solid var(--theme-accent,#c2263f);outline-offset:3px;border-radius:16px}
+.wb-home-clear .wb-summary-body :is(.wb-feed-section,.wb-notes,.wb-update-frequency) {padding:0;margin:0;min-width:0}
+.wb-home-clear .wb-summary-body h2 {font-size:18px;font-weight:600}
+.wb-home-clear .wb-summary-body .wb-update-frequency p {margin:8px 0 0!important;font-size:12px;line-height:20px}
+.wb-home-clear .wb-summary-body .wb-home-feed {flex-shrink:0}
+.wb-overview-modules [data-overview-card="health"] .widget-card {height:auto!important;max-height:none!important;border:0;box-shadow:none;padding:0;background:transparent}
+.wb-home-clear.is-layout-editing .wb-summary-slot :is(button,a,summary) {touch-action:manipulation}
+.main-screen .hud-island .status-island.hud-icon-row {padding:10px;cursor:grab;touch-action:none;user-select:none}
+.main-screen :is(.hud-left,.hud-right) .status-island.hud-icon-row {padding:10px}
+.main-screen .hud-island.hud-dragging .status-island {cursor:grabbing}
+.main-screen .hud-island:focus-visible {outline:2px solid var(--theme-link,#e0576d);outline-offset:4px;border-radius:40px}

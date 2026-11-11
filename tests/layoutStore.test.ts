@@ -60,6 +60,20 @@ test("validates and remaps imported layouts to the current monitor", () => {
 });
 import {dragHudPlacement,hudPosition,loadHudPlacement,saveHudPlacement} from "../src/providers/layoutStore";
 
+test("HUD free movement preserves its grab point, stays inside the desktop and reloads",()=>{
+ const values=new Map<string,string>(),old=globalThis.localStorage;
+ Object.defineProperty(globalThis,"localStorage",{configurable:true,value:{getItem:(key:string)=>values.get(key)??null,setItem:(key:string,value:string)=>values.set(key,value)}});
+ try {
+  const viewport={width:1536,height:864},size={width:500,height:74};
+  const moved=dragHudPlacement({x:680,y:350},viewport,{edge:"top",offset:1},size,.5,{x:80,y:30});
+  assert.deepEqual(hudPosition(moved,size,viewport),{x:600,y:320});assert.ok(moved.free);
+  saveHudPlacement("free",moved);assert.deepEqual(loadHudPlacement("free"),moved);
+  const small=hudPosition(moved,size,{width:800,height:600});assert.ok(small.x>=16&&small.y>=16&&small.x+500<=784&&small.y+74<=536);
+  const bounded=dragHudPlacement({x:-100,y:900},viewport,moved,size,.5,{x:80,y:30}),position=hudPosition(bounded,size,viewport);
+  assert.equal(position.x,16);assert.ok(position.y+74<=800);
+ }finally{Object.defineProperty(globalThis,"localStorage",{configurable:true,value:old});}
+});
+
 test("HUD parks on each screen edge, stays bounded and remembers a per-screen position",()=>{
  const values=new Map<string,string>();const old=globalThis.localStorage;
  Object.defineProperty(globalThis,"localStorage",{configurable:true,value:{getItem:(key:string)=>values.get(key)??null,setItem:(key:string,value:string)=>values.set(key,value)}});

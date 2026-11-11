@@ -159,9 +159,9 @@ export function snapPlacements(placements: WidgetPlacement[]): WidgetPlacement[]
 }
 
 export type HudEdge="top"|"right"|"bottom"|"left";
-export interface HudPlacement{edge:HudEdge;offset:number}
+export interface HudPlacement{edge:HudEdge;offset:number;free?:{x:number;y:number}}
 export function loadHudPlacement(monitorId:string):HudPlacement{
- try{const value=JSON.parse(localStorage.getItem(`codex-desktop.hud-position.v1.${monitorId}`)||"null");if(value&&["top","right","bottom","left"].includes(value.edge)&&Number.isFinite(value.offset))return {edge:value.edge,offset:Math.max(0,Math.min(1,value.offset))}}catch{/* Keep a usable position if local storage is unavailable. */}
+ try{const value=JSON.parse(localStorage.getItem(`codex-desktop.hud-position.v1.${monitorId}`)||"null");if(value&&["top","right","bottom","left"].includes(value.edge)&&Number.isFinite(value.offset))return {edge:value.edge,offset:Math.max(0,Math.min(1,value.offset)),...(value.free&&Number.isFinite(value.free.x)&&Number.isFinite(value.free.y)?{free:{x:Math.max(0,Math.min(1,value.free.x)),y:Math.max(0,Math.min(1,value.free.y))}}:{})}}catch{/* Keep a usable position if local storage is unavailable. */}
  return {edge:"top",offset:1};
 }
 export function saveHudPlacement(monitorId:string,placement:HudPlacement){localStorage.setItem(`codex-desktop.hud-position.v1.${monitorId}`,JSON.stringify(placement))}
@@ -169,9 +169,17 @@ export function hudPosition(placement:HudPlacement,size:{width:number;height:num
  const inset=16,bottomSpace=64,width=Math.min(size.width,Math.max(0,viewport.width-inset*2)),height=Math.min(size.height,Math.max(0,viewport.height-inset*2-bottomSpace));
  const xTravel=Math.max(0,viewport.width-inset*2-width),yTravel=Math.max(0,viewport.height-inset*2-bottomSpace-height);
  const offset=Math.max(0,Math.min(1,placement.offset));
+ if(placement.free&&Number.isFinite(placement.free.x)&&Number.isFinite(placement.free.y))return {x:inset+xTravel*Math.max(0,Math.min(1,placement.free.x)),y:inset+yTravel*Math.max(0,Math.min(1,placement.free.y))};
  return {x:placement.edge==="left"?inset:placement.edge==="right"?inset+xTravel:inset+xTravel*offset,y:placement.edge==="top"?inset:placement.edge==="bottom"?inset+yTravel:inset+yTravel*offset};
 }
-export function dragHudPlacement(point:{x:number;y:number},viewport:{width:number;height:number},current:HudPlacement,size={width:0,height:0},grabFraction=.5):HudPlacement{
+export function dragHudPlacement(point:{x:number;y:number},viewport:{width:number;height:number},current:HudPlacement,size={width:0,height:0},grabFraction=.5,grabPoint?:{x:number;y:number}):HudPlacement{
+ if(grabPoint){
+  const xTravel=Math.max(0,viewport.width-32-Math.min(size.width,Math.max(0,viewport.width-32))),yTravel=Math.max(0,viewport.height-96-Math.min(size.height,Math.max(0,viewport.height-96)));
+  const x=Math.max(0,Math.min(1,(point.x-grabPoint.x-16)/Math.max(1,xTravel))),y=Math.max(0,Math.min(1,(point.y-grabPoint.y-16)/Math.max(1,yTravel)));
+  const horizontal=current.edge==="top"||current.edge==="bottom";
+  const edge=horizontal?(16+yTravel*y+size.height/2>viewport.height/2?"bottom":"top"):(16+xTravel*x+size.width/2>viewport.width/2?"right":"left");
+  return {edge,offset:horizontal?x:y,free:{x,y}};
+ }
  const distances={top:Math.abs(point.y),right:Math.abs(viewport.width-point.x),bottom:Math.abs(viewport.height-64-point.y),left:Math.abs(point.x)};
  const edge=(Object.keys(distances) as HudEdge[]).reduce((nearest,next)=>distances[next]<distances[nearest]?next:nearest,current.edge);
  const horizontal=edge==="top"||edge==="bottom",length=(horizontal?viewport.width:viewport.height-64)-32,run=Math.min(length,horizontal?size.width:size.height);
