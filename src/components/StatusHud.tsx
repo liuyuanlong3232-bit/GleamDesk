@@ -9,6 +9,7 @@ import antigravityMark from "../assets/hud/antigravity.png";
 import apiHubMark from "../assets/hud/api-fluent.png";
 import mailHubMark from "../assets/hud/mail-fluent.png";
 import vpsHubMark from "../assets/hud/vps-fluent.png";
+import pcHubMark from "../assets/hud/pc-fluent.png";
 import ollamaMark from "../assets/hud/ollama.svg";
 import doubaoMark from "../assets/hud/doubao.svg";
 import geminiMark from "../assets/hud/gemini.svg";
@@ -37,7 +38,7 @@ import {MailOtpToast} from './MailOtpToast';
 
 const clientMarks:Record<string,string>={codex:codexMark,claude:claudeMark,antigravity:antigravityMark,ollama:ollamaMark,doubao:doubaoMark,gemini:geminiMark,cursor:cursorMark,windsurf:windsurfMark,trae:traeMark,copilot:copilotMark,qwen:qwenMark,opencode:opencodeMark,kimi:kimiMark,pi:piMark,hermes:hermesMark,openclaw:openclawMark,codebuddy:codebuddyMark,workbuddy:workbuddyMark,qoder:qoderMark,zcode:zcodeMark,"deepseek-harness":deepseekMark,goose:gooseMark};
 const templateMarks=new Set(["codex","cursor","windsurf","copilot","kimi","pi","hermes","zcode","goose","ollama"]);
-const utilityMarks:Record<string,string>={api:apiHubMark,mail:mailHubMark,vps:vpsHubMark};
+const utilityMarks:Record<string,string>={api:apiHubMark,mail:mailHubMark,vps:vpsHubMark,pc:pcHubMark};
 
 export function HudQuotaDetails({provider}:{provider?:ProviderStatus}){
  if(provider?.id==="doubao"&&provider.membership?.available){
@@ -103,7 +104,6 @@ function HudArtwork({id,label}:{id:string;label:string}){
  const image=clientMarks[id];
  if(image&&templateMarks.has(id))return <span className="hud-brand-mask" style={{maskImage:`url(${JSON.stringify(image)})`,WebkitMaskImage:`url(${JSON.stringify(image)})`}}/>;
  if(image)return <img src={image} alt="" className="hud-brand-image"/>;
- if(id==="pc")return <svg className="hud-device-avatar" viewBox="0 0 48 48" fill="none" aria-hidden="true"><circle cx="24" cy="24" r="23" fill="#443046"/><g stroke="#f2c0d7" strokeWidth="2.2" strokeLinecap="round"><rect x="10" y="12" width="28" height="21" rx="4"/><path d="M18 39h12M24 33v6M17 22h.01M31 22h.01M20 27q4 3 8 0"/></g></svg>;
  return <span className="hud-letter-mark">{label.slice(0,1)}</span>;
 }
 
