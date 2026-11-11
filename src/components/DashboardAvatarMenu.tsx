@@ -1,3 +1,4 @@
+import {SelectionIndicator} from "./SelectionIndicator";
 import {CloseIcon} from "./CloseIcon";
 import {useEffect,useRef,type ReactNode} from "react";
 import {RoomPortrait} from "./RoomPortrait";
@@ -38,7 +39,7 @@ export interface WorkbenchNavItem {id:string;label:string;icon:string;active:boo
 export function WorkbenchRail({items,blocked,onSelect,onSettings,onSearch,onAdd,onAvatar}:{items:WorkbenchNavItem[];blocked:boolean;onSelect:(id:string)=>void;onSettings:()=>void;onSearch:()=>void;onAdd:()=>void;onAvatar?:()=>void}) {
   return <nav className="workbench-rail" aria-label="工作台主导航" data-no-page-swipe>
     <button type="button" className="workbench-rail-avatar-space" aria-label="更换我的头像" title="更换我的头像" disabled={blocked} onClick={onAvatar}><RoomPortrait id="你"/></button>
-    <div className="workbench-rail-pages">{items.map(item=><button key={item.id} type="button" className="workbench-nav-button" aria-label={item.label} title={item.label} data-tooltip={item.label} aria-current={item.active?"page":undefined} disabled={blocked} onClick={()=>onSelect(item.id)}><WorkbenchIcon kind={item.icon}/></button>)}</div>
+    <div className="workbench-rail-pages wb-moving-selection"><SelectionIndicator activeKey={items.find(item=>item.active)?.id??""}/>{items.map(item=><button key={item.id} type="button" className="workbench-nav-button" aria-label={item.label} title={item.label} data-tooltip={item.label} aria-current={item.active?"page":undefined} disabled={blocked} onClick={()=>onSelect(item.id)}><WorkbenchIcon kind={item.icon}/></button>)}</div>
     <div className="workbench-rail-actions"><button type="button" className="workbench-nav-button" aria-label="搜索" title="搜索" data-tooltip="搜索" onClick={onSearch} disabled={blocked}><WorkbenchIcon kind="search"/></button><button type="button" className="workbench-nav-button" aria-label="设置中心" title="设置中心" data-tooltip="设置中心" onClick={onSettings} disabled={blocked}><WorkbenchIcon kind="settings"/></button><button type="button" className="workbench-nav-button workbench-add" aria-label="页面与布局" title="页面与布局" data-tooltip="页面与布局" onClick={onAdd} disabled={blocked}><WorkbenchIcon kind="add"/></button></div>
   </nav>;
 }

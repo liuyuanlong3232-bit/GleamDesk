@@ -522,7 +522,7 @@ test("design overview uses the new hero/feed/sidebar/hardware frame with real su
  const html=renderToStaticMarkup(React.createElement(WorkbenchOverview,{data,onNotifications:()=>{},onRoom:()=>{},onConnections:()=>{},vpsInterval:60}));
  for(const marker of ["wb-home-hero-grid","wb-home-feed","wb-sidebar"])assert.match(html,new RegExp(marker));
  assert.doesNotMatch(html,/wb-home-hardware|wb-hardware-grid|本机电脑/);
- assert.doesNotMatch(html,/Holle Felix/);assert.match(html,/wb-personal-title[^>]*>我的工作台/);assert.match(html,/wb-time-greeting/);assert.doesNotMatch(html,/<h1>工作台<\/h1>/);assert.match(html,/7.44/);assert.doesNotMatch(html,/宁德时代|洛杉矶|宏观利率哨兵|MOCK_DATA|widget-grid/);
+ assert.doesNotMatch(html,/Holle Felix/);assert.match(html,/wb-personal-title[^>]*>我的工作台/);assert.doesNotMatch(html,/wb-time-greeting|今日焦点|当前通知脉搏/);assert.doesNotMatch(html,/<h1>工作台<\/h1>/);assert.match(html,/7.44/);assert.doesNotMatch(html,/宁德时代|洛杉矶|宏观利率哨兵|MOCK_DATA|widget-grid/);
 });
 test("market and agriculture replace the old three-column research layout",async()=>{
  const React=await import("react"),{renderToStaticMarkup}=await import("react-dom/server"),{MarketWorkspace}=await import("../src/components/MarketWorkspace"),{AgricultureWorkspace}=await import("../src/components/AgricultureWorkspace");
@@ -710,10 +710,7 @@ test("disk I/O rates distinguish idle, warmup, unavailable, and legacy history",
  const idle=renderToStaticMarkup(React.createElement(PcDisks,{data,effectsEnabled:true}));assert.match(idle,/0 B\/s/);assert.doesNotMatch(idle,/fx-disk-live/);
 });
 
-test("workbench greeting follows local morning afternoon and evening boundaries",async()=>{
- const {workbenchGreeting}=await import("../src/components/WorkbenchOverview");
- for(const [hour,minute,expected] of [[0,0,"早安"],[6,0,"早安"],[11,59,"早安"],[12,0,"下午好"],[17,59,"下午好"],[18,0,"晚上好"],[23,59,"晚上好"]] as const)assert.equal(workbenchGreeting(new Date(2026,9,11,hour,minute)),expected);
-});
+
 
 test("VPS navigation selects its own view and follows the resource group's visibility",async()=>{
  const {dashboardNavigationItems}=await import("../src/components/DashboardPageControls"),React=await import("react"),{renderToStaticMarkup}=await import("react-dom/server"),{WorkbenchResources}=await import("../src/components/WorkbenchOverview"),{emptyDashboardData}=await import("../src/providers/dashboardAdapter");

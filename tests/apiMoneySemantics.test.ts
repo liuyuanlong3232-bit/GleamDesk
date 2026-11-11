@@ -20,7 +20,7 @@ test("首页信息流也明确余额与币种，不虚列余额账户的日月�
  const html=homeMarkup(presentApiUsage([balance],"normal"));assert.match(html,/>账户余额</);assert.match(html,/5\.00 USD/);assert.doesNotMatch(html,/今日 未知/);
 });
 test("首页信息流不把过期余额当当前金额，旧值只能出现在历史详情",()=>{
- const html=homeMarkup(presentApiUsage([balance],"stale","读取失败"));assert.doesNotMatch(html,/<strong[^>]*>[^<]*5\.00/);assert.match(html,/上次记录（非当前）/);assert.match(html,/数据已过期/);
+ const html=homeMarkup(presentApiUsage([balance],"stale","读取失败"));assert.doesNotMatch(html,/<strong[^>]*>[^<]*5\.00/);assert.match(html,/账户余额/);assert.match(html,/数据已过期/);
 });
 test("余额主数字旁有口径和币种，不给DeepSeek编出今日费用",()=>{
  const html=markup(presentApiUsage([balance],"normal"));assert.match(html,/>账户余额</);assert.match(html,/USD/);assert.doesNotMatch(html,/今日 未知/);

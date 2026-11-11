@@ -94,7 +94,9 @@ export interface ApplicationConfig {
   apps: ApplicationItem[];
 }
 
+export type OverviewCardId = "agents" | "api" | "vps";
 export interface AppSettings {
+  workbenchOverviewOrder?: OverviewCardId[];
   credentialNamespaceVersion?: 1;
   checkUpdatesOnStartup?: boolean;
   displayName: string;

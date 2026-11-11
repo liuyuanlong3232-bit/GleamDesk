@@ -8,6 +8,7 @@ import {renderToStaticMarkup} from "react-dom/server";
 import {WorkbenchOverview} from "../src/components/WorkbenchOverview";
 import {emptyDashboardData} from "../src/providers/dashboardAdapter";
 import {presentApiUsage} from "../src/presentation/quotaAdapter";
+import {normalizeOverviewCardOrder,loadSettings,saveSettings,defaultSettings} from "../src/providers/settingsStore";
 const memory=()=>{const values=new Map<string,string>();return {values,getItem:(key:string)=>values.get(key)??null,setItem:(key:string,value:string)=>{values.set(key,value);}};};
 const rooms:ChatRoom[]=[{id:"room-a",name:"研究室",members:["GPT"],mode:"group"},{id:"room-b",name:"灵感室",members:["GPT"],mode:"free"}];
 test("first-use overview omits unconfigured API cards and VPS schedules but keeps Windows health",()=>{
@@ -18,7 +19,29 @@ test("first-use overview omits unconfigured API cards and VPS schedules but keep
 test("configured API failures remain visible and a configured VPS shows its refresh interval",()=>{
  const data=emptyDashboardData();data.providers=presentApiUsage([{id:"deepseek",name:"DeepSeek",state:"unknown",currency:"CNY",observedAt:"",availabilityReason:"read-failed"}],"error","网络读取失败");
  const html=renderToStaticMarkup(createElement(WorkbenchOverview,{data,vpsInterval:45,vpsConfigured:true,onNotifications:()=>{},onRoom:()=>{},onConnections:()=>{}}));
- assert.match(html,/<h3>DeepSeek</);assert.match(html,/VPS 自动读取/);assert.match(html,/刷新间隔 45 秒/);assert.doesNotMatch(html,/当前筛选暂无摘要/);
+ assert.match(html,/<h3>DeepSeek</);assert.match(html,/VPS 自动读取/);assert.match(html,/刷新间隔 45 秒/);assert.match(html,/未知/);assert.doesNotMatch(html,/¥0\.00/);
+});
+
+test("clear overview shows weekly-only quota without inventing a five-hour window",()=>{
+ const data=emptyDashboardData();data.providers=[{id:"antigravity",name:"Antigravity",kind:"agent",state:"normal",confidence:"verified",installed:true,lastUpdated:new Date().toISOString(),usageWindows:[{id:"weekly",windowDurationMins:10080,usedPercent:27}]}];
+ const html=renderToStaticMarkup(createElement(WorkbenchOverview,{data,vpsInterval:30,onNotifications:()=>{},onRoom:()=>{},onConnections:()=>{}}));
+ assert.match(html,/Antigravity/);assert.match(html,/剩余 73%/);assert.match(html,/周额度/);
+ assert.doesNotMatch(html,/5 小时|今日焦点|当前通知脉搏|wb-donut|wb-time-greeting|查看明细|wb-overview-detail/);
+ assert.match(html,/调整布局/);assert.match(html,/便签与待办/);
+});
+test("clear overview suppresses expired quotas and offline VPS gauges",()=>{
+ const data=emptyDashboardData();data.providers=[{id:"codex",name:"Codex",kind:"agent",state:"normal",confidence:"verified",lastUpdated:new Date(Date.now()-600000).toISOString(),usageWindows:[{id:"primary",windowDurationMins:300,usedPercent:13}]}];
+ data.vps={...data.vps,state:"offline",lastSuccessAt:new Date().toISOString(),gauges:[{label:"CPU",value:42.7,color:"blue"}] as never};
+ const html=renderToStaticMarkup(createElement(WorkbenchOverview,{data,vpsInterval:30,onNotifications:()=>{},onRoom:()=>{},onConnections:()=>{}}));
+ assert.match(html,/数据已过期/);assert.doesNotMatch(html,/剩余 87%|42\.7%/);
+});
+test("overview order validates and round-trips through existing settings without dropping other choices",()=>{
+ for(const value of [undefined,null,[],["api","api","vps"],["api","vps","unknown"],"api"])
+  assert.deepEqual(normalizeOverviewCardOrder(value),["agents","api","vps"]);
+ const store=memory(),previous=globalThis.localStorage;
+ Object.defineProperty(globalThis,"localStorage",{configurable:true,value:store});
+ try {saveSettings({...defaultSettings,theme:"moss",displayName:"我的名字",workbenchOverviewOrder:["vps","agents","api"]});const loaded=loadSettings();assert.deepEqual(loaded.workbenchOverviewOrder,["vps","agents","api"]);assert.equal(loaded.theme,"moss");assert.equal(loaded.displayName,"我的名字");}
+ finally{Object.defineProperty(globalThis,"localStorage",{configurable:true,value:previous});}
 });
 test("recent conversations track actual opens, deduplicate and exclude notes",()=>{
  const store=memory();assert.deepEqual(loadRecentScopes(store),[]);

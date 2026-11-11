@@ -1,12 +1,18 @@
 import {normalizeTheme,themeAccent} from "../presentation/theme";
-import type { AppSettings } from "../types";
+import type { AppSettings, OverviewCardId } from "../types";
 import { logEvent } from "../services/appLogger";
 import { normalizeNotificationPreferences } from "../services/notifications/policy";
 import { normalizeRemoteAnalysisSettings } from "../domain/analysis/remoteSettings";
 
 const storageKey = "codex-desktop.settings.v1";
 
+export function normalizeOverviewCardOrder(value:unknown):OverviewCardId[] {
+  return Array.isArray(value)&&value.length===3&&new Set(value).size===3&&value.every(id=>["agents","api","vps"].includes(id))
+    ? [...value] as OverviewCardId[] : ["agents","api","vps"];
+}
+
 export const defaultSettings: AppSettings = {
+  workbenchOverviewOrder: ["agents","api","vps"],
   credentialNamespaceVersion: 1,
   checkUpdatesOnStartup: true,
   displayName: "",
@@ -45,6 +51,7 @@ export function loadSettings(): AppSettings {
     const value = JSON.parse(localStorage.getItem(storageKey) ?? "null") as Partial<AppSettings> | null;
     if (!value) return { ...defaultSettings };
     return {
+      workbenchOverviewOrder: normalizeOverviewCardOrder(value.workbenchOverviewOrder),
       credentialNamespaceVersion: 1,
       displayName: typeof value.displayName==="string"?value.displayName.replace(/[\u0000-\u001f\u007f]/g,"").trim().slice(0,32):"",
       theme: normalizeTheme(value.theme),
