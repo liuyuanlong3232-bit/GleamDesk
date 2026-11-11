@@ -42,7 +42,7 @@ test('automatic reminders last thirty seconds within the actual code expiry',()=
  assert.equal(remainingOtpTime(0,25_000,25_000),0);
 });
 test('mail icon opens a persistent list with ordinary subjects and copyable codes',()=>{
- const button=renderToStaticMarkup(createElement(HudMailButton,{onOpen:()=>{},onEnter:()=>{},expanded:true}));assert.match(button,/打开邮箱提醒/);assert.match(button,/aria-expanded="true"/);assert.match(button,/<svg/);
+ const button=renderToStaticMarkup(createElement(HudMailButton,{onOpen:()=>{},onEnter:()=>{},expanded:true}));assert.match(button,/打开邮箱提醒/);assert.match(button,/aria-expanded="true"/);assert.match(button,/<img[^>]+alt=""[^>]+draggable="false"[^>]+class="hud-app-icon"/);
  const mail:OtpNotice={...notice('mail',500),subject:'本周安排',code:null};const otp=notice('otp',500);const html=renderToStaticMarkup(createElement(MailOtpCard,{recent:true,notices:[mail,otp],snapshot:{accounts:[],statuses:[],notices:[mail,otp]},copied:'',error:'',copy:async()=>{},onClose:()=>{}}));assert.match(html,/最近邮件/);assert.match(html,/本周安排/);assert.match(html,/复制验证码 123456/);assert.doesNotMatch(html,/复制验证码 null/);
 });
 test('empty mailbox still shows configured accounts and connection errors',()=>{

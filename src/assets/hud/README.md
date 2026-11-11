@@ -3,7 +3,11 @@
 chatgpt.png、claude.png、antigravity.png 取自 Agent HUD 的 Resources，核对日期 2026-10-14：
 https://github.com/jazzenchen/agent-hud-open/tree/main/Sources/AgentHUDDesktop/Resources
 
-这些图标随原项目附带 LobeIcons 的 MIT 许可，完整声明保留在 LobeIcons-LICENSE.txt。本项目没有复制 Swift 动画源码；Windows 交互由现有 React/CSS 实现。VPS 和本机头像使用内联 SVG；当前 Room、个人头像及 HUD 角色使用相邻 avatars-3d 目录的主题图集。
+这些图标随原项目附带 LobeIcons 的 MIT 许可，完整声明保留在 LobeIcons-LICENSE.txt。本项目没有复制 Swift 动画源码；Windows 交互由现有 React/CSS 实现。本机头像使用内联 SVG；当前 Room、个人头像及 HUD 角色使用相邻 avatars-3d 目录的主题图集。
+
+2026-11-11：api-fluent.png、mail-fluent.png、vps-fluent.png 是用户选定的 H 方案，使用内置 imagegen 生成透明背景素材。API 为蓝绿交织连接标志，邮箱为蓝白信封，VPS 为银灰服务器；不属于上述第三方品牌素材。沿用 Hub 的圆形按钮和原有交互。
+
+三枚图标由主题 CSS 的 `--hud-app-icon-filter` 调整色相与明暗，保留 H 方案的造型和金属高光；酒红、雾紫、苔绿采用对应强调色，标准白保留蓝绿配色。切换主题即时生效，不改第三方应用标志。
 
 doubao.svg、gemini.svg 补自同一图标库：https://github.com/lobehub/lobe-icons/tree/master/packages/static-svg/icons 。核对日期同上，适用同一 MIT 许可。主屏按当前运行识别显示，预留且未接入的成员不会冒充已连接。
 

@@ -581,8 +581,9 @@ html.workbench-console .notification-center .notification-preferences :is(select
 .hud-screen-options>button:focus-visible{outline:2px solid var(--theme-link,#efafc5);outline-offset:2px}
 .hud-brand-mask{display:block;width:30px;height:30px;background:#f8f5fa;mask-size:contain;mask-repeat:no-repeat;mask-position:center;-webkit-mask-size:contain;-webkit-mask-repeat:no-repeat;-webkit-mask-position:center}
 .hud-brand-image{width:30px;height:30px;object-fit:contain;filter:drop-shadow(0 0 1px #fff8)}
+.hud-app-icon{display:block;width:42px;height:42px;max-width:none;object-fit:contain;pointer-events:none;user-select:none;filter:var(--hud-app-icon-filter,hue-rotate(130deg) saturate(.85))}
 .main-screen .hud-icon-row .island-symbol .hud-device-avatar{width:40px;height:40px}
-.hud-api-mark,.hud-letter-mark{font:700 13px/1 var(--font-ui);color:#f5eafa}
+.hud-letter-mark{font:700 13px/1 var(--font-ui);color:#f5eafa}
 .hud-bot-body{position:absolute;inset:2px;background:#a29bc6;border-radius:50%;transform:scale(.6);opacity:0;transition:transform .5s,opacity .5s}
 .hud-logo-codex .hud-bot-body{background:#107f6b}.hud-logo-claude .hud-bot-body{background:#d87958}.hud-logo-antigravity .hud-bot-body{background:linear-gradient(135deg,#569bf9,#bd69d9,#7fe6d4)}.hud-logo-vps .hud-bot-body{background:#3d6e87}.hud-logo-pc .hud-bot-body{background:#7b4c76}
 .hud-bot-eyes{position:absolute;top:17px;left:10px;display:flex;gap:8px;opacity:0;transition:opacity .5s;transform:translate(var(--hud-look-x,0px),var(--hud-look-y,0px))}

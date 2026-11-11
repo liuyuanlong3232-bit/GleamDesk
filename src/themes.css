@@ -1,4 +1,8 @@
 /* Shared palette: the original burgundy uses each component's existing fallback. */
+.theme-burgundy{--hud-app-icon-filter:hue-rotate(130deg) saturate(.85)}
+.theme-lavender{--hud-app-icon-filter:hue-rotate(50deg) saturate(.85)}
+.theme-moss{--hud-app-icon-filter:hue-rotate(-70deg) saturate(.75)}
+.theme-white{--hud-app-icon-filter:saturate(.95) contrast(1.06)}
 .theme-lavender{--theme-page:#16111e;--theme-surface:#251d30;--theme-surface-rgb:37,29,48;--theme-fg:#f4eef9;--theme-muted:#c7b8d4;--theme-accent:#8759b8;--theme-accent-rgb:135,89,184;--theme-border:#66516f;--theme-soft:#47304e;--theme-link:#dab7fa;--theme-scheme:dark}
 .theme-moss{--theme-page:#101b15;--theme-surface:#1c2b22;--theme-surface-rgb:28,43,34;--theme-fg:#edf5ed;--theme-muted:#b6cbbb;--theme-accent:#477657;--theme-accent-rgb:71,118,87;--theme-border:#486452;--theme-soft:#2c4836;--theme-link:#a3d4ad;--theme-scheme:dark}
 .theme-white{--theme-page:#f3f5f8;--theme-surface:#ffffff;--theme-surface-rgb:255,255,255;--theme-fg:#202530;--theme-muted:#596475;--theme-accent:#3165bb;--theme-accent-rgb:49,101,187;--theme-line-rgb:35,49,70;--theme-border:#cbd3df;--theme-soft:#e8eef9;--theme-link:#285cac;--theme-scheme:light}
