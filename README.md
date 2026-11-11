@@ -1,12 +1,14 @@
 <div align="center">
 
+<img src="src-tauri/icons/icon.png" width="96" height="96" alt="GleamDesk mascot app icon" />
+
 # GleamDesk
 
 **栖光桌面 — A little light for your desktop.**
 
-A Windows workspace for HUD, Dock, system status, public data and Agent Room.
+A personal Windows desktop companion: a compact HUD and Dock, with a customizable workbench for AI quotas, API accounts, email codes and everyday information.
 
-[简体中文](README.zh-CN.md) · [Download for Windows](https://github.com/liuyuanlong3232-bit/GleamDesk/releases/tag/v0.1.7) · [User guide](docs/USAGE.md) · [Build](docs/BUILDING.md) · [Report an issue](https://github.com/liuyuanlong3232-bit/GleamDesk/issues)
+[简体中文](README.zh-CN.md) · [Download for Windows](https://github.com/liuyuanlong3232-bit/GleamDesk/releases/tag/v0.1.9) · [User guide](docs/USAGE.md) · [Build](docs/BUILDING.md) · [Report an issue](https://github.com/liuyuanlong3232-bit/GleamDesk/issues)
 
 ![Windows](https://img.shields.io/badge/platform-Windows-3165bb)
 ![Tauri 2](https://img.shields.io/badge/Tauri-2-24c8db)
@@ -20,30 +22,35 @@ A Windows workspace for HUD, Dock, system status, public data and Agent Room.
 Keep frequently checked status and everyday shortcuts on your desktop. Open the full workbench when you need it.
 
 - **Start small:** startup shows only the Dock and HUD by default.
-- **Check status at a glance:** supported AI-client quotas, API accounts, system health and optional server status share one HUD. Coverage varies by source; unavailable values remain unknown.
+- **Check status at a glance:** supported AI-client quotas, API accounts, local PC and optional VPS status share one HUD. Coverage varies by source; unavailable values remain unknown.
+- **Catch what matters:** optional email reminders and verification-code copying, plus daily GitHub, Skills, Hugging Face Spaces and Show HN recommendations with offline translation.
 - **Choose your shortcuts:** add apps, URLs and local AI entries, reorder them by dragging and choose your own icons.
-- **Match your desktop:** burgundy, lavender, moss and white themes, rounded glass surfaces and adjustable layouts.
+- **Arrange your workbench:** drag and resize overview cards, keep your to-dos nearby, and restore your layout next time. Cards reveal available data with restrained motion.
+- **Match your desktop:** burgundy, lavender, moss and white themes, rounded glass surfaces and matching API, mail, PC and VPS icons.
 - **Connect directly:** public news, market and agricultural sources run from your own computer, with optional custom HTTP quote mappings.
 
 ### Dock — compact until you need it
 
 ![Collapsed and expanded Dock](docs/images/dock.jpg)
 
-Hover over or click the avatar to expand the launcher; move away to collapse it. Pin applications and URLs, or open the workbench from the avatar. Built-in app icons are starter entries and require your own executable paths. Change the display name and avatar at the top left of the workbench.
+Hover over or click the avatar to expand the launcher; move away to collapse it. Add your own applications and URLs, or open the workbench from the avatar. New installations start without placeholder applications. Change the display name and avatar at the top left of the workbench.
 
 ### HUD — persistent status with expandable details
 
-![Top HUD and expanded quota details](docs/images/hud.jpg)
+![Theme-aware compact HUD](docs/images/hud-0.1.9.png)
 
-Compact icons and status rings keep the desktop clear. Click to pin details, drag the HUD to a screen edge, and use the penguin button to open the workbench on the main or secondary display. **Exit the whole app from the HUD context menu**; closing the workbench only hides it.
+Compact icons and status rings keep the desktop clear. Click to pin details, drag the icon bar to dock on any screen edge, and use the workbench avatar to open the main or secondary display. API, mail, PC and VPS icons follow the selected theme. **Exit the whole app from the HUD context menu**; closing the workbench only hides it.
 
-> These are isolated browser previews of the actual React components. HUD values are developer simulation data; Dock entries are starter defaults and the avatar is the creator-authorized public brand logo. No personal accounts, servers or chats were read. Previews do not prove live quotas, installed applications, connectivity or native Windows window behavior. [Capture details](docs/images/README.md).
+> These are isolated browser previews of the actual React components. Overview values are simulation data; the older Dock preview shows starter entries. Avatars are creator-authorized public brand artwork. No personal accounts, servers or chats were read. Previews do not prove live quotas, connectivity or native Windows window behavior. [Capture details](docs/images/README.md).
 
 ## Features
 
 | Area | What it provides |
 | --- | --- |
 | Desktop surfaces | Persistent HUD and Dock, an on-demand workbench, and whole-app exit from HUD |
+| Workbench overview | Seven draggable, resizable cards with saved layout, to-dos and data arrival animations |
+| Email reminders | Optional read-only message summaries and verification-code copying; open webmail by clicking a message |
+| Daily discoveries | GitHub, Skills, Hugging Face Spaces and Show HN with local offline translation |
 | System resources | Native Windows CPU, memory, disk, network and event status |
 | Public data | Direct news, market and agricultural sources with provenance, dates and units |
 | Watchlist | Add A-shares, US stocks, Hong Kong stocks and supported futures codes |
@@ -55,17 +62,18 @@ Compact icons and status rings keep the desktop clear. Click to pin details, dra
 
 ## Get started
 
-Version 0.1.7 adds read-only email reminders, verification-code copying and recent-message summaries in the HUD. Account rows use icons and move the newest mailbox to the top; clicking a message opens its webmail site in the default browser. Click-expanded HUD panels share the mailbox width and adapt to available screen space. QQ and 163 were connected locally; Gmail and Outlook real-account flows remain unverified. Versions 0.1.2 and earlier need one manual installation first.
+Version 0.1.9 refreshes the workbench overview, adds card dragging and resizing with saved layouts, and updates the API, mail, PC and VPS icons across all four themes. It also ships the approved GleamDesk mascot application icon. Email reminders and verification-code copying remain optional; QQ and 163 were connected locally, while Gmail and Outlook real-account flows remain unverified. Versions 0.1.2 and earlier need one manual installation first.
 
-Download the Windows x64 packages from [GitHub Release v0.1.7](https://github.com/liuyuanlong3232-bit/GleamDesk/releases/tag/v0.1.7):
+Download the Windows x64 packages from [GitHub Release v0.1.9](https://github.com/liuyuanlong3232-bit/GleamDesk/releases/tag/v0.1.9):
 
 | File | Use |
 | --- | --- |
-| `GleamDesk_0.1.7_x64-setup.exe` | Installer for the current Windows user |
-| `GleamDesk_0.1.7_windows_x64_portable.zip` | Extract and run `GleamDesk.exe` without app installation |
+| `GleamDesk_0.1.9_x64-setup.exe` | Installer for the current Windows user |
+| `GleamDesk_0.1.9_windows_x64_portable.zip` | Extract and run `GleamDesk.exe` without app installation |
 | `SHA256SUMS.txt` | SHA-256 checksums for downloaded files |
+| `GleamDesk-icon.png` | The approved GleamDesk mascot application icon |
 
-**0.1.7 has no Windows publisher signature.** Update signatures verify future in-app upgrades and do not replace a Windows publisher certificate. Windows may show an unknown-publisher warning. Checksums verify file integrity and do not replace publisher signatures. Both packages require WebView2 Runtime; setup downloads Microsoft's runtime installer if missing. Portable means installation-free: settings and history still use local AppData, rather than a self-contained profile beside the executable. Read [Windows package notes](docs/WINDOWS_PACKAGES.md).
+**0.1.9 has no Windows publisher signature.** Update signatures verify future in-app upgrades and do not replace a Windows publisher certificate. Windows may show an unknown-publisher warning. Checksums verify file integrity and do not replace publisher signatures. Both packages require WebView2 Runtime; setup downloads Microsoft's runtime installer if missing. Portable means installation-free: settings and history still use local AppData, rather than a self-contained profile beside the executable. Read [Windows package notes](docs/WINDOWS_PACKAGES.md).
 
 Build requirements: Windows 10/11, Node.js 22+, Rust stable, Visual Studio C++ Build Tools, Windows SDK and WebView2 Runtime. Native integrations target Windows; macOS and Linux releases are not provided or verified.
 
@@ -82,7 +90,7 @@ See [Build from source](docs/BUILDING.md) for validation and executable build co
 
 ### On-demand workbench
 
-![GleamDesk workbench preview](docs/images/overview.jpg)
+![GleamDesk workbench preview](docs/images/overview-0.1.9.png)
 
 Overview balances are explicitly labeled simulation values, not real accounts or investment results.
 

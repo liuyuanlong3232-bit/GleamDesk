@@ -1,10 +1,12 @@
+<p align="center"><img src="src-tauri/icons/icon.png" width="96" height="96" alt="栖光桌面吉祥物图标" /></p>
+
 # 栖光桌面 · GleamDesk
 
 **让状态常驻，让工作更轻。**
 
-[English](README.md) · [Windows 下载](https://github.com/liuyuanlong3232-bit/GleamDesk/releases/tag/v0.1.7) · [使用指南](docs/USAGE.md) · [编译说明](docs/BUILDING.md) · [问题反馈](https://github.com/liuyuanlong3232-bit/GleamDesk/issues)
+[English](README.md) · [Windows 下载](https://github.com/liuyuanlong3232-bit/GleamDesk/releases/tag/v0.1.9) · [使用指南](docs/USAGE.md) · [编译说明](docs/BUILDING.md) · [问题反馈](https://github.com/liuyuanlong3232-bit/GleamDesk/issues)
 
-基于 Tauri、React、TypeScript 和 Rust 的 Windows 桌面工作台，将顶部 HUD、Dock、系统资源、公开数据和 Agent Room 放在一起。
+一个 Windows 桌面助手：顶部 HUD 随手查看 AI 额度、API 账户、邮箱验证码与电脑状态，Dock 打开常用应用，完整工作台按需展开。
 
 ## 为什么做栖光桌面
 
@@ -12,29 +14,34 @@
 
 - **启动不占满屏幕**：默认只显示 Dock 和顶部 HUD，工作台按需打开。
 - **状态随手看**：HUD 汇集受支持的 AI 客户端额度、API 账户、系统与可选服务器状态，悬停或点击查看详情。各来源支持程度不同，未获取到的数据会标记未知。
+- **新消息及时看**：可选邮箱提醒和验证码复制；每日推荐汇集 GitHub、Skills、Hugging Face Spaces 和 Show HN，英文简介使用本机离线翻译。
 - **入口自己安排**：Dock 支持应用、网址与本地 AI 入口；拖入添加、拖动排序，并可修改图标。
-- **桌面风格统一**：酒红、雾紫、苔绿、标准白四种主题，搭配圆角玻璃面板与可调整布局。
+- **工作台自己排**：总览卡片支持拖动和调整大小，松手保存布局；数据到达后轻量呈现，待办就在手边。
+- **桌面风格统一**：酒红、雾紫、苔绿、标准白四种主题，API、邮箱、本机与 VPS 图标随主题变色。
 - **电脑直连数据**：新闻、市场与农业公开数据不依赖作者服务器，可再添加自己的 HTTP 行情接口。
 
 ### Dock：收起时是头像，展开后是启动栏
 
 ![Dock 收起与展开对照](docs/images/dock.jpg)
 
-靠近或点击头像展开；离开后自动收起。可以固定常用应用和网址；内置图标只是初始入口，首次使用仍需配置本机应用路径。点击头像可打开工作台，显示名字和头像可在工作台左上角修改。
+靠近或点击头像展开；离开后自动收起。添加自己的常用应用和网址，新安装不预置占位应用。点击头像可打开工作台，显示名字和头像可在工作台左上角修改。
 
 ### 顶部 HUD：常驻状态，按需展开
 
-![顶部 HUD 与展开的额度详情](docs/images/hud.jpg)
+![随主题切换的顶部 HUD](docs/images/hud-0.1.9.png)
 
-圆形图标和状态环减少桌面占用，点击可固定详情。拖动 HUD 可贴到屏幕四边；企鹅按钮打开工作台，并可选择主屏或副屏。**退出整个软件在 HUD 右键菜单中**；关闭工作台只隐藏工作台。
+圆形图标和状态环减少桌面占用，点击可固定详情。直接拖动图标栏可贴到屏幕四边；工作台头像打开工作台，并可选择主屏或副屏。API、邮箱、本机与 VPS 图标跟随主题切换。**退出整个软件在 HUD 右键菜单中**；关闭工作台只隐藏工作台。
 
-> 以上为真实 React 组件的独立浏览器预览，HUD 数值是开发模拟数据，Dock 使用创作者授权公开的品牌头像及内置入口。未读取私人账户、服务器或聊天。预览不代表真实额度、已安装应用或连接成功；窗口穿透、跨屏与系统启动行为以 Windows 桌面版为准。[截图说明](docs/images/README.md)
+> 以上为真实 React 组件的独立浏览器预览；总览使用模拟数据，旧 Dock 预览展示初始入口，头像均为创作者授权公开的品牌素材。未读取私人账户、服务器或聊天。预览不代表真实额度或连接成功；窗口穿透、跨屏与系统启动行为以 Windows 桌面版为准。[截图说明](docs/images/README.md)
 
 ## 功能
 
 | 模块 | 能做什么 |
 | --- | --- |
 | HUD 与 Dock | 常驻状态、应用入口、按需展开工作台、HUD 退出整个程序 |
+| 工作台总览 | 七个卡片支持拖动、调整大小和布局保存；保留待办，数据到达时轻量呈现 |
+| 邮箱提醒 | 可选只读邮件摘要、验证码复制；点击邮件打开对应邮箱网站 |
+| 每日推荐 | GitHub、Skills、Hugging Face Spaces、Show HN 与本机离线翻译 |
 | 系统资源 | Windows 本机 CPU、内存、磁盘、网络与事件状态 |
 | 新闻、市场与农业 | 电脑直连公开来源；保留来源、日期、单位与缺失状态 |
 | 自选 | 添加 A股、美股、港股及受支持的期货代码 |
@@ -46,17 +53,18 @@
 
 ## 开始使用
 
-0.1.7 新增只读邮箱提醒、验证码复制和最近邮件摘要。HUD 邮箱账号以图标逐行排列，最新来信账号自动置顶，点击邮件用默认浏览器打开邮箱网站。各点击展开面板统一为邮箱宽度，并按屏幕可用空间自适应。QQ、163 已做本机连接验收；Gmail、Outlook 尚未完成真实账号验收。0.1.2 及更早版本需要先手动安装一次包含更新模块的版本。
+0.1.9 更新工作台总览，加入卡片拖动、大小调整和布局保存，统一四种主题下的 API、邮箱、本机与 VPS 图标，并带上已选定的栖光桌面吉祥物应用图标。邮箱提醒和验证码复制仍按需开启；QQ、163 已做本机连接验收，Gmail、Outlook 尚未完成真实账号验收。0.1.2 及更早版本需要先手动安装一次包含更新模块的版本。
 
-从 [GitHub Release v0.1.7](https://github.com/liuyuanlong3232-bit/GleamDesk/releases/tag/v0.1.7) 下载 Windows x64 版本：
+从 [GitHub Release v0.1.9](https://github.com/liuyuanlong3232-bit/GleamDesk/releases/tag/v0.1.9) 下载 Windows x64 版本：
 
 | 文件 | 使用方式 |
 | --- | --- |
-| `GleamDesk_0.1.7_x64-setup.exe` | 安装版，仅为当前用户安装 |
-| `GleamDesk_0.1.7_windows_x64_portable.zip` | 免安装版，解压后运行 `GleamDesk.exe` |
+| `GleamDesk_0.1.9_x64-setup.exe` | 安装版，仅为当前用户安装 |
+| `GleamDesk_0.1.9_windows_x64_portable.zip` | 免安装版，解压后运行 `GleamDesk.exe` |
 | `SHA256SUMS.txt` | 下载文件的 SHA-256 校验值 |
+| `GleamDesk-icon.png` | 已选定的栖光桌面吉祥物应用图标 |
 
-**0.1.7 尚无 Windows 发行者签名**，已提供的更新签名用于校验后续应用内升级，不能代替 Windows 发行者证书，Windows 可能提示“未知发布者”。SHA-256 用于核对文件完整性，不能替代发布者签名。两种版本均需要 WebView2 Runtime；安装版在缺失时下载官方运行库。免安装版仍将个人设置和历史保存在本机 AppData，不是随文件夹携带的独立配置。详见 [Windows 安装说明](docs/WINDOWS_PACKAGES.md)。
+**0.1.9 尚无 Windows 发行者签名**，已提供的更新签名用于校验后续应用内升级，不能代替 Windows 发行者证书，Windows 可能提示“未知发布者”。SHA-256 用于核对文件完整性，不能替代发布者签名。两种版本均需要 WebView2 Runtime；安装版在缺失时下载官方运行库。免安装版仍将个人设置和历史保存在本机 AppData，不是随文件夹携带的独立配置。详见 [Windows 安装说明](docs/WINDOWS_PACKAGES.md)。
 
 需要自行编译时，准备 Windows、Node.js 22、Rust stable、Visual Studio C++ 构建工具和 WebView2 Runtime：
 
@@ -73,7 +81,7 @@ npm.cmd run tauri -- dev
 
 ### 按需打开的工作台
 
-![工作台界面预览](docs/images/overview.jpg)
+![工作台界面预览](docs/images/overview-0.1.9.png)
 
 首页金额为标明的开发模拟数据，不代表实际账户或投资收益。
 

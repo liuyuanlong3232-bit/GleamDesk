@@ -2,6 +2,23 @@
 
 ## [Unreleased]
 
+## [0.1.9] - 2026-11-11
+
+- Simplify the workbench overview and shared navigation; retain seven overview cards and to-dos, while removing the scratch-note UI without deleting existing note data.
+- Support dragging overview cards from their titles or blank areas and resizing from their edges, with live placement previews, keyboard controls, cancellation and saved layouts.
+- Reveal loaded overview data once, retain unknown values, and respect reduced-motion settings. Use the current time when assessing newly refreshed snapshots.
+- Keep the HUD docked to screen edges and remove its visible drag handle; dragging an icon preserves the next normal click.
+- Add matching H-style API, email, local PC and VPS icons that follow all four themes. Ship the approved mascot application icon and display it in the project README.
+- Refresh the English and Chinese project introductions and download instructions.
+
+## [0.1.8] - 2026-11-07
+
+- List only Dock applications in the application library; remove hard-coded icons and individual entry editors.
+- Simplify Dock context menus, align them with their icons, and add feedback while reordering.
+- Unify hover-revealed scrollbars and present AI clients as a connection list.
+- Read Claude Code usage from its official OAuth usage endpoint and add local Cursor usage reading.
+- Start new installations without placeholder applications.
+
 ## [0.1.7] - 2026-11-06
 
 - Add optional read-only email reminders and verification-code copying for QQ, 163, Gmail and Outlook. Keep authorization in a separate Windows credential namespace; keep message summaries and codes in memory.

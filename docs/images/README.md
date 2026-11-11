@@ -11,4 +11,9 @@ The refreshed JPG images capture the actual React components from the 0.1.1 cand
 External data requests were blocked during capture; only local assets were loaded. The images verify interface presentation only; they are not evidence of live provider connectivity, installed launcher applications, window transparency, screen-edge placement or other native Windows behavior. The creator-authorized brand avatar is deliberately included; private avatar uploads, watchlists, accounts and chats are excluded. Capture date: 2026-10-26 (0.1.1 candidate).
 
 
-Legacy .png previews are retained from the 0.1.0 source tree; current README links use the refreshed .jpg candidate captures with the authorized brand logo.
+## 0.1.9 previews — 2026-11-11
+
+- `hud-0.1.9.png`: the actual `StatusHud` and `HudLogo` components, white theme, with the approved API, VPS, local PC and mail artwork. No native account services are invoked.
+- `overview-0.1.9.png`: the actual `WorkbenchOverview` component with seven cards and explicitly labeled synthetic values. Cropped from the existing browser acceptance capture to exclude its developer controls; the simulated-data label remains visible.
+
+README now uses these two updated PNG previews. Other JPG captures and legacy PNGs remain for historical context. No private desktop screenshots, account data or native app profile files are included.
