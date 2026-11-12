@@ -42,11 +42,14 @@ export function useProviderDashboardData(providerIds: string[], beszelConfig: Be
     const customRefreshed=()=>{if(allowLive&&selectedIds.includes("custom-market-quotes"))refresh(["custom-market-quotes"],true);};
     window.addEventListener("codex-desktop.custom-http-refresh",customRefreshed);
     let stopSource:(()=>void)|undefined;
+    let stopAgents:(()=>void)|undefined;
     if(isTauri())void listen("snapshot-connection-changed",sourceChanged).then(stop=>{if(active)stopSource=stop;else stop();}).catch(()=>{});
+    if(isTauri())void listen("agent-usage-changed",refreshAgents).then(stop=>{if(active)stopAgents=stop;else stop();}).catch(()=>{});
     return () => {
       window.removeEventListener("codex-desktop.agents-refresh",refreshAgents);
       window.removeEventListener("codex-desktop.custom-http-refresh",customRefreshed);
       stopSource?.();
+      stopAgents?.();
       active = false;
       stopPolling();
     };

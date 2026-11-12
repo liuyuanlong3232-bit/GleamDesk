@@ -5,8 +5,8 @@ import {resolve,dirname} from 'node:path';
 import {createContext,runInContext} from 'node:vm';
 import {transformSync} from 'esbuild';
 
-function fixture({defer=false}={}){
- const slots=[],effects=[],calls=[];let cursor=0,enabled=false,finish,changed;
+function fixture({defer=false,readFails=false,emitFails=false}={}){
+ const slots=[],effects=[],calls=[],events=[],localEvents=[],dashboardCalls=[],nativeListeners=new Map();let cursor=0,enabled=false,finish,changed;
  const react={
   useState(initial){const i=cursor++;if(!(i in slots))slots[i]=typeof initial==='function'?initial():initial;return[slots[i],v=>{slots[i]=typeof v==='function'?v(slots[i]):v}]},
   useRef(initial){const i=cursor++;return slots[i]??(slots[i]={current:initial})},
@@ -14,21 +14,63 @@ function fixture({defer=false}={}){
  };
  const account={id:'codex',name:'Codex',installed:true,loginStatus:'verified',plan:'synthetic-plan'};
  const deps={react,'react/jsx-runtime':{jsx:(type,props)=>({type,props}),jsxs:(type,props)=>({type,props})},
-  '@tauri-apps/api/core':{isTauri:()=>true,invoke:async(command,args)=>{calls.push({command,args});if(command==='read_agent_usage'){if(defer)await new Promise(r=>finish=r);return{accounts:[account]}}if(command==='read_ollama_status')return{serviceStatus:'online',runningModels:[]};if(command==='read_doubao_membership')return{available:false};throw Error('Unexpected command '+command)}},
+  '@tauri-apps/api/core':{isTauri:()=>true,invoke:async(command,args)=>{calls.push({command,args});if(command==='read_agent_usage'){if(defer)await new Promise(r=>finish=r);if(readFails)throw Error('Synthetic read failure');return{accounts:[account]}}if(command==='read_ollama_status')return{serviceStatus:'online',runningModels:[]};if(command==='read_doubao_membership')return{available:false};throw Error('Unexpected command '+command)}},
+  '@tauri-apps/api/event':{emit:async(name,payload)=>{if(emitFails)throw Error('Synthetic event failure');events.push({name,payload})},listen:async(name,fn)=>{nativeListeners.set(name,fn);return()=>nativeListeners.delete(name)}},
+  './dashboardAdapter':{emptyDashboardData:()=>({providers:[]})},
+  './dashboardService':{refreshDashboardData:async(...args)=>{dashboardCalls.push(args);return{providers:[]}},mergeDashboardData:(current,next)=>({...current,...next})},
+  './pollingLifecycle':{startProviderPolling:()=>()=>{}},'./registry':{providersFor:()=>[]},
+  '../services/appLogger':{logEvent(){}},
   './AIControlCenter':{membershipBenefitDetail:v=>v},'./StatusHud':{HudLogo:()=>null},
   '../presentation/quotaAdapter':{doubaoReadIssueMessage:()=>undefined},
   '../providers/agents/agentUsageProvider':{normalizeAgentUsage:v=>v,agentClients:[],unavailableAgentRuntime:()=>({available:false}),readAgentRuntime:async()=>{calls.push({command:'runtime-only'});return{available:true}},runningAgentClients:()=>[]},
   '../services/windowVisibility':{isWindowVisible:()=>true,subscribeWindowVisibility:()=>()=>{}},'../services/launcher/launcherService':{launchApplication:async()=>{throw Error('External launch not allowed')}}
  };
- const context=createContext({console,Event:class{},window:{setInterval:()=>1,clearInterval(){},addEventListener(){},removeEventListener(){},dispatchEvent(){}}});
+ const context=createContext({console,Event:class{constructor(type){this.type=type}},window:{setInterval:()=>1,clearInterval(){},addEventListener(){},removeEventListener(){},dispatchEvent(event){localEvents.push(event.type)}}});
  const load=path=>{const module={exports:{}};const code=transformSync(readFileSync(path,'utf8'),{loader:'tsx',format:'cjs',jsx:'automatic'}).code;runInContext(`(function(require,module,exports){${code}\n})`,context)(name=>{if(!(name in deps))throw Error('Unexpected dependency '+name);return deps[name]},module,module.exports);return module.exports};
  const {AgentConnectionsSettings}=load('src/components/AgentConnectionsSettings.tsx');
- return{calls,load,get changed(){return changed},render(value=enabled){enabled=value;cursor=0;return AgentConnectionsSettings({enabled,onEnabledChange:v=>changed=v})},async flush(){for(const effect of effects.splice(0))effect();await new Promise(r=>setImmediate(r))},finish(){finish?.()}};
+ return{calls,events,localEvents,dashboardCalls,nativeListeners,load,get changed(){return changed},render(value=enabled){enabled=value;cursor=0;return AgentConnectionsSettings({enabled,onEnabledChange:v=>changed=v})},renderHook(fn){cursor=0;return fn()},async flush(){for(const effect of effects.splice(0))effect();await new Promise(r=>setImmediate(r))},dispose(){for(const slot of slots)slot?.cleanup?.()},finish(){finish?.()}};
 }
 function elements(tree,type){if(!tree||typeof tree!=='object')return[];if(Array.isArray(tree))return tree.flatMap(t=>elements(t,type));return[...(tree.type===type?[tree]:[]),...elements(tree.props?.children,type)]}
 function text(tree){if(tree==null||typeof tree==='boolean')return'';if(typeof tree!=='object')return String(tree);if(Array.isArray(tree))return tree.map(text).join('');return text(tree.props?.children)}
 const button=(tree,label)=>elements(tree,'button').find(b=>text(b)===label);
 const accountCalls=f=>f.calls.filter(c=>c.command==='read_agent_usage'||c.command==='read_doubao_membership');
+
+test('manual account refresh notifies every native window without publishing account data',async()=>{
+ const f=fixture();f.render(true);await f.flush();
+ assert.equal(f.events.length,0,'opening settings must not broadcast a manual refresh');
+ button(f.render(),'刷新连接状态').props.onClick();await f.flush();
+ assert.equal(f.events.length,1);assert.equal(f.events[0].name,'agent-usage-changed');assert.equal(f.events[0].payload,undefined);
+});
+
+test('failed account reads do not broadcast a successful refresh',async()=>{
+ const f=fixture({readFails:true});f.render(true);await f.flush();button(f.render(),'刷新连接状态').props.onClick();await f.flush();
+ assert.equal(f.events.length,0);assert.match(text(f.render()),/AI 连接读取失败/);
+});
+
+test('a native event failure preserves the successful account read and falls back to a local refresh',async()=>{
+ const f=fixture({emitFails:true});f.render(true);await f.flush();button(f.render(),'刷新连接状态').props.onClick();await f.flush();
+ assert.deepEqual(f.localEvents,['codex-desktop.agents-refresh']);assert.match(text(f.render()),/synthetic-plan|连接状态已刷新/);assert.doesNotMatch(text(f.render()),/连接检查失败/);
+});
+
+test('a refresh from another native window updates the HUD provider and unsubscribes on unmount',async()=>{
+ const f=fixture(),{useProviderDashboardData}=f.load('src/providers/useProviderDashboardData.ts');
+ f.renderHook(()=>useProviderDashboardData(['agent-quotas'],{url:'',systemId:'',refreshIntervalSeconds:30},true,{localAgentUsageEnabled:true}));await f.flush();
+ const listener=f.nativeListeners.get('agent-usage-changed');assert.equal(typeof listener,'function');
+ listener();await f.flush();assert.equal(f.dashboardCalls.length,1);assert.deepEqual(Array.from(f.dashboardCalls[0][0]),['agent-quotas','ollama-local']);assert.equal(f.dashboardCalls[0][4],true);
+ f.dispose();assert.equal(f.nativeListeners.has('agent-usage-changed'),false);
+});
+
+test('a cross-window quota refresh cannot enable real reads in simulation',async()=>{
+ const f=fixture(),{useProviderDashboardData}=f.load('src/providers/useProviderDashboardData.ts');
+ f.renderHook(()=>useProviderDashboardData(['agent-quotas'],{url:'',systemId:'',refreshIntervalSeconds:30},false));await f.flush();
+ const listener=f.nativeListeners.get('agent-usage-changed');assert.equal(typeof listener,'function');listener();await f.flush();assert.equal(f.dashboardCalls.length,0);f.dispose();
+});
+
+test('windows without quota cards ignore cross-window quota refreshes',async()=>{
+ const f=fixture(),{useProviderDashboardData}=f.load('src/providers/useProviderDashboardData.ts');
+ f.renderHook(()=>useProviderDashboardData(['hardware-status'],{url:'',systemId:'',refreshIntervalSeconds:30}));await f.flush();
+ f.nativeListeners.get('agent-usage-changed')();await f.flush();assert.equal(f.dashboardCalls.length,0);f.dispose();
+});
 
 test('opening AI settings while disabled only detects running apps, never reads accounts',async()=>{
  const f=fixture();f.render();await f.flush();const tree=f.render();assert.equal(elements(tree,'input')[0].props.checked,false);
@@ -46,6 +88,7 @@ test('explicit opt in passes consent; turning off hides account values and preve
 test('an in-flight account reply cannot reappear after consent is turned off',async()=>{
  const f=fixture({defer:true});f.render(true);await f.flush();assert.equal(accountCalls(f).length,1);
  f.render(false);await f.flush();f.finish();await f.flush();assert.doesNotMatch(text(f.render()),/synthetic-plan|连接状态已刷新/);
+ assert.equal(f.events.length,0);
  assert.equal(button(f.render(),'刷新连接状态').props.disabled,true);
 });
 test('privacy notice is collapsed by default and exposes the local and external data boundary',()=>{
