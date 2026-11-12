@@ -114,8 +114,9 @@ export function createProviderRuntime(options: ProviderRuntimeOptions = {}) {
     }
 
     const task = lock(`codex-desktop-provider:${identity}`, async () => {
+      const providerCache=provider.persistCache===false?undefined:cache;
       const cacheKey = `codex-desktop.provider.v6:${encodeURIComponent(identity)}`;
-      const previous = readEnvelope<T>(cache, cacheKey);
+      const previous = readEnvelope<T>(providerCache, cacheKey);
       const timestamp = now();
       if (previous?.cooldownUntil && previous.cooldownUntil > timestamp) {
         const failureReason = provider.id === "vps-status"
@@ -128,7 +129,7 @@ export function createProviderRuntime(options: ProviderRuntimeOptions = {}) {
           error: `${failureReason ? `${failureReason}；` : ""}连续读取失败，暂停刷新至 ${new Date(previous.cooldownUntil).toISOString()}`,
           retryAt: new Date(previous.cooldownUntil).toISOString(),
         };
-        writeEnvelope(cache, cacheKey, { ...previous, failureReason, expiresAt: previous.cooldownUntil, snapshot });
+        writeEnvelope(providerCache, cacheKey, { ...previous, failureReason, expiresAt: previous.cooldownUntil, snapshot });
         return snapshot;
       }
       if (!force && previous && previous.expiresAt > timestamp) return previous.snapshot;
@@ -224,7 +225,7 @@ export function createProviderRuntime(options: ProviderRuntimeOptions = {}) {
       // the previous sample. Keep one second after slow loads to merge waiters.
       const schedulingMargin = Math.min(250, refreshInterval / 10);
       const cacheDuration = successful ? Math.max(1_000, refreshInterval - schedulingMargin - (completedAt - timestamp)) : retryAt ? Math.max(1_000, Date.parse(retryAt) - completedAt) : Math.max(1_000, refreshInterval);
-      writeEnvelope(cache, cacheKey, {
+      writeEnvelope(providerCache, cacheKey, {
         expiresAt: completedAt + cacheDuration,
         snapshot,
         failureCount: failureCount || undefined,

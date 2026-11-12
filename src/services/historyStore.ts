@@ -65,6 +65,7 @@ export async function deleteHistoryRecord(id: string, kind?: HistoryKind) {
 
 // Only official observations are persisted. Existing API and simulated history stay separate.
 export interface CodexQuotaHistory {
+  accountKey?:string;
   type: "codex-quota";
   source: "codex-cli-official-rpc";
   windows: AgentUsageWindow[];
@@ -77,6 +78,7 @@ export function codexQuotaRecords(records: HistoryRecord[]): CodexQuotaRecord[] 
     if (record.kind !== "provider_history" || !Number.isFinite(Date.parse(record.createdAt))
       || !payload || payload.type !== "codex-quota" || payload.source !== "codex-cli-official-rpc"
       || !Array.isArray(payload.windows) || !payload.windows.length) return [];
+    if(payload.accountKey!==undefined&&!/^[a-f0-9]{64}$/.test(payload.accountKey))return [];
     const windows = payload.windows;
     if (windows.length > 8 || new Set(windows.map(window => window?.id)).size !== windows.length
       || windows.some(window => !window || typeof window.id !== "string" || window.id.length > 80
@@ -87,6 +89,7 @@ export function codexQuotaRecords(records: HistoryRecord[]): CodexQuotaRecord[] 
 }
 
 export function codexQuotaHistoryRecord(account: AgentQuotaAccount | undefined, previous?: CodexQuotaRecord, now=Date.now()): CodexQuotaRecord | null {
+  if(account?.accountKey!==previous?.payload.accountKey)previous=undefined;
   if (!account || account.id !== "codex" || account.confidence !== "verified"
     || account.source !== "codex-cli-official-rpc" || account.availabilityReason
     || !["normal","warning","online"].includes(account.state)) return null;
@@ -102,8 +105,8 @@ export function codexQuotaHistoryRecord(account: AgentQuotaAccount | undefined, 
   if (!windows.length) return null;
   const signature=(rows:AgentUsageWindow[])=>JSON.stringify(rows.map(row=>[row.id,row.windowDurationMins,row.usedPercent]).sort((a,b)=>String(a[0]).localeCompare(String(b[0]))));
   if (previous && signature(windows)===signature(previous.payload.windows)) return null;
-  const record:CodexQuotaRecord={id:"codex-quota:"+account.observedAt,kind:"provider_history",createdAt:account.observedAt,
-    payload:{type:"codex-quota",source:"codex-cli-official-rpc",windows}};
+  const record:CodexQuotaRecord={id:"codex-quota:"+(account.accountKey?account.accountKey+":":"")+account.observedAt,kind:"provider_history",createdAt:account.observedAt,
+    payload:{type:"codex-quota",source:"codex-cli-official-rpc",windows,...(account.accountKey?{accountKey:account.accountKey}:{})}};
   return codexQuotaRecords([record]).length ? record : null;
 }
 
@@ -111,8 +114,8 @@ let codexHistoryWrite:Promise<void>=Promise.resolve();
 export function recordCodexQuotaChange(accounts:AgentQuotaAccount[], store:HistoryRepository=repository(), now=Date.now()):Promise<void> {
   const write=codexHistoryWrite.catch(()=>{}).then(async()=>{
     const account=accounts.find(item=>item.id==="codex");
-    if(!account || account.confidence!=="verified" || account.source!=="codex-cli-official-rpc")return;
-    const previous=codexQuotaRecords(await store.query("provider_history",1000)).at(-1);
+    if(!account || !account.accountKey || account.confidence!=="verified" || account.source!=="codex-cli-official-rpc")return;
+    const previous=codexQuotaRecords(await store.query("provider_history",1000)).filter(record=>record.payload.accountKey===account.accountKey).at(-1);
     const record=codexQuotaHistoryRecord(account,previous,now);
     if(record)await store.insert(record);
   });
@@ -120,6 +123,7 @@ export function recordCodexQuotaChange(accounts:AgentQuotaAccount[], store:Histo
   return write;
 }
 
-export async function readCodexQuotaHistory():Promise<CodexQuotaRecord[]> {
-  return codexQuotaRecords(await repository().query("provider_history",1000)).slice(-120);
+export async function readCodexQuotaHistory(accountKey?:string,store:HistoryRepository=repository()):Promise<CodexQuotaRecord[]> {
+  if(!accountKey||!/^[a-f0-9]{64}$/.test(accountKey))return [];
+  return codexQuotaRecords(await store.query("provider_history",1000)).filter(record=>record.payload.accountKey===accountKey).slice(-120);
 }

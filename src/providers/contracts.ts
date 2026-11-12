@@ -29,6 +29,8 @@ export interface Provider<T> {
   retryPolicy?: Partial<ProviderRetryPolicy>;
   /** Include non-secret configuration that changes the provider result. */
   cacheKey?: string;
+  /** Native account readers own their cache; don't persist a second browser snapshot. */
+  persistCache?:boolean;
   load: (signal: AbortSignal) => Promise<ProviderLoadResult<T>>;
 }
 

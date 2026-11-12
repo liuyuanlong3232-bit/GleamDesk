@@ -17,6 +17,7 @@ export interface AgentUsageWindow {
 }
 
 export interface AgentQuotaAccount {
+  accountKey?:string;
   id: string;
   name: string;
   state: ProviderState;

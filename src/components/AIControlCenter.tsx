@@ -30,12 +30,14 @@ export function AIControlCenter({ agents, localAI, gpuName, simulationEnabled=fa
   const [history,setHistory]=useState<CodexQuotaRecord[]>([]);
   const [historyUnavailable,setHistoryUnavailable]=useState(false);
   const codexUpdatedAt=agents.find(agent=>agent.id==="codex")?.lastUpdated;
+  const codexAccountKey=agents.find(agent=>agent.id==="codex")?.accountKey;
   useEffect(()=>{
+    setHistory([]);
     if(simulationEnabled){setHistory([]);setHistoryUnavailable(false);return;}
     let active=true;
-    void readCodexQuotaHistory().then(records=>{if(active){setHistory(records);setHistoryUnavailable(false);}}).catch(()=>{if(active)setHistoryUnavailable(true);});
+    void readCodexQuotaHistory(codexAccountKey).then(records=>{if(active){setHistory(records);setHistoryUnavailable(false);}}).catch(()=>{if(active)setHistoryUnavailable(true);});
     return()=>{active=false;};
-  },[codexUpdatedAt,simulationEnabled]);
+  },[codexUpdatedAt,codexAccountKey,simulationEnabled]);
   const overview=summarizeAiStatus(agents,localAI);
   return <article className="widget-card ai-control-center">
     <div className="card-heading"><span className="heading-glyph">◉</span><strong>AI 客户端</strong><div className="heading-actions"><button className="card-link" onClick={()=>window.dispatchEvent(new Event("codex-desktop.open-agent-connections"))}>连接</button><button className="card-link" aria-expanded={details} onClick={() => setDetails(value => !value)}>{details ? "收起来源" : "来源详情"} ›</button></div></div>
@@ -76,7 +78,7 @@ export function AIControlCenter({ agents, localAI, gpuName, simulationEnabled=fa
         </section>;
       })}
     </div>
-    {simulationEnabled?<section className="codex-quota-trend" aria-label="Codex 额度使用趋势"><p>模拟模式 · 不读取真实额度历史</p></section>:<CodexQuotaTrend records={history} unavailable={historyUnavailable}/>}
+    {simulationEnabled?<section className="codex-quota-trend" aria-label="Codex 额度使用趋势"><p>模拟模式 · 不读取真实额度历史</p></section>:<CodexQuotaTrend records={history.filter(record=>Boolean(codexAccountKey)&&record.payload.accountKey===codexAccountKey)} unavailable={historyUnavailable}/>}
     {details && <div className="widget-source-details">
       {agents.filter(agent => ["codex","claude","antigravity","doubao","kimi"].includes(agent.id)).map(agent => <p key={agent.id}><strong>{agent.name}</strong><span>{sourceNames[agent.source??"none"]??"未知"}{agent.detail?` · ${agent.detail}`:""}{agent.lastUpdated ? ` · 读取于 ${new Date(agent.lastUpdated).toLocaleString("zh-CN")}` : ""}{agent.id === "antigravity" ? ` · CLI ${agent.cliDetected ? "已检测" : "未检测"} · 配置 ${agent.configurationDetected ? "存在" : "未检测"} · 缓存 ${agent.cacheDetected ? "存在" : "未检测"} · 最近使用未知` : ""}</span></p>)}
       <p><strong>Ollama</strong><span>{localAI?.serviceStatus === "online" ? "本机 API 已连接" : localAI?.error || "本机服务状态未知"}</span></p>

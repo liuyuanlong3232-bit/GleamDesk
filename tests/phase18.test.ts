@@ -313,12 +313,12 @@ test("fresh Agent metadata with unknown quotas replaces cached verified login fa
     for (const reason of ["read-failed","not-logged-in"] as const) {
       let clock=Date.now(), calls=0;
       Object.defineProperty(globalThis,"window",{configurable:true,value:{__TAURI_INTERNALS__:{invoke:async(command:string,args:unknown)=>{
-        assert.equal(command,"read_agent_usage");assert.deepEqual(args,{consent:true});calls++;
-        return {observedAtUnixMs:clock,accounts:[{id:"codex",name:"Codex",state:calls===1?"normal":"unknown",installed:true,running:calls===1,loginStatus:calls===1?"verified":reason==="not-logged-in"?"not-logged-in":"unknown",plan:calls===1?"plus":null,usageType:"subscription",source:"codex-cli",confidence:calls===1?"verified":"unknown",reason:calls===1?"":reason,observedAtUnixMs:clock,ordinaryUsageAllowed:null,windows:calls===1?[{id:"primary",usedPercent:20,windowDurationMins:300,resetsAtUnixMs:null}]:[]}]};
+        assert.equal(command,"read_agent_usage");assert.deepEqual(args,{consent:true,expectedRevision:"1:1:1"});calls++;
+        return {accountRevision:"1:1:1",observedAtUnixMs:clock,accounts:[{id:"codex",name:"Codex",state:calls===1?"normal":"unknown",installed:true,running:calls===1,loginStatus:calls===1?"verified":reason==="not-logged-in"?"not-logged-in":"unknown",plan:calls===1?"plus":null,usageType:"subscription",source:"codex-cli",confidence:calls===1?"verified":"unknown",reason:calls===1?"":reason,observedAtUnixMs:clock,ordinaryUsageAllowed:null,windows:calls===1?[{id:"primary",usedPercent:20,windowDurationMins:300,resetsAtUnixMs:null}]:[]}]};
       }}}});
       const cache=new Map<string,string>();
       const runtime=createProviderRuntime({now:()=>clock,cache:{get:key=>cache.get(key),set:(key,value)=>{cache.set(key,value);}}});
-      const provider=createAgentUsageProvider(true);
+      const provider=createAgentUsageProvider(true,"1:1:1");
       const verified=await runtime.refresh(provider);
       assert.equal(verified.data?.accounts[0].confidence,"verified");
       clock+=300_001;
@@ -388,7 +388,7 @@ test("Ollama expands on API availability even with no loaded models and collapse
   const offline=renderToStaticMarkup(createElement(AIControlCenter,{agents:[],localAI:{...online,serviceStatus:"offline",error:"offline-private-detail"}}));
   assert.match(offline,/data-agent-id="ollama" data-expanded="false"/);assert.doesNotMatch(offline,/在线 ·|offline-private-detail|模型列表/);
 });
-import { codexQuotaHistoryRecord, codexQuotaRecords, recordCodexQuotaChange } from "../src/services/historyStore";
+import { codexQuotaHistoryRecord, codexQuotaRecords, recordCodexQuotaChange,readCodexQuotaHistory } from "../src/services/historyStore";
 
 test("simulated AI cards do not display real quota history", () => {
   const markup=renderToStaticMarkup(createElement(AIControlCenter,{agents:[],simulationEnabled:true}));
@@ -417,9 +417,33 @@ test("AI overview counts the six real sources, keeping cached and disconnected s
 });
 
 function quotaAccount(percent:number,stamp="2026-10-13T01:00:00Z") {
-  return {id:"codex",name:"Codex",state:"normal" as const,confidence:"verified" as const,source:"codex-cli-official-rpc",observedAt:stamp,
+  return {id:"codex",name:"Codex",accountKey:"a".repeat(64),state:"normal" as const,confidence:"verified" as const,source:"codex-cli-official-rpc",observedAt:stamp,
     usageWindows:[{id:"primary",usedPercent:percent,windowDurationMins:300,resetsAt:"2026-10-13T06:00:00Z"},{id:"secondary",usedPercent:14,windowDurationMins:10080,resetsAt:"2026-10-20T01:00:00Z"}]};
 }
+
+test("equal percentages from different Codex accounts are recorded independently",()=>{
+ const now=Date.parse("2026-10-13T01:05:00Z");
+ const a={...quotaAccount(20),accountKey:"a".repeat(64)};
+ const b={...quotaAccount(20,"2026-10-13T01:01:00Z"),accountKey:"b".repeat(64)};
+ const previous=codexQuotaHistoryRecord(a,undefined,now)!;
+ assert.ok(codexQuotaHistoryRecord(b,previous,now),"another account must not be deduplicated against the previous account");
+});
+
+test("Codex quota history reads only the current owner and cannot adopt unowned legacy records",async()=>{
+ const now=Date.parse("2026-10-13T01:05:00Z");const a=quotaAccount(20),b={...quotaAccount(20,"2026-10-13T01:01:00Z"),accountKey:"b".repeat(64)};
+ const one=codexQuotaHistoryRecord(a,undefined,now)!,two=codexQuotaHistoryRecord(b,undefined,now)!;
+ const legacy={...one,id:"legacy",payload:{...one.payload,accountKey:undefined}};
+ const store={async query(){return[one,two,legacy]}} as unknown as import("../src/services/historyRepository").HistoryRepository;
+ assert.deepEqual((await readCodexQuotaHistory(a.accountKey,store)).map(r=>r.id),[one.id]);
+ assert.deepEqual((await readCodexQuotaHistory(b.accountKey,store)).map(r=>r.id),[two.id]);
+ assert.deepEqual(await readCodexQuotaHistory(undefined,store),[]);
+});
+
+test("Agent provider cache keys and returned snapshots cannot cross account revisions",()=>{
+ assert.notEqual(createAgentUsageProvider(true,"1:1:1").cacheKey,createAgentUsageProvider(true,"1:1:2").cacheKey);
+ assert.throws(()=>normalizeAgentUsage({accountRevision:"1:1:1",observedAtUnixMs:1,accounts:[]},"1:1:2"),/agent-account-changed/);
+ assert.equal(normalizeAgentUsage({accountRevision:"1:1:2",observedAtUnixMs:1,accounts:[]},"1:1:2").accounts.length,0);
+});
 test("Codex history persists observed percentages only and skips duplicates, unknown, stale and simulated readings", () => {
   const now=Date.parse("2026-10-13T01:05:00Z");
   const first=codexQuotaHistoryRecord(quotaAccount(0),undefined,now)!;

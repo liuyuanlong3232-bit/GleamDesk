@@ -38,6 +38,13 @@ fn token(path: &std::path::Path) -> Result<String, &'static str> {
     Ok(text)
 }
 
+pub(super) fn source_scope()->Result<String,String>{
+    let path=state_path().ok_or("Cursor 登录目录暂时不可用")?;
+    let token=crate::credentials::Secret::from_string(token(&path).map_err(|_|"Cursor 登录状态暂时不可用")?);
+    let material=crate::credentials::Secret::from_string(format!("{}\n{}",path.to_string_lossy().to_lowercase(),token.as_str()));
+    super::account_scope::digest(material.as_str().as_bytes())
+}
+
 /// Cursor 的额度是「本计费周期已用百分比」，没有 5 小时或周窗口。
 /// 实测（2026-11-07，free 账号）：`plan.limit` 为 0，只有 `totalPercentUsed` 有效，
 /// 所以先取百分比，再退回 used/limit（企业席位的 `overall` 走后者）。

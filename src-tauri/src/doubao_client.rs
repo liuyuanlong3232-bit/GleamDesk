@@ -127,10 +127,32 @@ fn cookie_header(profile:&Path)->Result<Login,&'static str>{
 #[derive(serde::Serialize,serde::Deserialize)]
 struct SavedLogin{version:u8,profile:String,saved_at:u64,expires:u64,header:String,token:Option<String>}
 impl Drop for SavedLogin{fn drop(&mut self){std::mem::take(&mut self.header).into_bytes().fill(0);if let Some(token)=self.token.take(){token.into_bytes().fill(0)}}}
-fn cache_scope(root:&Path,folder:&str)->Result<String,&'static str>{crate::analysis::sha256(root.join(folder).to_string_lossy().to_lowercase().as_bytes()).map_err(|_|"login-unreadable")}
+fn cache_scope(root:&Path,folder:&str)->Result<String,&'static str>{
+ // The folder identifies a profile, not its current account. Only client-owned
+ // identity/session cookies bind an imported login to the account signed in now.
+ let db=rusqlite::Connection::open_with_flags(root.join(folder).join("Network/Cookies"),rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY|rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX).map_err(|_|"account-unconfirmed")?;
+ db.busy_timeout(Duration::from_millis(100)).map_err(|_|"account-unconfirmed")?;
+ let mut query=db.prepare("SELECT host_key,name,encrypted_value FROM cookies WHERE (host_key IN ('doubao.com','.doubao.com','bytedance.com','.bytedance.com') OR host_key LIKE '%.doubao.com' OR host_key LIKE '%.bytedance.com') AND name IN ('uid_tt','sessionid','sessionid_ss','sid_tt','sid_guard') AND length(encrypted_value) BETWEEN 1 AND 32768 AND (expires_utc=0 OR expires_utc>?1) ORDER BY name,host_key LIMIT 64").map_err(|_|"account-unconfirmed")?;
+ let expiry=observed_unix_ms().saturating_mul(1000).saturating_add(11644473600000000).min(i64::MAX as u64) as i64;
+ let mut rows=query.query([expiry]).map_err(|_|"account-unconfirmed")?;
+ let mut bytes=Sensitive(format!("doubao-account-source-v2\n{}",root.join(folder).to_string_lossy().to_lowercase()).into_bytes());let mut uid=false;let mut session=false;
+ while let Some(row)=rows.next().map_err(|_|"account-unconfirmed")?{
+  let host:String=row.get(0).map_err(|_|"account-unconfirmed")?;let name:String=row.get(1).map_err(|_|"account-unconfirmed")?;
+  let encrypted=Sensitive(row.get::<_,Vec<u8>>(2).map_err(|_|"account-unconfirmed")?);
+  uid|=name=="uid_tt";session|=matches!(name.as_str(),"sessionid"|"sessionid_ss"|"sid_tt");
+  for part in [host.as_bytes(),name.as_bytes(),encrypted.0.as_slice()]{bytes.0.extend_from_slice(&(part.len() as u64).to_le_bytes());bytes.0.extend_from_slice(part)}
+ }
+ if !uid||!session{return Err("not-logged-in")}
+ crate::analysis::sha256(&bytes.0).map_err(|_|"account-unconfirmed")
+}
+pub(super) fn source_scope()->Result<String,String>{
+ let root=profiles().into_iter().next().ok_or("豆包当前登录目录暂时不可用")?;
+ let folder=active_profile(&root).map_err(|_|"豆包当前账号暂时不可确认")?;
+ cache_scope(&root,&folder).map_err(|_|"豆包当前账号暂时不可确认".into())
+}
 fn cache_file(dir:&Path)->PathBuf{dir.join("doubao-session.dpapi")}
 fn save_login(dir:&Path,scope:&str,login:&Login,now:u64)->Result<(),&'static str>{
- let payload=SavedLogin{version:1,profile:scope.into(),saved_at:now,expires:login.expires.min(now+MAX_SESSION_AGE),header:login.header.as_str().into(),token:login.token.as_ref().map(|s|s.as_str().into())};
+ let payload=SavedLogin{version:2,profile:scope.into(),saved_at:now,expires:login.expires.min(now+MAX_SESSION_AGE),header:login.header.as_str().into(),token:login.token.as_ref().map(|s|s.as_str().into())};
  let body=Sensitive(serde_json::to_vec(&payload).map_err(|_|"cache-unavailable")?);
  if body.0.len()>128*1024{return Err("cache-unavailable")}
  let input=CRYPT_INTEGER_BLOB{cbData:body.0.len() as u32,pbData:body.0.as_ptr() as *mut u8};let mut output=CRYPT_INTEGER_BLOB::default();
@@ -145,7 +167,8 @@ fn load_login(dir:&Path,scope:&str,now:u64)->Result<Login,&'static str>{
  let encrypted=bounded_file(&cache_file(dir)).map_err(|_|"login-file-busy")?;if encrypted.0.len()>256*1024{return Err("cache-invalid")}
  let plain=unprotect(&encrypted.0).map_err(|_|"cache-invalid")?;let mut payload:SavedLogin=serde_json::from_slice(&plain.0).map_err(|_|"cache-invalid")?;
  if payload.expires<=now{let _=std::fs::remove_file(cache_file(dir));return Err("cache-expired")}
- if payload.version!=1||payload.profile!=scope||payload.saved_at>now||payload.expires<=now||payload.expires>payload.saved_at.saturating_add(MAX_SESSION_AGE)||payload.header.is_empty()||payload.header.len()>64*1024||!payload.header.bytes().all(|b|(32..=126).contains(&b))||payload.token.as_ref().is_some_and(|v|v.len()>16384||!v.bytes().all(|b|(32..=126).contains(&b))){return Err("cache-expired")}
+ if payload.version!=2||payload.profile!=scope{return Err("account-unconfirmed")}
+ if payload.saved_at>now||payload.expires<=now||payload.expires>payload.saved_at.saturating_add(MAX_SESSION_AGE)||payload.header.is_empty()||payload.header.len()>64*1024||!payload.header.bytes().all(|b|(32..=126).contains(&b))||payload.token.as_ref().is_some_and(|v|v.len()>16384||!v.bytes().all(|b|(32..=126).contains(&b))){return Err("cache-expired")}
  Ok(Login{header:crate::credentials::Secret::from_string(std::mem::take(&mut payload.header)),token:payload.token.take().map(crate::credentials::Secret::from_string),expires:payload.expires})
 }
 fn query_path(token:Option<&str>)->String{
@@ -158,10 +181,16 @@ fn query_path(token:Option<&str>)->String{
 pub(super) fn read(cache_dir:Option<&Path>)->AgentObservation{
  let paths=profiles();if paths.is_empty(){return failure("profile-not-found")}
  let mut last="not-logged-in";
- for profile in paths{
+ for profile in paths.into_iter().take(1){
   let scope=match active_profile(&profile).and_then(|folder|cache_scope(&profile,&folder)){Ok(scope)=>scope,Err(issue)=>{last=issue;continue}};
   let mut cache_issue=None;
-  let login=match cookie_header(&profile){Ok(login)=>{if let Some(dir)=cache_dir{if save_login(dir,&scope,&login,observed_unix_ms()).is_err(){cache_issue=Some("cache-unavailable")}}login},Err("login-file-busy")=>match cache_dir.ok_or("login-file-busy").and_then(|dir|load_login(dir,&scope,observed_unix_ms())){Ok(login)=>login,Err(issue)=>{last=issue;continue}},Err(issue)=>{last=issue;continue}};
+  let login=match cookie_header(&profile){Ok(login)=>{if let Some(dir)=cache_dir{if save_login(dir,&scope,&login,observed_unix_ms()).is_err(){cache_issue=Some("cache-unavailable")}}login},Err("login-file-busy")=>{
+   // Re-check the actual account, never infer ownership from a directory or
+   // from an old token still accepted by the service. A locked DB fails closed.
+   if cache_scope(&profile,&active_profile(&profile).unwrap_or_default()).ok().as_ref()!=Some(&scope){last="account-unconfirmed";continue}
+   match cache_dir.ok_or("account-unconfirmed").and_then(|dir|load_login(dir,&scope,observed_unix_ms())){Ok(login)=>login,Err(issue)=>{last=issue;continue}}
+  },Err(issue)=>{last=issue;continue}};
+  if cache_scope(&profile,&active_profile(&profile).unwrap_or_default()).ok().as_ref()!=Some(&scope){last="account-unconfirmed";continue}
   let path=crate::credentials::Secret::from_string(query_path(login.token.as_ref().map(|s|s.as_str())));
   let headers=crate::credentials::Secret::from_string(format!("User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36 SamanthaDoubao/2.31.4\r\nReferer: chrome://doubao-chat/\r\nContent-Type: application/json\r\nAccept: */*\r\nAccept-Language: zh-CN,zh;q=0.9\r\nagw-js-conv: str\r\nCookie: {}\r\n",login.header.as_str()));
   match crate::http::post_doubao_quota(path.as_str(),headers.as_str()){
@@ -186,6 +215,20 @@ pub(super) fn read(cache_dir:Option<&Path>)->AgentObservation{
 #[cfg(test)]
 mod tests{
  use super::*;use serde_json::json;
+ #[test]fn changed_cookie_source_cannot_reuse_the_previous_account_login(){
+  let root=std::env::temp_dir().join(format!("gleamdesk-doubao-account-scope-{}-{}",std::process::id(),observed_unix_ms()));
+  let network=root.join("profile/Default/Network");std::fs::create_dir_all(&network).unwrap();
+  let db=rusqlite::Connection::open(network.join("Cookies")).unwrap();
+  db.execute_batch("CREATE TABLE cookies(host_key TEXT,name TEXT,encrypted_value BLOB,expires_utc INTEGER DEFAULT 0)").unwrap();
+  for name in ["uid_tt","sessionid"]{db.execute("INSERT INTO cookies(host_key,name,encrypted_value) VALUES('.doubao.com',?1,?2)",rusqlite::params![name,b"synthetic-account-a".as_slice()]).unwrap();}
+  let scope=cache_scope(&root.join("profile"),"Default").unwrap();let now=observed_unix_ms();
+  let login=Login{header:crate::credentials::Secret::from_string("sessionid=synthetic-a".into()),token:None,expires:now+MAX_SESSION_AGE};
+  save_login(&root,&scope,&login,now).unwrap();
+  db.execute("UPDATE cookies SET encrypted_value=?1 WHERE name='uid_tt'",[b"synthetic-account-b".as_slice()]).unwrap();drop(db);
+  let next_scope=cache_scope(&root.join("profile"),"Default").unwrap();
+  let reused=load_login(&root,&next_scope,now).is_ok();std::fs::remove_dir_all(&root).unwrap();
+  assert!(!reused,"same profile directory must not authorize another account's cached login");
+ }
  #[test]fn doubao_uses_active_profile_and_never_traverses_another_directory(){assert_eq!(profile_folder(Some("Profile 2")),Ok("Profile 2"));assert_eq!(profile_folder(None),Ok("Default"));for name in ["../other","C:\\other","another/profile","",".hidden"]{assert!(profile_folder(Some(name)).is_err())}}
  #[test]fn doubao_activity_quota_uses_only_reported_percentage(){let result=parse_quota(&json!({"code":0,"data":{"current_subscription":{"display":{"product_name":"体验套餐"}},"incentive_quota_section":{"window_limit_groups":[{"window_limits":[{"window_type":9,"used_percent":45,"end_time":1800000000000u64}]}]}}}));assert_eq!(result.login_status,"verified");assert_eq!(result.plan.as_deref(),Some("体验套餐"));assert_eq!(result.membership.as_ref().unwrap()["benefits"][0]["label"],"活动赠送额度");assert_eq!(result.windows[0].used_percent,45.);assert_eq!(result.windows[0].window_duration_mins,None);assert!(crate::http::post_doubao_quota("/chat/completion","Cookie: fixture").is_err());}
  #[test]#[ignore="explicitly authorized, read-only live Doubao account quota query"]

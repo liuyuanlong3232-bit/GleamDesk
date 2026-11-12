@@ -117,8 +117,7 @@ fn credential(bytes:&[u8],now:u64)->Result<crate::credentials::Secret,&'static s
 }
 pub(super) fn read()->AgentObservation{
     let mut result=account("kimi","Kimi Code");result.source="kimi-code-api";
-    let Some(home)=std::env::var_os("KIMI_CODE_HOME").map(PathBuf::from).filter(|p|p.is_absolute()&&!p.to_string_lossy().starts_with("\\\\"))
-        .or_else(||std::env::var_os("USERPROFILE").map(|p|PathBuf::from(p).join(".kimi-code")))else{return result};
+    let Some(home)=std::env::var_os("USERPROFILE").map(|p|PathBuf::from(p).join(".kimi-code")).and_then(|default|super::account_scope::local_root("KIMI_CODE_HOME",default))else{return result};
     if !home.is_absolute()||home.to_string_lossy().starts_with("\\\\"){return result}
     let config_path=home.join("config.toml");result.configuration_detected=Some(config_path.is_file());
     result.installed=home.is_dir();result.cli_detected=executable("kimi.exe").is_some();
@@ -140,6 +139,18 @@ pub(super) fn read()->AgentObservation{
         _=>result.reason="read-failed"
     }
     result
+}
+
+pub(super) fn source_scope()->Result<String,String>{
+    let home=super::account_scope::local_root("KIMI_CODE_HOME",PathBuf::from(std::env::var_os("USERPROFILE").ok_or("Kimi 登录目录暂时不可用")?).join(".kimi-code")).ok_or("Kimi 登录目录暂时不可用")?;
+    let config=bounded_file(&home.join("config.toml"),1024*1024).ok().and_then(|b|String::from_utf8(b).ok()).unwrap_or_default();
+    let region=if std::env::var("KIMI_CODE_REGION_MARKER").is_ok_and(|s|s.trim().eq_ignore_ascii_case("off")){None}else{bounded_file(&home.join("region"),128).ok().and_then(|b|String::from_utf8(b).ok())};
+    let env_base=std::env::var("KIMI_CODE_BASE_URL").ok();let env_host=std::env::var("KIMI_CODE_OAUTH_HOST").ok().filter(|s|!s.trim().is_empty()).or_else(||std::env::var("KIMI_OAUTH_HOST").ok());
+    let (host,name)=service(&config,env_base.as_deref(),env_host.as_deref(),region.as_deref().map(str::trim)).ok_or("Kimi 登录来源暂时不可用")?;
+    let fingerprint=super::account_scope::file_scope(&home.join("credentials").join(format!("{name}.json")))?;
+    let config_scope=super::account_scope::file_scope(&home.join("config.toml"))?;
+    let region_scope=super::account_scope::file_scope(&home.join("region"))?;
+    super::account_scope::digest(format!("{host}\n{fingerprint}\n{config_scope}\n{region_scope}").as_bytes())
 }
 
 #[cfg(test)]

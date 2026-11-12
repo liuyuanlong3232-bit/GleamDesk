@@ -7,6 +7,11 @@ use super::*;
 const HOST: &str = "api.anthropic.com";
 const USAGE_PATH: &str = "/api/oauth/usage";
 
+pub(super) fn credential_path()->Option<PathBuf>{
+    let home=PathBuf::from(std::env::var_os("USERPROFILE")?);
+    super::account_scope::local_root("CLAUDE_CONFIG_DIR",home.join(".claude")).map(|root|root.join(".credentials.json"))
+}
+
 fn bounded(path: &std::path::Path, cap: u64) -> Option<Vec<u8>> {
     use std::io::Read;
     let file = std::fs::File::open(path).ok()?;
@@ -50,11 +55,7 @@ pub(crate) fn usage_windows(root: &Value) -> Vec<UsageWindow> {
 pub(super) fn read() -> AgentObservation {
     let mut result = account("claude", "Claude Code");
     result.source = "claude-oauth-usage";
-    let home = match std::env::var_os("USERPROFILE").map(PathBuf::from)
-        .filter(|path| path.is_absolute() && !path.to_string_lossy().starts_with("\\\\")) {
-        Some(home) => home, None => return result,
-    };
-    let path = home.join(".claude").join(".credentials.json");
+    let Some(path)=credential_path()else{return result};
     result.installed = path.is_file();
     if !result.installed { result.reason = "not-installed"; result.login_status = "not-logged-in"; return result }
     let Some(bytes) = bounded(&path, 256 * 1024) else { result.reason = "read-failed"; return result };

@@ -26,8 +26,10 @@ import { recordCodexQuotaChange } from "../../services/historyStore";
 import { logEvent } from "../../services/appLogger";
 
 export interface NativeSnapshot {
+  accountRevision?:string;
   observedAtUnixMs: number;
   accounts: Array<{ id: string; name: string; state: AgentQuotaAccount["state"]; installed: boolean; running: boolean;
+    accountKey?:string|null;
     loginStatus: AgentQuotaAccount["loginStatus"]; plan: string | null; usageType: string; source: string;
     confidence: AgentQuotaAccount["confidence"]; reason: AgentAvailabilityReason | ""; observedAtUnixMs: number;
     ordinaryUsageAllowed: boolean | null;
@@ -39,7 +41,14 @@ const names = [["codex", "Codex"], ["claude", "Claude Code"], ["antigravity", "A
 export function unknownAgentUsage(reason: AgentAvailabilityReason = "no-source"): AgentQuotaData {
   return { type: "agent-quotas", mode: "live", accounts: names.map(([id, name]) => ({ id, name, state: "unknown", observedAt: "", availabilityReason: reason, source: "none", confidence: "unknown", loginStatus: "unknown", usageWindows: [] })) };
 }
-export function normalizeAgentUsage(snapshot: NativeSnapshot): AgentQuotaData {
+export async function readAgentAccountRevision(consent=false):Promise<string>{
+  if(!consent||!isTauri())throw new Error("未允许读取本机 AI 账号状态");
+  const revision=await invoke<unknown>("read_agent_account_revision",{consent:true});
+  if(typeof revision!=="string"||!/^\d+:\d+:\d+$/.test(revision))throw new Error("AI 账号状态暂时不可用");
+  return revision;
+}
+export function normalizeAgentUsage(snapshot: NativeSnapshot,expectedRevision?:string): AgentQuotaData {
+  if(expectedRevision!==undefined&&snapshot.accountRevision!==expectedRevision)throw new Error("agent-account-changed");
   if (!Number.isFinite(snapshot.observedAtUnixMs) || !Array.isArray(snapshot.accounts)) throw new Error("Agent 状态响应无效");
   const accounts = snapshot.accounts.filter(account => names.some(([id]) => id === account.id)).map((account): AgentQuotaAccount => {
     const usageWindows: AgentUsageWindow[] = (account.windows ?? []).flatMap(window => {
@@ -49,6 +58,7 @@ export function normalizeAgentUsage(snapshot: NativeSnapshot): AgentQuotaData {
         resetsAt: Number.isFinite(window.resetsAtUnixMs) && window.resetsAtUnixMs! >= 0 ? new Date(window.resetsAtUnixMs!).toISOString() : undefined }];
     });
     return { id: account.id, name: account.name, state: account.state,
+      accountKey:typeof account.accountKey==="string"&&/^[a-f0-9]{64}$/.test(account.accountKey)?account.accountKey:undefined,
       observedAt: new Date(account.observedAtUnixMs ?? snapshot.observedAtUnixMs).toISOString(),
       installed: account.installed, running: account.running, loginStatus: account.loginStatus,
       plan: account.plan ?? undefined, membership:account.membership, usageType: account.usageType, source: account.source,
@@ -60,18 +70,23 @@ export function normalizeAgentUsage(snapshot: NativeSnapshot): AgentQuotaData {
   });
   return { type: "agent-quotas", mode: "live", accounts };
 }
-export function createAgentUsageProvider(consent=false): Provider<AgentQuotaData> {
+export function createAgentUsageProvider(consent=false,accountRevision?:string): Provider<AgentQuotaData> {
   return { id: "agent-quotas", name: "AI Agent Usage", kind: "agent", refreshIntervalMs: isTauri() && consent ? 300_000 : null,
-    backgroundRefreshIntervalMs: null, timeoutMs: 70_000, retryPolicy: { maxRetries: 0 }, cacheKey: `native-agents-v7:${consent}`,
+    persistCache:false,
+    backgroundRefreshIntervalMs: null, timeoutMs: 70_000, retryPolicy: { maxRetries: 0 }, cacheKey: `native-agents-v8:${consent}:${accountRevision??"unconfirmed"}`,
     load: async () => {
       if (!consent) return {status:"unavailable",data:unknownAgentUsage("permission-required"),retryable:false};
       if (!isTauri()) return { status: "unavailable", data: unknownAgentUsage("unsupported-runtime"), retryable: false };
+      if (!accountRevision) return { status:"unavailable",data:unknownAgentUsage("read-failed"),retryable:false };
       try {
-        const snapshot = await invoke<NativeSnapshot>("read_agent_usage", {consent:true});
-        const data = normalizeAgentUsage(snapshot);
+        const snapshot = await invoke<NativeSnapshot>("read_agent_usage", {consent:true,expectedRevision:accountRevision});
+        const data = normalizeAgentUsage(snapshot,accountRevision);
         await recordCodexQuotaChange(data.accounts).catch(()=>logEvent("warn","history.codex_quota_write_failed"));
         return { status: data.accounts.some(account => account.availabilityReason === "read-failed") ? "degraded" : "normal", data,
           observedAt: new Date(snapshot.observedAtUnixMs).toISOString(), retryable: false };
-      } catch { return { status: "error", data: unknownAgentUsage("read-failed"), error: "Agent 本地状态读取失败", retryable: false }; }
+      } catch(error) {
+        if(String(error).includes("agent-account-changed"))window.dispatchEvent(new Event("codex-desktop.agents-refresh"));
+        return { status: "error", data: unknownAgentUsage("read-failed"), error: "Agent 本地状态读取失败", retryable: false };
+      }
     } };
 }

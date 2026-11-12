@@ -30,6 +30,15 @@ function sampleProvider(load: Provider<{ value: number }> ["load"]): Provider<{ 
   return { id: "sample", name: "Sample Provider", kind: "system", refreshIntervalMs: 60_000, load };
 }
 
+test("native-owned account quotas neither hydrate nor accumulate browser snapshots",async()=>{
+  const cache=memoryCache(),key="codex-desktop.provider.v6:sample%3Adefault";
+  const previous=JSON.stringify({expiresAt:50_000,snapshot:{providerId:"sample",status:"normal",data:{value:99},lastUpdated:new Date(5_000).toISOString(),lastSuccessAt:new Date(5_000).toISOString()}});
+  cache.set(key,previous);
+  const provider=Object.assign(sampleProvider(async()=>({status:"normal",data:{value:2}})),{persistCache:false});
+  const result=await createProviderRuntime({cache,now:()=>10_000}).refresh(provider);
+  assert.deepEqual(result.data,{value:2});assert.equal(cache.get(key),previous);
+});
+
 test("domain cache version six does not reuse legacy presentation or quota text payloads", async () => {
   const cache = memoryCache();
   const legacyKey = "codex-desktop.provider.v3:sample%3Adefault";

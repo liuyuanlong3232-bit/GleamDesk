@@ -8,6 +8,7 @@ import type { HardwareSnapshot } from "./domain/hardware/contracts";
 export type { HardwareSnapshot, HardwareMetricStatus } from "./domain/hardware/contracts";
 
 export interface ProviderStatus {
+  accountKey?:string;
   id: string;
   name: string;
   kind: ProviderKind;

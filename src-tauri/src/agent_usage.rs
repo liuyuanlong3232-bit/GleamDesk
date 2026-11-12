@@ -6,6 +6,7 @@ use crate::{cli_reader, provider_requests::{observed_unix_ms, RequestCache}};
 mod kimi;
 mod claude_oauth;
 mod cursor;
+mod account_scope;
 #[cfg(windows)]
 #[path="doubao_client.rs"]
 mod doubao;
@@ -67,12 +68,14 @@ pub struct AgentObservation {
     ordinary_usage_allowed: Option<bool>, reason: &'static str,
     observed_at_unix_ms: u64,
     cli_detected: bool, configuration_detected: Option<bool>, cache_detected: Option<bool>, membership: Option<Value>,
+    #[serde(skip_serializing_if="Option::is_none")]
+    account_key:Option<String>,
 }
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AgentSnapshot { accounts: Vec<AgentObservation>, observed_at_unix_ms: u64 }
+pub struct AgentSnapshot { accounts: Vec<AgentObservation>, observed_at_unix_ms: u64, account_revision:String }
 #[derive(Default)]
-pub struct AgentUsageState { cache: RequestCache<(), AgentSnapshot>, runtime_cache: RequestCache<(), AgentRuntimeSnapshot> }
+pub struct AgentUsageState { cache: RequestCache<String, AgentSnapshot>, runtime_cache: RequestCache<(), AgentRuntimeSnapshot>, account_scope:account_scope::State }
 impl AgentUsageState { pub fn metrics(&self)->Option<crate::provider_requests::RequestMetrics>{self.cache.metrics()} }
 
 #[derive(Clone, Debug, Serialize)]
@@ -165,7 +168,7 @@ pub async fn read_agent_runtime(state:tauri::State<'_,AgentUsageState>)->Result<
 fn account(id: &str, name: &str) -> AgentObservation {
     AgentObservation { id: id.into(), name: name.into(), state: "unknown", installed: false, running: false,
         login_status: "unknown", plan: None, usage_type: "subscription", source: "none", confidence: "unknown",
-        windows: Vec::new(), ordinary_usage_allowed: None, reason: "no-source", observed_at_unix_ms: observed_unix_ms(), cli_detected: false, configuration_detected: None, cache_detected: None, membership: None }
+        windows: Vec::new(), ordinary_usage_allowed: None, reason: "no-source", observed_at_unix_ms: observed_unix_ms(), cli_detected: false, configuration_detected: None, cache_detected: None, membership: None,account_key:None }
 }
 fn bounded_text(value: Option<&Value>) -> Option<String> {
     value.and_then(Value::as_str).filter(|text| !text.is_empty() && text.len() <= 64 && !text.chars().any(char::is_control)).map(str::to_owned)
@@ -247,6 +250,7 @@ fn load(_app:Option<&tauri::AppHandle>) -> AgentSnapshot {
         }
     }).unwrap_or_else(|| account("codex", "Codex"));
     codex.running = metadata["codexRunning"].as_bool().unwrap_or(false);
+    codex.account_key=account_scope::codex_account_key();
     let mut claude = executable("claude.exe").map(|path| match cli_reader::read_cli_json(&path, &["auth", "status", "--json"], Duration::from_secs(10)) {
         Ok(value) => claude_observation(&value),
         Err(_) => { let mut result = account("claude", "Claude Code"); result.installed = true; result.source = "claude-cli-auth-status"; result.reason = "read-failed"; result }
@@ -288,13 +292,24 @@ fn load(_app:Option<&tauri::AppHandle>) -> AgentSnapshot {
     #[cfg(not(windows))] let kimi=account("kimi","Kimi Code");
     #[cfg(windows)] let cursor=cursor::read();
     #[cfg(not(windows))] let cursor=account("cursor","Cursor");
-    AgentSnapshot { accounts: vec![codex, claude, antigravity, doubao, kimi, cursor], observed_at_unix_ms: observed_unix_ms() }
+    AgentSnapshot { accounts: vec![codex, claude, antigravity, doubao, kimi, cursor], observed_at_unix_ms: observed_unix_ms(), account_revision:String::new() }
 }
 #[tauri::command]
-pub async fn read_agent_usage(app:tauri::AppHandle,state: tauri::State<'_, AgentUsageState>,force:Option<bool>,consent:Option<bool>) -> Result<AgentSnapshot, String> {
+pub async fn read_agent_account_revision(state:tauri::State<'_,AgentUsageState>,consent:Option<bool>)->Result<String,String>{
+    require_usage_consent(consent)?;let scope=state.account_scope.clone();
+    tauri::async_runtime::spawn_blocking(move||scope.revision(false)).await.map_err(|_|"AI 账号识别任务失败".to_string())?
+}
+#[tauri::command]
+pub async fn read_agent_usage(app:tauri::AppHandle,state: tauri::State<'_, AgentUsageState>,force:Option<bool>,consent:Option<bool>,expected_revision:Option<String>) -> Result<AgentSnapshot, String> {
     require_usage_consent(consent)?;
-    let cache = state.cache.clone();
-    tauri::async_runtime::spawn_blocking(move || cache.read((), if force==Some(true){Duration::ZERO}else{Duration::from_secs(300)}, Duration::from_secs(10), || Ok(load(Some(&app)))))
+    let cache = state.cache.clone();let scope=state.account_scope.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let revision=scope.revision(true)?;
+        if expected_revision.as_ref().is_some_and(|expected|expected!=&revision){return Err("agent-account-changed".into())}
+        let mut snapshot=cache.read(revision.clone(),if force==Some(true){Duration::ZERO}else{Duration::from_secs(300)},Duration::from_secs(10),||Ok(load(Some(&app))))?;
+        if scope.revision(true)?!=revision{return Err("agent-account-changed".into())}
+        snapshot.account_revision=revision;Ok(snapshot)
+    })
         .await.map_err(|_| "Agent 状态读取任务失败".to_string())?
 }
 
@@ -403,6 +418,16 @@ mod tests {
         let malformed=serde_json::json!({"groups":[{"buckets":[{"bucketId":"bad","remainingFraction":-1},{"bucketId":"missing"}]}]});assert!(antigravity_summary(&malformed).unwrap().is_empty());
     }
     #[test]
+    fn antigravity_quota_owner_is_the_endpoint_account_not_its_plan_or_quota(){
+        let a=serde_json::json!({"userStatus":{"email":"SYNTHETIC-A@example.com","name":"same label","userTier":{"name":"Pro"}}});
+        let b=serde_json::json!({"userStatus":{"email":"synthetic-b@example.com","name":"same label","userTier":{"name":"Pro"}}});
+        let normalized=serde_json::json!({"userStatus":{"email":"synthetic-a@example.com"}});
+        assert_eq!(antigravity_status_owner(&a),antigravity_status_owner(&normalized));
+        assert_ne!(antigravity_status_owner(&a),antigravity_status_owner(&b));
+        assert!(antigravity_status_owner(&serde_json::json!({"userStatus":{"name":"same label"}})).is_none());
+        assert!(!antigravity_status_owner(&a).unwrap().contains("example.com"));
+    }
+    #[test]
     fn antigravity_legacy_groups_aliases_without_including_auxiliary_models(){
         let value=serde_json::json!({"userStatus":{"userTier":{"name":"Pro"},"cascadeModelConfigData":{"clientModelConfigs":[{"modelOrAlias":{"model":"gemini-a"},"quotaInfo":{"remainingFraction":0.7}},{"label":"Gemini B","quotaInfo":{"remainingFraction":0.2}},{"label":"Claude C","quotaInfo":{"remainingFraction":0.8}},{"label":"GPT D","quotaInfo":{"remainingFraction":0.4}},{"label":"Gemini Image","quotaInfo":{"remainingFraction":0.0}},{"label":"aux autocomplete","quotaInfo":{"remainingFraction":0.0}}]}}});
         let (plan,rows)=antigravity_status(&value);assert_eq!(plan.as_deref(),Some("Pro"));assert_eq!(rows.len(),2);assert!((rows[0].used_percent-80.).abs()<0.001);assert!((rows[1].used_percent-60.).abs()<0.001);assert!(rows.iter().all(|row|row.window_duration_mins.is_none()));
@@ -469,33 +494,78 @@ fn antigravity_status(value:&Value)->(Option<String>,Vec<UsageWindow>){
 }
 
 #[cfg(windows)]
-fn antigravity_quota(result:&mut AgentObservation){
-    if !result.running{return;}
-    result.reason="quota-unavailable";
-    let Ok(powershell)=crate::network_tools::system_executable("WindowsPowerShell/v1.0/powershell.exe")else{return;};
-    let Ok(curl)=crate::network_tools::system_executable("curl.exe")else{return;};
-    let Ok(mut detected)=cli_reader::read_cli_json(&powershell,&["-NoProfile","-NonInteractive","-Command",include_str!("antigravity-discovery.ps1")],Duration::from_secs(6))else{return;};
-    let deadline=std::time::Instant::now()+Duration::from_secs(7);
-    let candidates=detected["candidates"].as_array().cloned().unwrap_or_default();
-    'outer:for mut candidate in candidates.into_iter().take(3){
-        let Some(token)=candidate["token"].as_str().filter(|token|!token.is_empty()&&token.len()<=1024&&token.bytes().all(|b|b.is_ascii_alphanumeric()||b"-_.+/=".contains(&b)))else{continue;};
-        let token=token.to_owned();candidate["token"]=Value::Null;
-        for port in candidate["ports"].as_array().into_iter().flatten().take(4).filter_map(Value::as_u64).filter(|port|*port>0&&*port<=65535){
-            for method in ["RetrieveUserQuotaSummary","GetUserStatus"]{
-                if std::time::Instant::now()>=deadline{break 'outer;}
-                let body=if method=="RetrieveUserQuotaSummary"{r#"{\"forceRefresh\":true}"#}else{r#"{\"metadata\":{\"ideName\":\"antigravity\",\"extensionName\":\"antigravity\",\"ideVersion\":\"unknown\",\"locale\":\"en\"}}"#};
-                let config=format!("url = \"https://127.0.0.1:{port}/exa.language_server_pb.LanguageServerService/{method}\"\nrequest = \"POST\"\nheader = \"Content-Type: application/json\"\nheader = \"X-Codeium-Csrf-Token: {token}\"\nheader = \"Connect-Protocol-Version: 1\"\ndata = \"{body}\"\nnoproxy = \"*\"\nproto = \"=https\"\ninsecure\nfail\nsilent\nmax-time = 2\nconnect-timeout = 1\n");
-                let mut input=config.into_bytes();let remaining=deadline.saturating_duration_since(std::time::Instant::now());
-                let response=cli_reader::read_cli_json_input(&curl,&["-q","--config","-"],remaining.min(Duration::from_secs(3)),Some(&input));input.fill(0);
-                let Ok(value)=response else{continue;};
-                if method=="RetrieveUserQuotaSummary"{
-                    if let Some(rows)=antigravity_summary(&value){result.windows=rows;finish_quota(result,"antigravity-local-quota");break 'outer}
-                }else{
-                    let (plan,rows)=antigravity_status(&value);result.plan=plan;result.windows=rows;
-                }
-                if !result.windows.is_empty(){result.windows.truncate(8);result.source="antigravity-local-quota";result.confidence="verified";result.login_status="verified";result.reason="";result.state=if result.windows.iter().any(|window|window.used_percent>=100.){"warning"}else{"normal"};break 'outer;}
+struct AntigravityEndpoint {port:u64,token:crate::credentials::Secret,owner:String,status:Value}
+
+fn antigravity_status_owner(value:&Value)->Option<String>{
+    let email=value.pointer("/userStatus/email")?.as_str()?.trim();
+    if email.is_empty()||email.len()>256||email.chars().any(char::is_control){return None}
+    account_scope::digest(format!("antigravity-owner-v1\n{}",email.to_lowercase()).as_bytes()).ok()
+}
+
+#[cfg(windows)]
+fn antigravity_call(port:u64,token:&str,method:&str,deadline:std::time::Instant)->Result<Value,String>{
+    if !matches!(method,"GetUserStatus"|"RetrieveUserQuotaSummary"){return Err("不支持的本机状态方法".into())}
+    let remaining=deadline.saturating_duration_since(std::time::Instant::now());
+    if remaining.is_zero(){return Err("本机状态读取超时".into())}
+    let curl=crate::network_tools::system_executable("curl.exe")?;
+    let body=if method=="RetrieveUserQuotaSummary"{r#"{\"forceRefresh\":true}"#}else{r#"{\"metadata\":{\"ideName\":\"antigravity\",\"extensionName\":\"antigravity\",\"ideVersion\":\"unknown\",\"locale\":\"en\"}}"#};
+    let mut input=format!("url = \"https://127.0.0.1:{port}/exa.language_server_pb.LanguageServerService/{method}\"\nrequest = \"POST\"\nheader = \"Content-Type: application/json\"\nheader = \"X-Codeium-Csrf-Token: {token}\"\nheader = \"Connect-Protocol-Version: 1\"\ndata = \"{body}\"\nnoproxy = \"*\"\nproto = \"=https\"\ninsecure\nfail\nsilent\nmax-time = 2\nconnect-timeout = 1\n").into_bytes();
+    let response=cli_reader::read_cli_json_input(&curl,&["-q","--config","-"],remaining.min(Duration::from_secs(3)),Some(&input));input.fill(0);response
+}
+
+#[cfg(windows)]
+fn antigravity_endpoints()->Result<Vec<AntigravityEndpoint>,String>{
+    let powershell=crate::network_tools::system_executable("WindowsPowerShell/v1.0/powershell.exe")?;
+    let mut detected=cli_reader::read_cli_json(&powershell,&["-NoProfile","-NonInteractive","-Command",include_str!("antigravity-discovery.ps1")],Duration::from_secs(6))?;
+    let count=detected["candidates"].as_array().map(Vec::len).unwrap_or(0);
+    if count==0||count>3{return Err("Antigravity 当前账号暂时不可确认".into())}
+    let deadline=std::time::Instant::now()+Duration::from_secs(4);let mut out=vec![];
+    for candidate in detected["candidates"].as_array().into_iter().flatten().take(3){
+        let Some(token)=candidate["token"].as_str().filter(|token|!token.is_empty()&&token.len()<=1024&&token.bytes().all(|b|b.is_ascii_alphanumeric()||b"-_.+/=".contains(&b)))else{continue};
+        let token=crate::credentials::Secret::from_string(token.into());
+        for port in candidate["ports"].as_array().into_iter().flatten().take(8).filter_map(Value::as_u64).filter(|port|*port>0&&*port<=65535){
+            if std::time::Instant::now()>=deadline{break}
+            if let Ok(status)=antigravity_call(port,token.as_str(),"GetUserStatus",deadline){
+                if let Some(owner)=antigravity_status_owner(&status){out.push(AntigravityEndpoint{port,token,owner,status});break}
             }
         }
     }
     detected["candidates"]=Value::Null;
+    if out.len()!=count{Err("Antigravity 当前账号暂时不可确认".into())}else{Ok(out)}
+}
+
+#[cfg(windows)]
+fn antigravity_owner_scope()->Result<String,String>{
+    let endpoints=antigravity_endpoints()?;
+    let owner=&endpoints[0].owner;
+    if endpoints.iter().any(|endpoint|endpoint.owner!=*owner){return Err("多个 Antigravity 账号同时运行，当前账号不明确".into())}
+    // A restarted/rebound local service must not inherit the previous service's
+    // cached quota, even while its first user-status response is still settling.
+    let mut bindings=vec![];
+    for endpoint in &endpoints {
+        let token_scope=account_scope::digest(endpoint.token.as_str().as_bytes())?;
+        bindings.push(format!("{}:{}:{token_scope}",endpoint.owner,endpoint.port));
+    }
+    bindings.sort();account_scope::digest(bindings.join("\n").as_bytes())
+}
+
+#[cfg(windows)]
+fn antigravity_quota(result:&mut AgentObservation){
+    if !result.running{return}
+    result.reason="quota-unavailable";
+    let Ok(endpoints)=antigravity_endpoints()else{return};
+    let owner=&endpoints[0].owner;
+    if endpoints.iter().any(|endpoint|endpoint.owner!=*owner){return}
+    let deadline=std::time::Instant::now()+Duration::from_secs(7);
+    for endpoint in endpoints {
+        let (plan,legacy)=antigravity_status(&endpoint.status);
+        let rows=match antigravity_call(endpoint.port,endpoint.token.as_str(),"RetrieveUserQuotaSummary",deadline){
+            Ok(summary)=>antigravity_summary(&summary).unwrap_or(legacy),Err(_)=>legacy,
+        };
+        // The summary has no owner field. As in CodexBar's status probe, bind it
+        // to the account returned by this exact local endpoint, before AND after.
+        let Ok(after)=antigravity_call(endpoint.port,endpoint.token.as_str(),"GetUserStatus",deadline)else{continue};
+        if antigravity_status_owner(&after).as_ref()!=Some(&endpoint.owner){return}
+        result.plan=plan;result.windows=rows;result.windows.truncate(8);finish_quota(result,"antigravity-local-quota");return;
+    }
 }

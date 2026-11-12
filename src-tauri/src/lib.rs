@@ -495,6 +495,7 @@ pub fn run() {
             credentials::credential_import_legacy,
             api_usage::read_api_usage,
             agent_usage::read_agent_usage,
+            agent_usage::read_agent_account_revision,
             agent_usage::read_codex_activity,
             agent_usage::read_agent_runtime,
             ollama::read_ollama_status,

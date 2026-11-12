@@ -22,7 +22,8 @@ function fixture({defer=false,readFails=false,emitFails=false}={}){
   '../services/appLogger':{logEvent(){}},
   './AIControlCenter':{membershipBenefitDetail:v=>v},'./StatusHud':{HudLogo:()=>null},
   '../presentation/quotaAdapter':{doubaoReadIssueMessage:()=>undefined},
-  '../providers/agents/agentUsageProvider':{normalizeAgentUsage:v=>v,agentClients:[],unavailableAgentRuntime:()=>({available:false}),readAgentRuntime:async()=>{calls.push({command:'runtime-only'});return{available:true}},runningAgentClients:()=>[]},
+  '../providers/agents/agentUsageProvider':{normalizeAgentUsage:v=>v,agentClients:[],unavailableAgentRuntime:()=>({available:false}),readAgentRuntime:async()=>{calls.push({command:'runtime-only'});return{available:true}},runningAgentClients:()=>[],readAgentAccountRevision:async()=> '1:1:1'},
+  './agents/agentUsageProvider':{readAgentAccountRevision:async()=> '1:1:1'},
   '../services/windowVisibility':{isWindowVisible:()=>true,subscribeWindowVisibility:()=>()=>{}},'../services/launcher/launcherService':{launchApplication:async()=>{throw Error('External launch not allowed')}}
  };
  const context=createContext({console,Event:class{constructor(type){this.type=type}},window:{setInterval:()=>1,clearInterval(){},addEventListener(){},removeEventListener(){},dispatchEvent(event){localEvents.push(event.type)}}});
@@ -56,7 +57,7 @@ test('a refresh from another native window updates the HUD provider and unsubscr
  const f=fixture(),{useProviderDashboardData}=f.load('src/providers/useProviderDashboardData.ts');
  f.renderHook(()=>useProviderDashboardData(['agent-quotas'],{url:'',systemId:'',refreshIntervalSeconds:30},true,{localAgentUsageEnabled:true}));await f.flush();
  const listener=f.nativeListeners.get('agent-usage-changed');assert.equal(typeof listener,'function');
- listener();await f.flush();assert.equal(f.dashboardCalls.length,1);assert.deepEqual(Array.from(f.dashboardCalls[0][0]),['agent-quotas','ollama-local']);assert.equal(f.dashboardCalls[0][4],true);
+ const before=f.dashboardCalls.length;listener();await f.flush();assert.equal(f.dashboardCalls.length,before+1);assert.deepEqual(Array.from(f.dashboardCalls.at(-1)[0]),['agent-quotas']);assert.equal(f.dashboardCalls.at(-1)[4],true);
  f.dispose();assert.equal(f.nativeListeners.has('agent-usage-changed'),false);
 });
 

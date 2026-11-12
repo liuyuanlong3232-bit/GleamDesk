@@ -1,7 +1,7 @@
 import {useEffect,useRef,useState} from "react";
 import {invoke,isTauri} from "@tauri-apps/api/core";
 import {emit} from "@tauri-apps/api/event";
-import {normalizeAgentUsage,readAgentRuntime,unavailableAgentRuntime,runningAgentClients} from "../providers/agents/agentUsageProvider";
+import {normalizeAgentUsage,readAgentRuntime,readAgentAccountRevision,unavailableAgentRuntime,runningAgentClients} from "../providers/agents/agentUsageProvider";
 import {isWindowVisible,subscribeWindowVisibility} from "../services/windowVisibility";
 import {launchApplication} from "../services/launcher/launcherService";
 import type {AgentQuotaAccount} from "../domain/agent/contracts";
@@ -27,12 +27,24 @@ function stateLabel(account:AgentQuotaAccount|undefined,running:boolean,runtimeA
 
 export function AgentConnectionsSettings({enabled=false,onEnabledChange}:{enabled?:boolean;onEnabledChange?:(enabled:boolean)=>void}){
  const generation=useRef(0),allowed=useRef(enabled);allowed.current=enabled;
+ const accountRevision=useRef<string|undefined>(undefined);
  const [runtime,setRuntime]=useState(unavailableAgentRuntime);
  useEffect(()=>{if(!isTauri())return;let active=true,pending=false;const refresh=async()=>{if(!active||pending||!isWindowVisible())return;pending=true;try{const value=await readAgentRuntime();if(active)setRuntime(value)}finally{pending=false}};void refresh();const timer=window.setInterval(()=>void refresh(),8000);const stop=subscribeWindowVisibility(()=>{if(isWindowVisible())void refresh()});window.addEventListener("codex-desktop.agents-refresh",refresh);return()=>{active=false;window.clearInterval(timer);stop();window.removeEventListener("codex-desktop.agents-refresh",refresh)}},[]);
  const activeClients=new Set(runningAgentClients(runtime).map(client=>client.id));
  const [accounts,setAccounts]=useState<AgentQuotaAccount[]>([]),[busy,setBusy]=useState(false),[message,setMessage]=useState("");
- const refresh=async(forced=true)=>{if(!allowed.current||!isTauri())return;const version=++generation.current;setBusy(true);setMessage("");try{const result=await Promise.allSettled([invoke<Parameters<typeof normalizeAgentUsage>[0]>("read_agent_usage",{force:forced,consent:true})]);if(version!==generation.current||!allowed.current)return;if(result[0].status==="fulfilled"){setAccounts(normalizeAgentUsage(result[0].value).accounts);if(forced)void emit("agent-usage-changed").catch(()=>window.dispatchEvent(new Event("codex-desktop.agents-refresh")));}setMessage(result[0].status==="rejected"?"AI 连接读取失败，请查看客户端登录状态。":"连接状态已刷新");}catch{if(version===generation.current&&allowed.current)setMessage("连接检查失败");}finally{if(version===generation.current)setBusy(false);}};
+ const refresh=async(forced=true)=>{if(!allowed.current||!isTauri())return;const version=++generation.current;setBusy(true);setMessage("");try{const result=await Promise.allSettled([invoke<Parameters<typeof normalizeAgentUsage>[0]>("read_agent_usage",{force:forced,consent:true})]);if(version!==generation.current||!allowed.current)return;if(result[0].status==="fulfilled"){accountRevision.current=result[0].value.accountRevision;setAccounts(normalizeAgentUsage(result[0].value).accounts);if(forced)void emit("agent-usage-changed").catch(()=>window.dispatchEvent(new Event("codex-desktop.agents-refresh")));}else setAccounts([]);setMessage(result[0].status==="rejected"?"AI 连接读取失败，请查看客户端登录状态。":"连接状态已刷新");}catch{if(version===generation.current&&allowed.current){setAccounts([]);setMessage("连接检查失败");}}finally{if(version===generation.current)setBusy(false);}};
  useEffect(()=>{if(enabled&&isTauri())void refresh(false);else{generation.current++;setAccounts([]);setBusy(false);setMessage("");}return()=>{generation.current++;};},[enabled]);
+ useEffect(()=>{
+  if(!enabled||!isTauri())return;let active=true,pending=false;
+  const check=async()=>{
+   if(!active||pending||!allowed.current||!isWindowVisible())return;pending=true;
+   try{const next=await readAgentAccountRevision(true);if(active&&allowed.current&&next!==accountRevision.current){accountRevision.current=next;generation.current++;setAccounts([]);void refresh(false);}}
+   catch{if(active&&allowed.current){generation.current++;setAccounts([]);setBusy(false);setMessage("当前账号暂时无法确认，请稍后刷新");}}
+   finally{pending=false;}
+  };
+  const timer=window.setInterval(()=>void check(),10_000);const stop=subscribeWindowVisibility(()=>void check());
+  return()=>{active=false;window.clearInterval(timer);stop();};
+ },[enabled]);
  const open=(url:string,name:string)=>void launchApplication({id:"agent-connection-link",name,icon:"",type:"url",target:url,pinned:false,order:0}).catch(()=>setMessage("无法打开官方页面"));
  return <div className="settings-section">
   <label className="settings-toggle"><span>允许读取本机 AI 账号与用量</span><input aria-label="允许读取本机 AI 账号与用量" type="checkbox" checked={enabled} onChange={event=>onEnabledChange?.(event.target.checked)}/></label>
