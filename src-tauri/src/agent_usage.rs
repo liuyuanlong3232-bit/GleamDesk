@@ -121,6 +121,9 @@ $partial=$false
 foreach($process in $processes){
  $name=([string]$process.Name).ToLowerInvariant()
  $arguments=Arguments ([string]$process.CommandLine)
+ # Electron can also host plain Node services after its editor has exited.
+ # These --import/--require hosts are not the Antigravity desktop client.
+ if($name -eq 'antigravity.exe' -and $arguments -match '(?:^|\s)--(?:import|require)(?:=|\s)'){continue}
  if($process.ParentProcessId -eq $request.ownerPid -and (($name -eq 'codex.exe' -and $arguments -match '^app-server(?:\s|$)') -or ($name -eq 'claude.exe' -and $arguments -match '^auth\s+status(?:\s|$)'))){continue}
  $interpreter=$name -in @('node.exe','bun.exe','python.exe','pythonw.exe')
  if($interpreter -and !$process.CommandLine){$partial=$true;continue}
@@ -363,6 +366,19 @@ mod tests {
         let count=|id:&str|snapshot.clients.iter().find(|client|client.id==id).unwrap().process_count;
         assert_eq!(count("codex"),1);assert_eq!(count("claude"),1);assert_eq!(count("gemini"),2);assert_eq!(count("kimi"),2);
         assert!(!serde_json::to_string(&snapshot).unwrap().contains("must-not-leave-helper"));
+    }
+    #[cfg(windows)]
+    #[test]
+    fn runtime_detection_does_not_treat_electron_node_hosts_as_antigravity(){
+        let catalog:Vec<Value>=serde_json::from_str(CLIENT_CATALOG).unwrap();
+        let helpers=vec![
+            serde_json::json!({"ProcessId":100,"ParentProcessId":2,"Name":"Antigravity.exe","CommandLine":"Antigravity.exe --import C:/fixture/register_loader.js C:/fixture/main.mjs"}),
+            serde_json::json!({"ProcessId":101,"ParentProcessId":2,"Name":"Antigravity.exe","CommandLine":"Antigravity.exe --import=C:/fixture/register_loader.js C:/fixture/launch.mjs"}),
+        ];
+        let inspect=|processes:Vec<Value>|runtime_snapshot(runtime_helper(&serde_json::json!({"catalog":catalog,"ownerPid":999,"processes":processes})));
+        let result=inspect(helpers.clone());assert!(result.available);assert!(result.clients.is_empty(),"Node helper must not keep the closed client visible");
+        let mut running=helpers;running.push(serde_json::json!({"ProcessId":102,"ParentProcessId":2,"Name":"Antigravity.exe","CommandLine":"Antigravity.exe"}));
+        let result=inspect(running);assert_eq!(result.clients.len(),1);assert_eq!(result.clients[0].id,"antigravity");assert_eq!(result.clients[0].process_count,1);
     }
     #[cfg(windows)]
     #[test]
