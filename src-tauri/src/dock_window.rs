@@ -22,57 +22,37 @@ pub fn position_dock_window(app: AppHandle, width: f64, height: f64) -> Result<(
     let position = PhysicalPosition::new(x, y);
     if window.inner_size().ok() != Some(size) { window.set_size(size).map_err(|error| error.to_string())?; }
     if window.outer_position().ok() != Some(position) { window.set_position(position).map_err(|error| error.to_string())?; }
-    place_below_apps(&window)?;
+    place_above_apps(&window)?;
     Ok(())
 }
 
-/// Keep the launcher above Explorer's desktop hosts but below ordinary apps.
-/// It never activates itself; normal app activation continues to raise apps.
-pub(crate) fn place_below_apps(window: &tauri::WebviewWindow) -> Result<(), String> {
-    window.set_always_on_top(false).map_err(|error| error.to_string())?;
+/// Keep the launcher reachable over ordinary apps without taking keyboard focus.
+pub(crate) fn place_above_apps(window: &tauri::WebviewWindow) -> Result<(), String> {
     #[cfg(windows)]
-    unsafe {
-        use windows_sys::Win32::{Foundation::{HWND, LPARAM}, UI::WindowsAndMessaging::*};
-        struct Order { process: u32, last: HWND, dock: HWND, seen: bool, apps_below: usize }
-        unsafe extern "system" fn visit(hwnd: HWND, data: LPARAM) -> i32 {
-            let order = &mut *(data as *mut Order);
-            if hwnd == order.dock { order.seen = true; return 1; }
-            if IsWindowVisible(hwnd) == 0 || IsIconic(hwnd) != 0 || !GetWindow(hwnd, GW_OWNER).is_null() { return 1; }
-            let mut process = 0;
-            GetWindowThreadProcessId(hwnd, &mut process);
-            if process == order.process || GetWindowLongPtrW(hwnd, GWL_EXSTYLE) & (WS_EX_TOOLWINDOW | WS_EX_TOPMOST) as isize != 0 { return 1; }
-            let mut class = [0u16; 128];
-            let count = GetClassNameW(hwnd, class.as_mut_ptr(), class.len() as i32);
-            if count > 0 && !desktop_host(&String::from_utf16_lossy(&class[..count as usize])) {
-                // Remember the bottom-most ordinary window in the entire Z order,
-                // including windows currently above the Dock. Inserting after
-                // that window keeps every normal application in front of it.
-                order.last = hwnd;
-                if order.seen { order.apps_below += 1; }
-            }
-            1
-        }
-        let hwnd = window.hwnd().map_err(|error| error.to_string())?.0;
-        let mut order = Order { process: std::process::id(), last: std::ptr::null_mut(), dock: hwnd, seen: false, apps_below: 0 };
-        if EnumWindows(Some(visit), &mut order as *mut Order as LPARAM) == 0 { return Err("无法读取窗口层级".into()); }
-        let after = if order.last.is_null() { HWND_TOP } else { order.last };
-        if SetWindowPos(hwnd, after, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE) == 0 {
-            return Err("无法设置启动栏桌面层级".into());
-        }
-        #[cfg(debug_assertions)] {
-            order.seen = false; order.apps_below = 0;
-            let _ = EnumWindows(Some(visit), &mut order as *mut Order as LPARAM);
-            let style = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
-            let status = serde_json::json!({ "topmost": style & WS_EX_TOPMOST as isize != 0, "noActivate": style & WS_EX_NOACTIVATE as isize != 0, "ordinaryAppsBelowDock": order.apps_below });
-            let path = std::env::temp_dir().join(format!("codex-desktop-layer-{}.json", std::process::id()));
-            let _ = std::fs::write(path, status.to_string());
-        }
+    return raise_without_activation(window.hwnd().map_err(|error| error.to_string())?.0);
+    #[cfg(not(windows))]
+    window.set_always_on_top(true).map_err(|error|error.to_string())
+}
+
+#[cfg(windows)]
+fn raise_without_activation(hwnd:windows_sys::Win32::Foundation::HWND)->Result<(),String>{
+    use windows_sys::Win32::UI::WindowsAndMessaging::*;
+    if unsafe{SetWindowPos(hwnd,HWND_TOPMOST,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE)}==0{
+        return Err("无法设置 Dock 窗口层级".into());
     }
     Ok(())
 }
 
-fn desktop_host(class: &str) -> bool {
-    matches!(class, "Progman" | "WorkerW" | "Shell_TrayWnd" | "Shell_SecondaryTrayWnd")
+#[tauri::command]
+pub fn set_dock_menu_open(window:tauri::Window,open:bool)->Result<(),String>{
+    if window.label()!="dock"{return Err("只能由 Dock 操作菜单焦点".into());}
+    // A no-activate launcher cannot lose focus on outside clicks. Temporarily
+    // activate its popup; closing restores the launcher's non-activating mode.
+    window.set_focusable(open).map_err(|error|error.to_string())?;
+    if open {
+        if let Err(error)=window.set_focus(){let _=window.set_focusable(false);return Err(error.to_string());}
+    }
+    Ok(())
 }
 
 fn dock_bounds(area: (i32, i32, i32, i32), scale: f64, width: f64, height: f64) -> (i32, i32, u32, u32) {
@@ -86,10 +66,25 @@ fn dock_bounds(area: (i32, i32, i32, i32), scale: f64, width: f64, height: f64) 
 #[cfg(test)]
 mod tests {
     use super::dock_bounds;
+    #[cfg(windows)]
     #[test]
-    fn desktop_hosts_are_distinct_from_file_manager_and_application_windows() {
-        for class in ["Progman", "WorkerW", "Shell_TrayWnd", "Shell_SecondaryTrayWnd"] { assert!(super::desktop_host(class)); }
-        for class in ["CabinetWClass", "Chrome_WidgetWin_1", "Notepad"] { assert!(!super::desktop_host(class)); }
+    fn launcher_is_topmost_without_activating_or_changing_its_bounds(){
+        use windows_sys::Win32::{Foundation::RECT,UI::WindowsAndMessaging::*};
+        let class:Vec<u16>="STATIC".encode_utf16().chain(Some(0)).collect();
+        unsafe{
+            let hwnd=CreateWindowExW(WS_EX_NOACTIVATE,class.as_ptr(),std::ptr::null(),0,-32000,-32000,64,64,std::ptr::null_mut(),std::ptr::null_mut(),std::ptr::null_mut(),std::ptr::null());
+            assert!(!hwnd.is_null());
+            struct TestWindow(windows_sys::Win32::Foundation::HWND);
+            impl Drop for TestWindow{fn drop(&mut self){unsafe{DestroyWindow(self.0);}}}
+            let _window=TestWindow(hwnd);let foreground=GetForegroundWindow();
+            let mut before:RECT=std::mem::zeroed();assert_ne!(GetWindowRect(hwnd,&mut before),0);
+            super::raise_without_activation(hwnd).unwrap();
+            let style=GetWindowLongPtrW(hwnd,GWL_EXSTYLE) as u32;
+            assert_ne!(style&WS_EX_TOPMOST,0);assert_ne!(style&WS_EX_NOACTIVATE,0);
+            assert_eq!(GetForegroundWindow(),foreground);
+            let mut rect:RECT=std::mem::zeroed();assert_ne!(GetWindowRect(hwnd,&mut rect),0);
+            assert_eq!((rect.left,rect.top,rect.right,rect.bottom),(before.left,before.top,before.right,before.bottom));
+        }
     }
     #[test]
     fn dock_centers_above_taskbar_at_scaled_and_negative_monitor_positions() {

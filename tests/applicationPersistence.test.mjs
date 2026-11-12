@@ -8,22 +8,23 @@ import { transformSync } from "esbuild";
 // Execute the real services and handlers with in-memory storage and mocked IPC.
 // No browser, credentials, native commands, or external interfaces are used.
 function fixture({ native = true, invoke = async () => null } = {}) {
-  const values = new Map(), calls = [], slots = [], effects = [], cache = new Map(), listeners = new Map();
+  const values = new Map(), calls = [], slots = [], effects = [], cache = new Map(), listeners = new Map(), cleanups=new Map(), nativeFocus=new Set();
   let cursor = 0;
   const storage = { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value), removeItem: key => values.delete(key) };
   const react = {
     useState(initial) { const i = cursor++; if (!(i in slots)) slots[i] = typeof initial === "function" ? initial() : initial; return [slots[i], value => { slots[i] = typeof value === "function" ? value(slots[i]) : value; }]; },
     useRef(initial) { const i = cursor++; return slots[i] ??= { current: initial }; },
-    useEffect(effect, deps) { const i = cursor++; if (!slots[i] || deps?.some((value, index) => value !== slots[i][index])) { slots[i] = deps; effects.push(effect); } },
+    useEffect(effect, deps) { const i = cursor++; if (!slots[i] || deps?.some((value, index) => value !== slots[i][index])) { slots[i] = deps; effects.push(()=>{cleanups.get(i)?.();const stop=effect();if(stop)cleanups.set(i,stop);else cleanups.delete(i);}); } },
   };
   const jsx = (type, props) => ({ type, props });
-  const context = createContext({ console, localStorage: storage, window: { addEventListener: (name, fn) => listeners.set(name, fn), removeEventListener: name => listeners.delete(name) }, setTimeout, clearTimeout });
+  const context = createContext({ console, localStorage: storage, window: {setTimeout,clearTimeout,innerWidth:800,innerHeight:600, addEventListener: (name, fn) => listeners.set(name, fn), removeEventListener: name => listeners.delete(name) }, document:{addEventListener(){},removeEventListener(){}},requestAnimationFrame:()=>1,cancelAnimationFrame(){},setTimeout, clearTimeout });
   const stubs = {
     react, "react/jsx-runtime": { jsx, jsxs: jsx, Fragment: "fragment" },
     "@tauri-apps/api/core": { isTauri: () => native, invoke: async (command, args) => { calls.push({ command, args }); return invoke(command, args); } },
     appLogger: { logEvent() {} }, ApplicationDock: { AppGlyph() {} },
     dockIngress: { mergeDroppedApplications: (a, b) => [...a, ...b], applicationTargetsEqual: () => false, normalizeApplicationName: value => value, applicationFromUrl: target => ({ ...app("网址"), type: "url", target }) },
-    "@tauri-apps/api/webview": { getCurrentWebview() { throw new Error("Real webview access forbidden in this test"); } },
+    "@tauri-apps/api/webview": { getCurrentWebview() { return {onDragDropEvent:async()=>()=>{}}; } },
+    "@tauri-apps/api/window": {getCurrentWindow(){return {onFocusChanged:async callback=>{nativeFocus.add(callback);return()=>nativeFocus.delete(callback);}};}},
     useApplicationStatus: { useApplicationStatus: () => ({}) }, applicationStatus: { confirmedRunning: () => false },
     dockPresentation: { starterDockIcons: {} }, dockMagnification: {}, launcherService: {},
     iconStore: { readApplicationIcon: async () => "data:image/png;base64,AA==" }, appScanner: { discoverApplications: async () => [] },
@@ -42,7 +43,7 @@ function fixture({ native = true, invoke = async () => null } = {}) {
     runInContext(`(function(require,module,exports){${code}\n})`, context, { filename: full })(require, module, module.exports);
     return module.exports;
   }
-  return { load, values, storage, calls, dispatch: (name, event) => listeners.get(name)?.(event), render(fn) { cursor = 0; return fn(); }, async effects() { for (const effect of effects.splice(0)) effect(); await settle(); } };
+  return { load, values, storage, calls, dispatch: (name, event) => listeners.get(name)?.(event), nativeFocus(payload){for(const callback of nativeFocus)callback({payload});},nativeFocusCount:()=>nativeFocus.size,unmount(){for(const cleanup of cleanups.values())cleanup();cleanups.clear();},render(fn) { cursor = 0; return fn(); }, async effects() { for (const effect of effects.splice(0)) effect(); await settle(); } };
 }
 const settle = async () => { for (let i = 0; i < 8; i++) await new Promise(resolve => setImmediate(resolve)); };
 function elements(tree, type) {
@@ -232,4 +233,39 @@ test("Dock 拖入提示在结束、取消或失焦后消失，内部排序不显
   }
   renderDock().props.onDragOver({ preventDefault() {}, dataTransfer: { types: ["application/x-codex-dock"] } });
   assert.doesNotMatch(renderDock().props.className, /dock-drop-active/);
+});
+
+test("Dock 菜单临时接收原生焦点，点击桌面失焦后关闭并恢复不抢焦点",async()=>{
+ const f=fixture();const {ApplicationDock}=f.load("src/components/ApplicationDock.tsx");
+ const props={presentation:"quick-launch",applications:[app("示例")],onLaunch(){},onManage(){},onApplicationsChange(){}};
+ const render=()=>f.render(()=>ApplicationDock(props));
+ let tree=render();await f.effects();
+ elements(tree,"button").find(item=>item.props["data-dock-id"]==="示例").props.onContextMenu({preventDefault(){}});
+ tree=render();await f.effects();assert.equal(elements(tree,"div").filter(item=>item.props.role==="menu").length,1);
+ assert.ok(f.calls.some(call=>call.command==="set_dock_menu_open"&&call.args.open===true));
+ f.nativeFocus(false);tree=render();await f.effects();
+ assert.equal(elements(tree,"div").filter(item=>item.props.role==="menu").length,0);
+ assert.ok(f.calls.some(call=>call.command==="set_dock_menu_open"&&call.args.open===false));
+ assert.equal(f.nativeFocusCount(),0);f.unmount();
+});
+
+test("Dock 菜单原生激活失败时关闭并保留错误提示",async()=>{
+ const f=fixture({invoke:async command=>{if(command==="set_dock_menu_open")throw new Error("模拟激活失败");}});
+ const {ApplicationDock}=f.load("src/components/ApplicationDock.tsx");
+ const props={presentation:"quick-launch",applications:[app("示例")],onLaunch(){},onManage(){},onApplicationsChange(){}};
+ const render=()=>f.render(()=>ApplicationDock(props));let tree=render();await f.effects();
+ elements(tree,"button").find(item=>item.props["data-dock-id"]==="示例").props.onContextMenu({preventDefault(){}});
+ render();await f.effects();tree=render();await f.effects();
+ assert.equal(elements(tree,"div").filter(item=>item.props.role==="menu").length,0);
+ assert.match(elements(tree,"div").find(item=>item.props.role==="status").props.children,/菜单.*激活失败/);f.unmount();
+});
+
+test("Dock 右键切换图标只更换菜单，不反复释放和争抢焦点",async()=>{
+ const f=fixture();const {ApplicationDock}=f.load("src/components/ApplicationDock.tsx");
+ const props={presentation:"quick-launch",applications:[app("甲"),app("乙")],onLaunch(){},onManage(){},onApplicationsChange(){}};
+ const render=()=>f.render(()=>ApplicationDock(props));let tree=render();await f.effects();
+ for(const id of ["甲","乙"]){elements(tree,"button").find(item=>item.props["data-dock-id"]===id).props.onContextMenu({preventDefault(){}});tree=render();await f.effects();}
+ assert.equal(f.calls.filter(call=>call.command==="set_dock_menu_open"&&call.args.open===true).length,1);
+ assert.equal(f.calls.filter(call=>call.command==="set_dock_menu_open"&&call.args.open===false).length,0);
+ f.unmount();assert.equal(f.nativeFocusCount(),0);
 });

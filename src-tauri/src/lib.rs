@@ -448,6 +448,7 @@ pub fn run() {
             webapps::webapp_security_probe,
             list_monitors,
             dock_window::position_dock_window,
+            dock_window::set_dock_menu_open,
             window_regions::set_main_window_hit_regions,
             window_regions::set_dock_window_hit_regions,
             window_visible,
@@ -526,7 +527,7 @@ pub fn run() {
                 }
             }
             if window.label() == "dock" && matches!(event, WindowEvent::Focused(true)) {
-                if let Some(dock) = window.app_handle().get_webview_window("dock") { let _ = dock_window::place_below_apps(&dock); }
+                if let Some(dock) = window.app_handle().get_webview_window("dock") { let _ = dock_window::place_above_apps(&dock); }
             }
             if matches!(event, WindowEvent::Focused(_) | WindowEvent::Resized(_)) {
                 let visible = window.is_visible().unwrap_or(false) && !window.is_minimized().unwrap_or(false);

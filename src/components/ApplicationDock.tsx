@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import {useApplicationStatus} from "../services/launcher/useApplicationStatus";
 import {confirmedRunning} from "../services/launcher/applicationStatus";
-import { isTauri } from "@tauri-apps/api/core";
+import { invoke, isTauri } from "@tauri-apps/api/core";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { logEvent } from "../services/appLogger";
 import type { ApplicationItem } from "../types";
 import { dockMagnification } from "../services/launcher/dockMagnification";
 import { readApplicationIcon } from "../services/iconStore";
@@ -89,17 +91,28 @@ export function ApplicationDock({ applications, presentation = "shelf", onLaunch
 
   useEffect(() => {
     if (!menu) return;
-    const close = () => setMenu(null);
+    let active=true,unlisten:(()=>void)|undefined,nativeMenuRequested=false;
+    const close = () => {if(active)setMenu(null);};
     const keydown = (event: KeyboardEvent) => { if (event.key === "Escape") close(); };
     document.addEventListener("pointerdown", close, { once: true });
     document.addEventListener("keydown", keydown);
     window.addEventListener("blur", close);
+    if(isTauri())void (async()=>{
+      const stop=await getCurrentWindow().onFocusChanged(({payload})=>{if(!payload)close();});
+      if(!active){stop();return;}unlisten=stop;
+      if(presentation==="quick-launch"){
+        nativeMenuRequested=true;
+        await invoke("set_dock_menu_open",{open:true});
+      }
+    })().catch(()=>{if(active){close();setDropMessage("Dock 菜单激活失败，请重试");}});
     return () => {
+      active=false;unlisten?.();
       document.removeEventListener("pointerdown", close);
       document.removeEventListener("keydown", keydown);
       window.removeEventListener("blur", close);
+      if(nativeMenuRequested)void invoke("set_dock_menu_open",{open:false}).catch(()=>logEvent("warn","dock.menu_focus_restore_failed"));
     };
-  }, [menu]);
+  }, [Boolean(menu),presentation]);
 
   useEffect(() => {
     if (!menu) { setMenuPos(null); return; }
