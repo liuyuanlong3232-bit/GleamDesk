@@ -60,4 +60,4 @@ Hub 拖动图标时仍在原按钮捕获指针，以保留轻点行为；越过�
 豆包客户端目录、后台进程和旧缓存不能证明独立连接的账号归属；额度缓存只绑定 GleamDesk 当前连接，断开、过期或重新连接时原读数失效。
 release 原生测试 EXE 通过 Python subprocess.run 等待并捕获真实退出码；PowerShell 直接启动 Windows 子系统测试程序可能提前返回，不能据此判断测试结束。
 Antigravity.exe 可能被当作 Node 宿主运行 --import/--require 辅助服务；Hub 运行识别须排除这些进程，不能只按 EXE 名称判断编辑器仍在运行。
-Dock 常态不抢焦点；右键菜单打开时临时允许聚焦并监听原生失焦，关闭后恢复。仅监听 DOM blur 无法可靠处理裁剪窗口外的桌面点击；Dock 置顶使用 SWP_NOACTIVATE，不能再次压到普通应用下面。
+Dock 位于普通应用下方，不遮挡输入框；启动、缩放或获得焦点时均不能重新置顶，使用 alwaysOnBottom 与 SWP_NOACTIVATE 保持桌面层。右键菜单临时允许聚焦并监听原生失焦，关闭后恢复；仅监听 DOM blur 无法可靠处理裁剪窗口外的桌面点击。

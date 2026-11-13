@@ -529,9 +529,6 @@ pub fn run() {
                     let _=show_main(window.app_handle().clone());
                 }
             }
-            if window.label() == "dock" && matches!(event, WindowEvent::Focused(true)) {
-                if let Some(dock) = window.app_handle().get_webview_window("dock") { let _ = dock_window::place_above_apps(&dock); }
-            }
             if matches!(event, WindowEvent::Focused(_) | WindowEvent::Resized(_)) {
                 let visible = window.is_visible().unwrap_or(false) && !window.is_minimized().unwrap_or(false);
                 provider_diagnostics::record_visibility(window.app_handle(), window.label(), visible);

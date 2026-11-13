@@ -37,7 +37,8 @@
         "shadow": false,
         "resizable": false,
         "skipTaskbar": true,
-        "alwaysOnTop": true,
+        "alwaysOnTop": false,
+        "alwaysOnBottom": true,
         "focusable": false,
         "focus": false
       }

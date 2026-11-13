@@ -22,22 +22,22 @@ pub fn position_dock_window(app: AppHandle, width: f64, height: f64) -> Result<(
     let position = PhysicalPosition::new(x, y);
     if window.inner_size().ok() != Some(size) { window.set_size(size).map_err(|error| error.to_string())?; }
     if window.outer_position().ok() != Some(position) { window.set_position(position).map_err(|error| error.to_string())?; }
-    place_above_apps(&window)?;
+    place_below_apps(&window)?;
     Ok(())
 }
 
-/// Keep the launcher reachable over ordinary apps without taking keyboard focus.
-pub(crate) fn place_above_apps(window: &tauri::WebviewWindow) -> Result<(), String> {
+/// Keep the desktop launcher beneath ordinary apps without taking keyboard focus.
+fn place_below_apps(window: &tauri::WebviewWindow) -> Result<(), String> {
     #[cfg(windows)]
-    return raise_without_activation(window.hwnd().map_err(|error| error.to_string())?.0);
+    return lower_without_activation(window.hwnd().map_err(|error| error.to_string())?.0);
     #[cfg(not(windows))]
-    window.set_always_on_top(true).map_err(|error|error.to_string())
+    window.set_always_on_bottom(true).map_err(|error|error.to_string())
 }
 
 #[cfg(windows)]
-fn raise_without_activation(hwnd:windows_sys::Win32::Foundation::HWND)->Result<(),String>{
+fn lower_without_activation(hwnd:windows_sys::Win32::Foundation::HWND)->Result<(),String>{
     use windows_sys::Win32::UI::WindowsAndMessaging::*;
-    if unsafe{SetWindowPos(hwnd,HWND_TOPMOST,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE)}==0{
+    if unsafe{SetWindowPos(hwnd,HWND_BOTTOM,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE)}==0{
         return Err("无法设置 Dock 窗口层级".into());
     }
     Ok(())
@@ -68,19 +68,27 @@ mod tests {
     use super::dock_bounds;
     #[cfg(windows)]
     #[test]
-    fn launcher_is_topmost_without_activating_or_changing_its_bounds(){
+    fn launcher_is_below_apps_without_activating_or_changing_its_bounds(){
         use windows_sys::Win32::{Foundation::RECT,UI::WindowsAndMessaging::*};
         let class:Vec<u16>="STATIC".encode_utf16().chain(Some(0)).collect();
         unsafe{
-            let hwnd=CreateWindowExW(WS_EX_NOACTIVATE,class.as_ptr(),std::ptr::null(),0,-32000,-32000,64,64,std::ptr::null_mut(),std::ptr::null_mut(),std::ptr::null_mut(),std::ptr::null());
+            let hwnd=CreateWindowExW(WS_EX_NOACTIVATE|WS_EX_TOPMOST,class.as_ptr(),std::ptr::null(),0,-32000,-32000,64,64,std::ptr::null_mut(),std::ptr::null_mut(),std::ptr::null_mut(),std::ptr::null());
             assert!(!hwnd.is_null());
             struct TestWindow(windows_sys::Win32::Foundation::HWND);
             impl Drop for TestWindow{fn drop(&mut self){unsafe{DestroyWindow(self.0);}}}
-            let _window=TestWindow(hwnd);let foreground=GetForegroundWindow();
+            let _window=TestWindow(hwnd);
+            let ordinary=CreateWindowExW(WS_EX_NOACTIVATE,class.as_ptr(),std::ptr::null(),0,-32000,-32000,80,80,std::ptr::null_mut(),std::ptr::null_mut(),std::ptr::null_mut(),std::ptr::null());
+            assert!(!ordinary.is_null());let _ordinary=TestWindow(ordinary);
+            let foreground=GetForegroundWindow();
             let mut before:RECT=std::mem::zeroed();assert_ne!(GetWindowRect(hwnd,&mut before),0);
-            super::raise_without_activation(hwnd).unwrap();
+            super::lower_without_activation(hwnd).unwrap();
             let style=GetWindowLongPtrW(hwnd,GWL_EXSTYLE) as u32;
-            assert_ne!(style&WS_EX_TOPMOST,0);assert_ne!(style&WS_EX_NOACTIVATE,0);
+            assert_eq!(style&WS_EX_TOPMOST,0,"Dock must not cover ordinary applications");assert_ne!(style&WS_EX_NOACTIVATE,0);
+            // Compare controlled app windows; system/shell windows also occupy
+            // this global list, so being its absolute final item is not required.
+            let mut higher=GetWindow(hwnd,GW_HWNDPREV);let mut ordinary_above=false;
+            for _ in 0..4096{if higher.is_null(){break}if higher==ordinary{ordinary_above=true;break}higher=GetWindow(higher,GW_HWNDPREV);}
+            assert!(ordinary_above,"Dock must remain beneath an ordinary app window");
             assert_eq!(GetForegroundWindow(),foreground);
             let mut rect:RECT=std::mem::zeroed();assert_ne!(GetWindowRect(hwnd,&mut rect),0);
             assert_eq!((rect.left,rect.top,rect.right,rect.bottom),(before.left,before.top,before.right,before.bottom));
