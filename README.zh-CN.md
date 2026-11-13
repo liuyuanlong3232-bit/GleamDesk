@@ -4,7 +4,7 @@
 
 **让状态常驻，让工作更轻。**
 
-[English](README.md) · [Windows 下载](https://github.com/liuyuanlong3232-bit/GleamDesk/releases/tag/v0.1.9) · [使用指南](docs/USAGE.md) · [编译说明](docs/BUILDING.md) · [问题反馈](https://github.com/liuyuanlong3232-bit/GleamDesk/issues)
+[English](README.md) · [Windows 下载](https://github.com/liuyuanlong3232-bit/GleamDesk/releases/tag/v0.1.10) · [使用指南](docs/USAGE.md) · [编译说明](docs/BUILDING.md) · [问题反馈](https://github.com/liuyuanlong3232-bit/GleamDesk/issues)
 
 一个 Windows 桌面助手：顶部 HUD 随手查看 AI 额度、API 账户、邮箱验证码与电脑状态，Dock 打开常用应用，完整工作台按需展开。
 
@@ -53,18 +53,18 @@
 
 ## 开始使用
 
-0.1.9 更新工作台总览，加入卡片拖动、大小调整和布局保存，统一四种主题下的 API、邮箱、本机与 VPS 图标，并带上已选定的栖光桌面吉祥物应用图标。邮箱提醒和验证码复制仍按需开启；QQ、163 已做本机连接验收，Gmail、Outlook 尚未完成真实账号验收。0.1.2 及更早版本需要先手动安装一次包含更新模块的版本。
+0.1.10 修复 MiMo 余额会话失效后的自动恢复，各 Agent 独立识别账号并刷新额度；豆包改为单独连接，客户端运行时也可读取。Dock 位于普通应用下方，不遮挡输入框，右键菜单点击外部即可关闭。QQ、163 邮箱已做本机连接验收，Gmail、Outlook 尚未完成真实账号验收。 0.1.2 及更早版本需要先手动安装一次包含更新模块的版本。
 
-从 [GitHub Release v0.1.9](https://github.com/liuyuanlong3232-bit/GleamDesk/releases/tag/v0.1.9) 下载 Windows x64 版本：
+从 [GitHub Release v0.1.10](https://github.com/liuyuanlong3232-bit/GleamDesk/releases/tag/v0.1.10) 下载 Windows x64 版本：
 
 | 文件 | 使用方式 |
 | --- | --- |
-| `GleamDesk_0.1.9_x64-setup.exe` | 安装版，仅为当前用户安装 |
-| `GleamDesk_0.1.9_windows_x64_portable.zip` | 免安装版，解压后运行 `GleamDesk.exe` |
+| `GleamDesk_0.1.10_x64-setup.exe` | 安装版，仅为当前用户安装 |
+| `GleamDesk_0.1.10_windows_x64_portable.zip` | 免安装版，解压后运行 `GleamDesk.exe` |
 | `SHA256SUMS.txt` | 下载文件的 SHA-256 校验值 |
 | `GleamDesk-icon.png` | 已选定的栖光桌面吉祥物应用图标 |
 
-**0.1.9 尚无 Windows 发行者签名**，已提供的更新签名用于校验后续应用内升级，不能代替 Windows 发行者证书，Windows 可能提示“未知发布者”。SHA-256 用于核对文件完整性，不能替代发布者签名。两种版本均需要 WebView2 Runtime；安装版在缺失时下载官方运行库。免安装版仍将个人设置和历史保存在本机 AppData，不是随文件夹携带的独立配置。详见 [Windows 安装说明](docs/WINDOWS_PACKAGES.md)。
+**0.1.10 尚无 Windows 发行者签名**，已提供的更新签名用于校验后续应用内升级，不能代替 Windows 发行者证书，Windows 可能提示“未知发布者”。SHA-256 用于核对文件完整性，不能替代发布者签名。两种版本均需要 WebView2 Runtime；安装版在缺失时下载官方运行库。免安装版仍将个人设置和历史保存在本机 AppData，不是随文件夹携带的独立配置。详见 [Windows 安装说明](docs/WINDOWS_PACKAGES.md)。
 
 需要自行编译时，准备 Windows、Node.js 22、Rust stable、Visual Studio C++ 构建工具和 WebView2 Runtime：
 
