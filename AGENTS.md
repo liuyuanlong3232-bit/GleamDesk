@@ -61,3 +61,4 @@ Hub 拖动图标时仍在原按钮捕获指针，以保留轻点行为；越过�
 release 原生测试 EXE 通过 Python subprocess.run 等待并捕获真实退出码；PowerShell 直接启动 Windows 子系统测试程序可能提前返回，不能据此判断测试结束。
 Antigravity.exe 可能被当作 Node 宿主运行 --import/--require 辅助服务；Hub 运行识别须排除这些进程，不能只按 EXE 名称判断编辑器仍在运行。
 Dock 位于普通应用下方，不遮挡输入框；启动、缩放或获得焦点时均不能重新置顶，使用 alwaysOnBottom 与 SWP_NOACTIVATE 保持桌面层。右键菜单临时允许聚焦并监听原生失焦，关闭后恢复；仅监听 DOM blur 无法可靠处理裁剪窗口外的桌面点击。
+MiMo 余额依赖官方网页会话，不是模型 API 密钥；仅在官方登录失效时复用自己的 mimo-console-profile 尝试恢复，不读取其他浏览器。恢复须核对原 userId、验证余额并比较原凭据后替换，断开或手动换号不能被迟到恢复覆盖；网络错误不要求重新登录。

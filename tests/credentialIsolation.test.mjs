@@ -27,6 +27,27 @@ function elements(tree,type){if(!tree||typeof tree!=='object')return[];if(Array.
 function text(tree){if(tree==null||typeof tree==='boolean')return'';if(typeof tree!=='object')return String(tree);if(Array.isArray(tree))return tree.map(text).join('');return text(tree.props?.children)}
 const button=(tree,label)=>elements(tree,'button').find(b=>text(b)===label);
 
+test('MiMo balance uses its saved console connection rather than requiring a model API key',async()=>{
+ for(const consoleConnected of [true,false]){
+  const checked=[],calls=[];
+  const stamp=new Date().toISOString();
+  const deps={
+   '@tauri-apps/api/core':{isTauri:()=>true,invoke:async(command)=>{calls.push(command);return{observedAt:stamp,accounts:[{id:'mimo',name:'MiMo',state:'normal',currency:'CNY',balance:0,observedAt:stamp}]}}},
+   '../../services/credentials':{hasCredential:async source=>{checked.push(source);return source==='mimo-console'?consoleConnected:!consoleConnected}},
+   '../../services/historyStore':{writeHistoryRecord:async()=>assert.fail('MiMo balance must not be persisted as history')},
+   '../../domain/analysis/contracts':{liveProvenance:()=>({})},
+  };
+  const code=transformSync(readFileSync('src/providers/api/apiUsageProvider.ts','utf8'),{loader:'ts',format:'cjs'}).code;
+  const module={exports:{}};
+  runInContext(`(function(require,module,exports){${code}\n})`,createContext({console,Date}))(name=>{assert.ok(name in deps,name);return deps[name]},module,module.exports);
+  const provider=module.exports.createApiUsageProvider('mimo',{mimoEnabled:true,credentialRevision:0});
+  const value=await provider.load(new AbortController().signal);
+  assert.deepEqual(checked,['mimo-console']);
+  if(consoleConnected){assert.equal(value.status,'normal');assert.equal(value.data.accounts[0].balance,0);assert.deepEqual(calls,['read_mimo_usage'])}
+  else{assert.equal(value.status,'unavailable');assert.deepEqual(calls,[])}
+ }
+});
+
 test('fresh profiles remain unconfigured; existing watchlist and history storage are untouched',()=>{
   const f=fixture(),store=f.load('src/providers/settingsStore.ts');
   const before=JSON.stringify([...f.values]);const settings=store.loadSettings();

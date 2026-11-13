@@ -73,6 +73,19 @@ pub(crate) fn save_named(target_name:&str,value:&str)->Result<(),String>{
     let _lock = WRITING.lock().map_err(|_|"凭据正在保存，请稍后重试")?;
     save_unlocked(target_name,value)
 }
+// An automatic refresh must not resurrect a disconnected account or overwrite
+// a newer manual login that completed while its network request was in flight.
+#[cfg(windows)]
+fn replace_named_if_matches(target:&str,expected:&str,updated:&str)->Result<bool,String>{
+    let _lock=WRITING.lock().map_err(|_|"凭据正在保存，请稍后重试")?;
+    let current=match read_named(target){Ok(value)=>value,Err(_)=>return Ok(false)};
+    if current.as_str()!=expected{return Ok(false)}
+    save_unlocked(target,updated)?;Ok(true)
+}
+#[cfg(windows)]
+pub(crate) fn refresh_mimo_console(expected:&str,updated:&str)->Result<bool,String>{
+    replace_named_if_matches(CredentialSource::MimoConsole.target(),expected,updated)
+}
 #[cfg(windows)]
 fn save_unlocked(target_name:&str,value:&str)->Result<(),String>{
     validate(value)?;
@@ -241,6 +254,21 @@ pub fn credential_clear(source: CredentialSource) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(windows)]
+    #[test]
+    fn automatic_mimo_refresh_cannot_overwrite_a_new_login_or_resurrect_disconnect(){
+        let target=format!("GleamDesk.Test.MiMoRefresh.{}.{}",std::process::id(),crate::provider_requests::observed_unix_ms());
+        assert!(!exists_named(&target).unwrap());
+        struct Cleanup(String);impl Drop for Cleanup{fn drop(&mut self){let _=clear_named(&self.0);}}
+        let _cleanup=Cleanup(target.clone());
+        save_named(&target,"synthetic-old").unwrap();
+        assert!(replace_named_if_matches(&target,"synthetic-old","synthetic-renewed").unwrap());
+        save_named(&target,"synthetic-new-account").unwrap();
+        assert!(!replace_named_if_matches(&target,"synthetic-renewed","synthetic-late").unwrap());
+        assert_eq!(read_named(&target).unwrap().as_str(),"synthetic-new-account");
+        clear_named(&target).unwrap();assert!(!replace_named_if_matches(&target,"synthetic-new-account","synthetic-late").unwrap());
+        assert!(!exists_named(&target).unwrap());
+    }
     #[test]
     fn scopes_credentials_without_legacy_fallback() {
         assert_eq!(CredentialSource::Beszel.target(), "GleamDesk.Beszel.ApiToken");

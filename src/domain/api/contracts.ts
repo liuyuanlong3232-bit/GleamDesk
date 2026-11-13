@@ -1,6 +1,6 @@
 import type { ProviderState } from "../providers/contracts";
 
-export type ApiUnavailableReason = "not-enabled" | "unsupported-runtime" | "unconfigured" | "no-source" | "deferred" | "read-failed" | "balance-unavailable" | "balance-read-failed" | "mimo-console-balance" | "local-recommendation-estimate";
+export type ApiUnavailableReason = "not-enabled" | "unsupported-runtime" | "unconfigured" | "no-source" | "deferred" | "read-failed" | "balance-unavailable" | "balance-read-failed" | "balance-login-required" | "mimo-console-balance" | "local-recommendation-estimate";
 export type ApiAmountScope="balance"|"organization"|"local-estimate"|"unknown"|"demo";
 export interface ApiUsageAccount {
   id: string;

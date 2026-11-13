@@ -107,14 +107,14 @@ function MimoBalanceConnection({connections,onChange,simulationEnabled=false}:{c
         setConfigured(true);onChange({...connections,mimoEnabled:true,credentialRevision:Date.now()});setMessage(`账户连接成功 · 余额 ${formatMoney(value.balance,value.currency)} ${value.currency}`);
       }else if(action==="read"){
         const value=await readApiUsage("mimo");const account=value.accounts[0];
-        setMessage(account.balance!==undefined?`最新余额 ${formatMoney(account.balance,account.currency)} ${account.currency}`:"余额读取失败或登录过期，请重新连接官方账户。");
+        setMessage(account.balance!==undefined?`最新余额 ${formatMoney(account.balance,account.currency)} ${account.currency}`:account.availabilityReason==="balance-login-required"?"自动恢复未成功，请打开 MiMo 官方登录完成验证。":"余额暂时无法读取，请稍后刷新。");
       }else{await clearCredential("mimo-console");setConfigured(false);onChange({...connections,credentialRevision:Date.now()});setMessage("已断开自动余额连接；API 密钥仍可用于推荐。官方窗口登录状态可由你自行退出。");}
     }catch(cause){setMessage(typeof cause==="string"?cause:"MiMo 余额连接失败，请检查登录状态");}finally{setBusy(false);}
   };
   return <section className="mimo-balance-connection connection-purpose"><h4>官方账户余额 · {configured?"已连接":"待连接"}</h4>
     <p>先登录官方账户。点击连接即同意读取本窗口的登录凭证并保存到本机。</p>
     <div className="settings-actions"><button disabled={simulationEnabled||!isTauri()||busy} onClick={()=>void act("open")}>打开 MiMo 官方登录</button><button disabled={simulationEnabled||!isTauri()||busy} onClick={()=>void act("connect")}>登录完成，连接余额</button>{configured&&<><button disabled={simulationEnabled||busy} onClick={()=>void act("read")}>刷新余额</button><button disabled={busy} onClick={()=>void act("disconnect")}>断开余额连接</button></>}</div>
-    <details className="settings-help"><summary>余额连接帮助</summary><p>仅请求官方 HTTPS 余额地址，不读取其他浏览器账户、不发送到 VPS。验证成功后，凭证保存在 Windows 凭据管理器。显示时每分钟检查，窗口隐藏时停止。接口变动或登录过期时显示未知。</p></details>
+    <details className="settings-help"><summary>余额连接帮助</summary><p>凭证保存在 Windows 凭据管理器。登录过期时，使用本软件的官方登录窗口尝试自动恢复；官方要求短信或扫码时仍需本人验证。不读取其他浏览器账户，不调用付费模型。显示时每分钟检查，窗口隐藏时停止。</p></details>
     {message&&<small role="status">{message}</small>}
   </section>;
 }

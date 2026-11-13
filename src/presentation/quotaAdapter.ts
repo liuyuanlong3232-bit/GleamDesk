@@ -93,7 +93,8 @@ const reasons: Record<ApiUnavailableReason, string> = {
   unconfigured: "尚未配置或无法读取服务凭据", "no-source": "尚未接入可靠费用数据源",
   deferred: "按当前选择暂缓接入", "read-failed": "费用读取失败",
   "mimo-console-balance": "MiMo 官方控制台账户余额；账户费用未接入。",
-  "balance-read-failed": "MiMo 余额读取失败或登录过期，请在设置中重新连接账户。",
+  "balance-read-failed": "MiMo 余额暂时读取失败，请稍后刷新。",
+  "balance-login-required": "MiMo 自动恢复登录未成功，请在设置中完成官方登录。",
   "balance-unavailable": "尚未连接 MiMo 官方账户余额。",
   "local-recommendation-estimate":"仅本机每日推荐调用的估算，不含 Room、其他程序或设备；不是官方账单。",
 };

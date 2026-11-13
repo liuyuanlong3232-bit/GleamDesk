@@ -52,7 +52,7 @@ export function createApiUsageProvider(source: ApiSource, config: ApiConnectionS
       if (!enabled) return unavailable("not-enabled");
       if (!isTauri()) return unavailable("unsupported-runtime");
       try {
-        if (!await hasCredential(source)) return unavailable("unconfigured");
+        if (!await hasCredential(source==="mimo"?"mimo-console":source)) return unavailable("unconfigured");
         const data = await readApiUsage(source);
         const observedAt = data.accounts[0].observedAt;
         if (source !== "mimo") await writeHistoryRecord({ id: `api:${source}:${observedAt}`, kind: "usage_history", createdAt: observedAt,

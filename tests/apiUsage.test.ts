@@ -7,6 +7,12 @@ import { formatMoney } from "../src/services/formatMoney";
 import { presentAgentQuotas, presentApiUsage } from "../src/presentation/quotaAdapter";
 import { demoProviderRegistry } from "../src/providers/demo/registry";
 
+test("temporary MiMo balance failures do not tell the user to log in again",()=>{
+  const [row]=presentApiUsage([{id:"mimo",name:"MiMo",state:"warning",currency:"CNY",observedAt:new Date().toISOString(),availabilityReason:"balance-read-failed"}],"degraded");
+  assert.doesNotMatch(row.detail??"",/重新连接|登录过期/);
+  assert.match(row.detail??"",/稍后|刷新/);
+});
+
 test("quota providers return domain facts and adapters format durations and source descriptions", async () => {
   const agent = await demoProviderRegistry.find(provider => provider.id === "agent-quotas")!.load(new AbortController().signal);
   assert.equal(agent.data?.type, "agent-quotas");
