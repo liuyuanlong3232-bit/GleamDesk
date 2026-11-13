@@ -5,8 +5,9 @@ import {resolve,dirname} from 'node:path';
 import {createContext,runInContext} from 'node:vm';
 import {transformSync} from 'esbuild';
 
+const agentIds=['codex','claude','antigravity','doubao','kimi','cursor'];
 function fixture({defer=false,readFails=false,emitFails=false}={}){
- const slots=[],effects=[],calls=[],events=[],localEvents=[],dashboardCalls=[],nativeListeners=new Map();let cursor=0,enabled=false,finish,changed;
+ const slots=[],effects=[],calls=[],events=[],localEvents=[],dashboardCalls=[],nativeListeners=new Map(),pending=[];let cursor=0,enabled=false,changed;
  const react={
   useState(initial){const i=cursor++;if(!(i in slots))slots[i]=typeof initial==='function'?initial():initial;return[slots[i],v=>{slots[i]=typeof v==='function'?v(slots[i]):v}]},
   useRef(initial){const i=cursor++;return slots[i]??(slots[i]={current:initial})},
@@ -14,7 +15,7 @@ function fixture({defer=false,readFails=false,emitFails=false}={}){
  };
  const account={id:'codex',name:'Codex',installed:true,loginStatus:'verified',plan:'synthetic-plan'};
  const deps={react,'react/jsx-runtime':{jsx:(type,props)=>({type,props}),jsxs:(type,props)=>({type,props})},
-  '@tauri-apps/api/core':{isTauri:()=>true,invoke:async(command,args)=>{calls.push({command,args});if(command==='read_agent_usage'){if(defer)await new Promise(r=>finish=r);if(readFails)throw Error('Synthetic read failure');return{accounts:[account]}}if(command==='read_ollama_status')return{serviceStatus:'online',runningModels:[]};if(command==='read_doubao_membership')return{available:false};throw Error('Unexpected command '+command)}},
+  '@tauri-apps/api/core':{isTauri:()=>true,invoke:async(command,args)=>{calls.push({command,args});if(command==='read_agent_usage'){if(defer)await new Promise(r=>pending.push(r));if(readFails)throw Error('Synthetic read failure');return{accountRevision:'1:1:1',accounts:[{...account,id:args.agentId}]}}if(command==='read_ollama_status')return{serviceStatus:'online',runningModels:[]};if(command==='read_doubao_membership')return{available:false};throw Error('Unexpected command '+command)}},
   '@tauri-apps/api/event':{emit:async(name,payload)=>{if(emitFails)throw Error('Synthetic event failure');events.push({name,payload})},listen:async(name,fn)=>{nativeListeners.set(name,fn);return()=>nativeListeners.delete(name)}},
   './dashboardAdapter':{emptyDashboardData:()=>({providers:[]})},
   './dashboardService':{refreshDashboardData:async(...args)=>{dashboardCalls.push(args);return{providers:[]}},mergeDashboardData:(current,next)=>({...current,...next})},
@@ -23,13 +24,13 @@ function fixture({defer=false,readFails=false,emitFails=false}={}){
   './AIControlCenter':{membershipBenefitDetail:v=>v},'./StatusHud':{HudLogo:()=>null},
   '../presentation/quotaAdapter':{doubaoReadIssueMessage:()=>undefined},
   '../providers/agents/agentUsageProvider':{normalizeAgentUsage:v=>v,agentClients:[],unavailableAgentRuntime:()=>({available:false}),readAgentRuntime:async()=>{calls.push({command:'runtime-only'});return{available:true}},runningAgentClients:()=>[],readAgentAccountRevision:async()=> '1:1:1'},
-  './agents/agentUsageProvider':{readAgentAccountRevision:async()=> '1:1:1'},
+  './agents/agentUsageProvider':{quotaAgentIds:agentIds,readAgentAccountRevision:async()=> '1:1:1'},
   '../services/windowVisibility':{isWindowVisible:()=>true,subscribeWindowVisibility:()=>()=>{}},'../services/launcher/launcherService':{launchApplication:async()=>{throw Error('External launch not allowed')}}
  };
  const context=createContext({console,Event:class{constructor(type){this.type=type}},window:{setInterval:()=>1,clearInterval(){},addEventListener(){},removeEventListener(){},dispatchEvent(event){localEvents.push(event.type)}}});
  const load=path=>{const module={exports:{}};const code=transformSync(readFileSync(path,'utf8'),{loader:'tsx',format:'cjs',jsx:'automatic'}).code;runInContext(`(function(require,module,exports){${code}\n})`,context)(name=>{if(!(name in deps))throw Error('Unexpected dependency '+name);return deps[name]},module,module.exports);return module.exports};
  const {AgentConnectionsSettings}=load('src/components/AgentConnectionsSettings.tsx');
- return{calls,events,localEvents,dashboardCalls,nativeListeners,load,get changed(){return changed},render(value=enabled){enabled=value;cursor=0;return AgentConnectionsSettings({enabled,onEnabledChange:v=>changed=v})},renderHook(fn){cursor=0;return fn()},async flush(){for(const effect of effects.splice(0))effect();await new Promise(r=>setImmediate(r))},dispose(){for(const slot of slots)slot?.cleanup?.()},finish(){finish?.()}};
+ return{calls,events,localEvents,dashboardCalls,nativeListeners,load,get changed(){return changed},render(value=enabled){enabled=value;cursor=0;return AgentConnectionsSettings({enabled,onEnabledChange:v=>changed=v})},renderHook(fn){cursor=0;return fn()},async flush(){for(const effect of effects.splice(0))effect();await new Promise(r=>setImmediate(r))},dispose(){for(const slot of slots)slot?.cleanup?.()},finish(){for(const finish of pending)finish()}};
 }
 function elements(tree,type){if(!tree||typeof tree!=='object')return[];if(Array.isArray(tree))return tree.flatMap(t=>elements(t,type));return[...(tree.type===type?[tree]:[]),...elements(tree.props?.children,type)]}
 function text(tree){if(tree==null||typeof tree==='boolean')return'';if(typeof tree!=='object')return String(tree);if(Array.isArray(tree))return tree.map(text).join('');return text(tree.props?.children)}
@@ -57,7 +58,9 @@ test('a refresh from another native window updates the HUD provider and unsubscr
  const f=fixture(),{useProviderDashboardData}=f.load('src/providers/useProviderDashboardData.ts');
  f.renderHook(()=>useProviderDashboardData(['agent-quotas'],{url:'',systemId:'',refreshIntervalSeconds:30},true,{localAgentUsageEnabled:true}));await f.flush();
  const listener=f.nativeListeners.get('agent-usage-changed');assert.equal(typeof listener,'function');
- const before=f.dashboardCalls.length;listener();await f.flush();assert.equal(f.dashboardCalls.length,before+1);assert.deepEqual(Array.from(f.dashboardCalls.at(-1)[0]),['agent-quotas']);assert.equal(f.dashboardCalls.at(-1)[4],true);
+ const before=f.dashboardCalls.length;listener();await f.flush();const updates=f.dashboardCalls.slice(before);
+ assert.equal(updates.filter(args=>args[0].includes('agent-quotas')).length,6);
+ assert.deepEqual(updates.filter(args=>args[7]).map(args=>args[7]).sort(),[...agentIds].sort());assert.ok(updates.every(args=>args[4]===false),'reuse the completed native read instead of forcing it again');
  f.dispose();assert.equal(f.nativeListeners.has('agent-usage-changed'),false);
 });
 
@@ -82,12 +85,12 @@ test('opening AI settings while disabled only detects running apps, never reads 
 });
 test('explicit opt in passes consent; turning off hides account values and prevents further reads',async()=>{
  const f=fixture();f.render(false);await f.flush();f.render(true);await f.flush();let tree=f.render();assert.match(text(tree),/synthetic-plan/);
- assert.equal(accountCalls(f).length,1);assert.equal(accountCalls(f)[0].args.consent,true);
+ assert.equal(accountCalls(f).length,6);assert.ok(accountCalls(f).every(call=>call.args.consent===true&&agentIds.includes(call.args.agentId)));
  const staleRefresh=button(tree,'刷新连接状态').props.onClick;
- f.render(false);await f.flush();tree=f.render();assert.doesNotMatch(text(tree),/synthetic-plan/);await staleRefresh();assert.equal(accountCalls(f).length,1);
+ f.render(false);await f.flush();tree=f.render();assert.doesNotMatch(text(tree),/synthetic-plan/);await staleRefresh();assert.equal(accountCalls(f).length,6);
 });
 test('an in-flight account reply cannot reappear after consent is turned off',async()=>{
- const f=fixture({defer:true});f.render(true);await f.flush();assert.equal(accountCalls(f).length,1);
+ const f=fixture({defer:true});f.render(true);await f.flush();assert.equal(accountCalls(f).length,6);
  f.render(false);await f.flush();f.finish();await f.flush();assert.doesNotMatch(text(f.render()),/synthetic-plan|连接状态已刷新/);
  assert.equal(f.events.length,0);
  assert.equal(button(f.render(),'刷新连接状态').props.disabled,true);

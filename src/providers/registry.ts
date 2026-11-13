@@ -19,6 +19,8 @@ import type { SnapshotConnection } from "../domain/agriculture/contracts";
 
 export interface ProviderRegistryOptions {
   agentAccountRevision?:string;
+  agentId?:string;
+  forceAgentRefresh?:boolean;
   includeLiveProviders?: boolean;
   includeDemoProviders?: boolean;
   apiConfig?: ApiConnectionSettings;
@@ -41,7 +43,7 @@ export function providersFor(
     selected.push(...demoProviderRegistry.filter((provider) => requested.has(provider.id)));
   }
   if (includeLiveProviders && !includeDemoProviders) {
-    if (requested.has("agent-quotas")) selected.push(createAgentUsageProvider(options.apiConfig?.localAgentUsageEnabled === true,options.agentAccountRevision));
+    if (requested.has("agent-quotas")) selected.push(createAgentUsageProvider(options.apiConfig?.localAgentUsageEnabled === true,options.agentAccountRevision,options.agentId,options.forceAgentRefresh));
     if (requested.has("api-balances") || requested.has("api-deepseek")) selected.push(createApiUsageProvider("deepseek", options.apiConfig ?? defaultApiConnections));
     if (requested.has("api-balances") || requested.has("api-mimo")) selected.push(createApiUsageProvider("mimo", options.apiConfig ?? defaultApiConnections));
     if (requested.has("api-balances") || requested.has("api-anthropic")) selected.push(createApiUsageProvider("anthropic", options.apiConfig ?? defaultApiConnections));
@@ -51,7 +53,7 @@ export function providersFor(
   if (includeLiveProviders && requested.has("vps-status")) selected.push(createBeszelProvider(beszelConfig));
   if (includeLiveProviders && (requested.has("system-health") || requested.has("windows-health") || requested.has("notifications"))) selected.push(createWindowsHealthProvider());
   if (includeLiveProviders && requested.has("hardware-status")) selected.push(createHardwareProvider());
-  if (includeLiveProviders && !includeDemoProviders && (requested.has("agent-quotas") || requested.has("ollama-local"))) selected.push(createOllamaProvider());
+  if (includeLiveProviders && !includeDemoProviders && ((!options.agentId&&requested.has("agent-quotas")) || requested.has("ollama-local"))) selected.push(createOllamaProvider());
   if(includeLiveProviders&&!includeDemoProviders&&requested.has("agriculture-status"))selected.push(createAgricultureProvider(options.snapshotConnection));
   if(includeLiveProviders&&!includeDemoProviders&&requested.has("public-weather"))selected.push(createPublicWeatherProvider(options.snapshotConnection?.weatherEnabled));
   if(includeLiveProviders&&!includeDemoProviders&&requested.has("custom-market-quotes"))selected.push(createCustomHttpProvider(options.snapshotConnection?.customSources));

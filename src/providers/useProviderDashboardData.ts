@@ -9,7 +9,7 @@ import { logEvent } from "../services/appLogger";
 import { isWindowVisible, subscribeWindowVisibility } from "../services/windowVisibility";
 import {listen} from "@tauri-apps/api/event";
 import {isTauri} from "@tauri-apps/api/core";
-import {readAgentAccountRevision} from "./agents/agentUsageProvider";
+import {readAgentAccountRevision,quotaAgentIds} from "./agents/agentUsageProvider";
 
 export function useProviderDashboardData(providerIds: string[], beszelConfig: BeszelProviderConfig, includeLiveProviders = true, apiConfig?: ApiConnectionSettings, stockSymbols:string[]=[]): DashboardData {
   const ids = [...new Set(providerIds)].sort();
@@ -21,30 +21,39 @@ export function useProviderDashboardData(providerIds: string[], beszelConfig: Be
     let sourceGeneration=0;
     const { ids: selectedIds, beszelConfig: config, includeLiveProviders: allowLive, apiConfig: api, stockSymbols: selectedStocks } = JSON.parse(providerKey) as { ids: string[]; beszelConfig: BeszelProviderConfig; includeLiveProviders: boolean; apiConfig?: ApiConnectionSettings;stockSymbols:string[] };
     const monitorAccounts=allowLive&&api?.localAgentUsageEnabled===true&&selectedIds.includes("agent-quotas")&&isTauri();
-    let accountRevision:string|undefined,accountProbePending=false;
+    const accounts=new Map(quotaAgentIds.map(id=>[id,{revision:undefined as string|undefined,pending:false,generation:0}]));
     setData(emptyDashboardData());
     const refresh = (ids: string[], force = false) => {
-      if(monitorAccounts&&!accountRevision)ids=ids.filter(id=>id!=="agent-quotas");
+      if(monitorAccounts&&ids.includes("agent-quotas")){
+        for(const id of quotaAgentIds)void checkAccountRevision(id,true,force);
+        ids=ids.filter(id=>id!=="agent-quotas");
+      }
       if(!ids.length)return;
       const generation=sourceGeneration;
-      const expectedAccountRevision=accountRevision;
-      void refreshDashboardData(ids, config, allowLive, api, force, selectedStocks,expectedAccountRevision).then((snapshot) => {
-        if (active&&generation===sourceGeneration&&(!ids.includes("agent-quotas")||expectedAccountRevision===accountRevision)) setData((current) => mergeDashboardData(current, snapshot));
+      void refreshDashboardData(ids, config, allowLive, api, force, selectedStocks).then((snapshot) => {
+        if (active&&generation===sourceGeneration) setData((current) => mergeDashboardData(current, snapshot));
       }).catch((error: unknown) => {
         if (!active) return;
         logEvent("error", "provider.dashboard_refresh_failed", { message: error instanceof Error ? error.message.slice(0, 200) : String(error).slice(0, 200) });
       });
     };
-    const clearAccountQuota=()=>setData(current=>({...current,providers:current.providers.filter(provider=>provider.kind!=="agent"),providerDiagnostics:current.providerDiagnostics?.filter(provider=>provider.providerId!=="agent-quotas")??[]}));
-    const checkAccountRevision=async(forceRefresh=false)=>{
-      if(!monitorAccounts||!active||accountProbePending||(!forceRefresh&&!isWindowVisible()))return;
-      accountProbePending=true;
+    const clearAccountQuota=(id:string)=>setData(current=>({...current,providers:current.providers.filter(provider=>provider.kind!=="agent"||provider.id!==id),providerDiagnostics:current.providerDiagnostics?.filter(provider=>provider.providerId!==`agent-quotas-${id}`)??[]}));
+    const checkAccountRevision=async(id:typeof quotaAgentIds[number],refreshQuota=false,force=false)=>{
+      const account=accounts.get(id)!;
+      if(!monitorAccounts||!active||account.pending||(!force&&!isWindowVisible()))return;
+      account.pending=true;
       try{
-        const next=await readAgentAccountRevision(true);if(!active)return;
-        if(next!==accountRevision){accountRevision=next;clearAccountQuota();refresh(["agent-quotas"],true);}
-        else if(forceRefresh)refresh(["agent-quotas"],true);
-      }catch{if(active){accountRevision=undefined;clearAccountQuota();}}
-      finally{accountProbePending=false;}
+        const next=await readAgentAccountRevision(true,id);if(!active)return;
+        const changed=next!==account.revision;
+        if(changed){account.revision=next;account.generation++;clearAccountQuota(id);}
+        if(changed||refreshQuota){
+          const generation=account.generation;
+          void refreshDashboardData(["agent-quotas"],config,allowLive,api,force,selectedStocks,next,id).then(snapshot=>{
+            if(active&&generation===account.generation&&next===account.revision)setData(current=>mergeDashboardData(current,snapshot));
+          }).catch(()=>{if(active&&generation===account.generation)logEvent("warn","provider.agent_refresh_failed",{agent:id});});
+        }
+      }catch{if(active){account.revision=undefined;account.generation++;clearAccountQuota(id);}}
+      finally{account.pending=false;}
     };
     const providers = providersFor(selectedIds, config, { includeLiveProviders: allowLive, apiConfig: api,stockSymbols:selectedStocks });
     const stopPolling = startProviderPolling(selectedIds, providers, refresh, {
@@ -53,10 +62,17 @@ export function useProviderDashboardData(providerIds: string[], beszelConfig: Be
       setInterval: (callback, milliseconds) => window.setInterval(callback, milliseconds),
       clearInterval: (timerId) => window.clearInterval(timerId),
     });
-    const accountTimer=monitorAccounts?window.setInterval(()=>void checkAccountRevision(),10_000):undefined;
-    const stopAccountVisibility=monitorAccounts?subscribeWindowVisibility(()=>{if(isWindowVisible()){accountRevision=undefined;clearAccountQuota();void checkAccountRevision(true);}}):undefined;
-    if(monitorAccounts)void checkAccountRevision();
-    const refreshAgents=()=>{if(monitorAccounts)void checkAccountRevision(true);else if(allowLive&&selectedIds.includes("agent-quotas"))refresh(["agent-quotas","ollama-local"],true);};
+    const checkAccounts=()=>{for(const id of quotaAgentIds)void checkAccountRevision(id);};
+    const accountTimer=monitorAccounts?window.setInterval(checkAccounts,10_000):undefined;
+    const stopAccountVisibility=monitorAccounts?subscribeWindowVisibility(()=>{if(isWindowVisible())checkAccounts();}):undefined;
+    if(monitorAccounts)checkAccounts();
+    const refreshAgents=(event?:unknown)=>{
+      const id=(event as {detail?:{agentId?:string}}|undefined)?.detail?.agentId;
+      if(monitorAccounts&&quotaAgentIds.some(agent=>agent===id)){void checkAccountRevision(id as typeof quotaAgentIds[number],true);return;}
+      // Settings already performed its forced read. Other windows reuse that
+      // verified native result instead of issuing the same six queries again.
+      if(allowLive&&selectedIds.includes("agent-quotas"))refresh(["agent-quotas","ollama-local"]);
+    };
     window.addEventListener("codex-desktop.agents-refresh",refreshAgents);
     const sourceChanged=()=>{window.dispatchEvent(new Event("codex-desktop.custom-http-config-changed"));sourceGeneration++;setData(current=>({...current,agriculture:null,publicWeather:null,customMarket:null,publicNews:null,publicMarket:null,publicAStocks:null,publicChinaFutures:null,publicOverseasFutures:null,publicCftc:null,publicWasde:null,publicInspections:null,publicNoaa:null,nassAnnual:null,cropProgress:null,publicMonthly:null,publicIbge:null,publicConab:null,publicArgentina:null}));if(allowLive)refresh(selectedIds.filter(id=>["agriculture-status","public-weather","custom-market-quotes","public-news","public-a-shares","public-cn-futures","public-overseas-futures","public-market","public-cftc","public-wasde","public-inspections","public-noaa","public-nass-annual","public-crop-progress","public-monthly","public-ibge","public-conab","public-argentina"].includes(id)),true);};
     const customRefreshed=()=>{if(allowLive&&selectedIds.includes("custom-market-quotes"))refresh(["custom-market-quotes"],true);};

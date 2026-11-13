@@ -27,20 +27,47 @@ function stateLabel(account:AgentQuotaAccount|undefined,running:boolean,runtimeA
 
 export function AgentConnectionsSettings({enabled=false,onEnabledChange}:{enabled?:boolean;onEnabledChange?:(enabled:boolean)=>void}){
  const generation=useRef(0),allowed=useRef(enabled);allowed.current=enabled;
- const accountRevision=useRef<string|undefined>(undefined);
+ const accountStates=useRef(new Map<string,{revision?:string;checking:boolean;generation:number}>()),refreshBatch=useRef(0);
  const [runtime,setRuntime]=useState(unavailableAgentRuntime);
  useEffect(()=>{if(!isTauri())return;let active=true,pending=false;const refresh=async()=>{if(!active||pending||!isWindowVisible())return;pending=true;try{const value=await readAgentRuntime();if(active)setRuntime(value)}finally{pending=false}};void refresh();const timer=window.setInterval(()=>void refresh(),8000);const stop=subscribeWindowVisibility(()=>{if(isWindowVisible())void refresh()});window.addEventListener("codex-desktop.agents-refresh",refresh);return()=>{active=false;window.clearInterval(timer);stop();window.removeEventListener("codex-desktop.agents-refresh",refresh)}},[]);
  const activeClients=new Set(runningAgentClients(runtime).map(client=>client.id));
  const [accounts,setAccounts]=useState<AgentQuotaAccount[]>([]),[busy,setBusy]=useState(false),[message,setMessage]=useState("");
- const refresh=async(forced=true)=>{if(!allowed.current||!isTauri())return;const version=++generation.current;setBusy(true);setMessage("");try{const result=await Promise.allSettled([invoke<Parameters<typeof normalizeAgentUsage>[0]>("read_agent_usage",{force:forced,consent:true})]);if(version!==generation.current||!allowed.current)return;if(result[0].status==="fulfilled"){accountRevision.current=result[0].value.accountRevision;setAccounts(normalizeAgentUsage(result[0].value).accounts);if(forced)void emit("agent-usage-changed").catch(()=>window.dispatchEvent(new Event("codex-desktop.agents-refresh")));}else setAccounts([]);setMessage(result[0].status==="rejected"?"AI 连接读取失败，请查看客户端登录状态。":"连接状态已刷新");}catch{if(version===generation.current&&allowed.current){setAccounts([]);setMessage("连接检查失败");}}finally{if(version===generation.current)setBusy(false);}};
- useEffect(()=>{if(enabled&&isTauri())void refresh(false);else{generation.current++;setAccounts([]);setBusy(false);setMessage("");}return()=>{generation.current++;};},[enabled]);
+ const refreshAccount=async(id:string,forced=false,checkOnly=false)=>{
+  if(!allowed.current||!isTauri())return false;
+  const version=generation.current;let state=accountStates.current.get(id);
+  if(!state){state={checking:false,generation:0};accountStates.current.set(id,state);}
+  if(state.checking)return false;state.checking=true;
+  let revision:string;
+  try{revision=await readAgentAccountRevision(true,id);}
+  catch{if(version===generation.current&&allowed.current){state.revision=undefined;state.generation++;setAccounts(current=>current.filter(account=>account.id!==id));}return false;}
+  finally{state.checking=false;}
+  if(version!==generation.current||!allowed.current)return false;
+  const changed=revision!==state.revision;
+  if(changed){state.revision=revision;state.generation++;setAccounts(current=>current.filter(account=>account.id!==id));}
+  if(checkOnly&&!changed)return true;
+  const requestGeneration=++state.generation;
+  try{
+   const snapshot=await invoke<Parameters<typeof normalizeAgentUsage>[0]>("read_agent_usage",{force:forced,consent:true,agentId:id,expectedRevision:revision});
+   if(version!==generation.current||!allowed.current||requestGeneration!==state.generation||revision!==state.revision)return false;
+   const next=normalizeAgentUsage(snapshot,revision).accounts;
+   if(next.length!==1||next[0].id!==id)throw new Error("Agent 响应归属无效");
+   setAccounts(current=>[...current.filter(account=>account.id!==id),...next]);return true;
+  }catch{if(version===generation.current&&allowed.current&&requestGeneration===state.generation)setAccounts(current=>current.filter(account=>account.id!==id));return false;}
+ };
+ const refresh=async(forced=true)=>{
+  if(!allowed.current||!isTauri())return;const version=generation.current,batch=++refreshBatch.current;setBusy(true);setMessage("");
+  const result=await Promise.all(providers.map(provider=>refreshAccount(provider.id,forced)));
+  if(version!==generation.current||batch!==refreshBatch.current||!allowed.current)return;
+  const succeeded=result.some(Boolean);
+  if(forced&&succeeded)void emit("agent-usage-changed").catch(()=>window.dispatchEvent(new Event("codex-desktop.agents-refresh")));
+  setMessage(succeeded?(result.every(Boolean)?"连接状态已刷新":"部分连接读取失败，其余已刷新"):"AI 连接读取失败，请查看客户端登录状态。");setBusy(false);
+ };
+ useEffect(()=>{if(enabled&&isTauri())void refresh(false);else{generation.current++;accountStates.current.clear();setAccounts([]);setBusy(false);setMessage("");}return()=>{generation.current++;};},[enabled]);
  useEffect(()=>{
-  if(!enabled||!isTauri())return;let active=true,pending=false;
-  const check=async()=>{
-   if(!active||pending||!allowed.current||!isWindowVisible())return;pending=true;
-   try{const next=await readAgentAccountRevision(true);if(active&&allowed.current&&next!==accountRevision.current){accountRevision.current=next;generation.current++;setAccounts([]);void refresh(false);}}
-   catch{if(active&&allowed.current){generation.current++;setAccounts([]);setBusy(false);setMessage("当前账号暂时无法确认，请稍后刷新");}}
-   finally{pending=false;}
+  if(!enabled||!isTauri())return;let active=true;
+  const check=()=>{
+   if(!active||!allowed.current||!isWindowVisible())return;
+   for(const provider of providers)void refreshAccount(provider.id,false,true);
   };
   const timer=window.setInterval(()=>void check(),10_000);const stop=subscribeWindowVisibility(()=>void check());
   return()=>{active=false;window.clearInterval(timer);stop();};

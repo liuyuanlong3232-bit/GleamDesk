@@ -7,10 +7,12 @@ use super::*;
 use std::{io::Read, path::Path, sync::{Arc, Mutex}};
 
 #[derive(Clone, Default)]
-pub(super) struct State {
+struct Entry {
     probes: RequestCache<(), String>,
     tracker: Arc<Mutex<Tracker>>,
 }
+#[derive(Clone,Default)]
+pub(super) struct State { entries:Arc<Mutex<std::collections::BTreeMap<String,Entry>>> }
 
 struct Tracker { signature: Option<String>, started: u64, generation: u64 }
 impl Default for Tracker {
@@ -25,9 +27,15 @@ impl Tracker {
     }
 }
 impl State {
-    pub(super) fn revision(&self, fresh:bool) -> Result<String,String> {
-        let signature=self.probes.read((),if fresh {Duration::ZERO}else{Duration::from_secs(2)},Duration::from_secs(1),fingerprint)?;
-        Ok(self.tracker.lock().map_err(|_|"AI 账号状态暂时不可用")?.observe(signature))
+    fn entry(&self,id:&str)->Result<Entry,String>{
+        if !QUOTA_AGENT_IDS.contains(&id){return Err("未知的 AI 客户端".into())}
+        Ok(self.entries.lock().map_err(|_|"AI 账号状态暂时不可用")?.entry(id.into()).or_default().clone())
+    }
+    pub(super) fn revision(&self, id:&str, fresh:bool) -> Result<String,String> {
+        let entry=self.entry(id)?;
+        let signature=entry.probes.read((),if fresh {Duration::ZERO}else{Duration::from_secs(2)},Duration::from_secs(1),||fingerprint(id))?;
+        let revision=entry.tracker.lock().map_err(|_|"AI 账号状态暂时不可用")?.observe(signature);
+        Ok(revision)
     }
 }
 
@@ -83,15 +91,18 @@ fn claude_scope()->Result<String,String>{
     }
     digest(parts.join("\n").as_bytes())
 }
-fn fingerprint()->Result<String,String>{
+fn fingerprint(id:&str)->Result<String,String>{
     let mut parts=vec![];
-    if let Some(home)=codex_home(){parts.push(file_scope(&home.join("auth.json"))?);parts.push(file_scope(&home.join("config.toml"))?);}else{parts.push("no-codex-home".into())}
-    parts.push(claude_scope()?);
+    if id=="codex"{if let Some(home)=codex_home(){parts.push(file_scope(&home.join("auth.json"))?);parts.push(file_scope(&home.join("config.toml"))?);}else{parts.push("no-codex-home".into())}}
+    if id=="claude"{parts.push(claude_scope()?);}
     #[cfg(windows)] {
-        parts.push(kimi::source_scope().unwrap_or_else(|_|"kimi-unconfirmed".into()));
-        parts.push(cursor::source_scope().unwrap_or_else(|_|"cursor-unconfirmed".into()));
-        parts.push(doubao::source_scope().unwrap_or_else(|_|"doubao-unconfirmed".into()));
-        parts.push(antigravity_owner_scope().unwrap_or_else(|_|"antigravity-unconfirmed".into()));
+        match id {
+            "kimi"=>parts.push(kimi::source_scope().unwrap_or_else(|_|"kimi-unconfirmed".into())),
+            "cursor"=>parts.push(cursor::source_scope().unwrap_or_else(|_|"cursor-unconfirmed".into())),
+            "doubao"=>parts.push(doubao::source_scope().unwrap_or_else(|_|"doubao-unconfirmed".into())),
+            "antigravity"=>parts.push(antigravity_owner_scope().unwrap_or_else(|_|"antigravity-unconfirmed".into())),
+            _=>{},
+        }
     }
     digest(parts.join("\n").as_bytes())
 }
@@ -99,6 +110,14 @@ fn fingerprint()->Result<String,String>{
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]fn one_clients_exit_does_not_retire_another_clients_revision(){
+        let state=State::default();let codex=state.entry("codex").unwrap();let antigravity=state.entry("antigravity").unwrap();
+        let revision=codex.tracker.lock().unwrap().observe("same-codex-account".into());
+        antigravity.tracker.lock().unwrap().observe("running-account".into());
+        antigravity.tracker.lock().unwrap().observe("closed-service".into());
+        assert_eq!(codex.tracker.lock().unwrap().observe("same-codex-account".into()),revision);
+        assert!(state.entry("not-an-agent").is_err());
+    }
     #[test]fn switching_away_and_back_never_reuses_an_in_flight_revision(){
         let mut state=Tracker::default();let a=state.observe("account-a".into());
         assert_eq!(state.observe("account-a".into()),a);

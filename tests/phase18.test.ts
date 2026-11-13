@@ -313,12 +313,12 @@ test("fresh Agent metadata with unknown quotas replaces cached verified login fa
     for (const reason of ["read-failed","not-logged-in"] as const) {
       let clock=Date.now(), calls=0;
       Object.defineProperty(globalThis,"window",{configurable:true,value:{__TAURI_INTERNALS__:{invoke:async(command:string,args:unknown)=>{
-        assert.equal(command,"read_agent_usage");assert.deepEqual(args,{consent:true,expectedRevision:"1:1:1"});calls++;
+        assert.equal(command,"read_agent_usage");assert.deepEqual(args,{consent:true,expectedRevision:"1:1:1",agentId:"codex",force:false});calls++;
         return {accountRevision:"1:1:1",observedAtUnixMs:clock,accounts:[{id:"codex",name:"Codex",state:calls===1?"normal":"unknown",installed:true,running:calls===1,loginStatus:calls===1?"verified":reason==="not-logged-in"?"not-logged-in":"unknown",plan:calls===1?"plus":null,usageType:"subscription",source:"codex-cli",confidence:calls===1?"verified":"unknown",reason:calls===1?"":reason,observedAtUnixMs:clock,ordinaryUsageAllowed:null,windows:calls===1?[{id:"primary",usedPercent:20,windowDurationMins:300,resetsAtUnixMs:null}]:[]}]};
       }}}});
       const cache=new Map<string,string>();
       const runtime=createProviderRuntime({now:()=>clock,cache:{get:key=>cache.get(key),set:(key,value)=>{cache.set(key,value);}}});
-      const provider=createAgentUsageProvider(true,"1:1:1");
+      const provider=createAgentUsageProvider(true,"1:1:1","codex");
       const verified=await runtime.refresh(provider);
       assert.equal(verified.data?.accounts[0].confidence,"verified");
       clock+=300_001;

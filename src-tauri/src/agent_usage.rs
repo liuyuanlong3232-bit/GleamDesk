@@ -75,8 +75,13 @@ pub struct AgentObservation {
 #[serde(rename_all = "camelCase")]
 pub struct AgentSnapshot { accounts: Vec<AgentObservation>, observed_at_unix_ms: u64, account_revision:String }
 #[derive(Default)]
-pub struct AgentUsageState { cache: RequestCache<String, AgentSnapshot>, runtime_cache: RequestCache<(), AgentRuntimeSnapshot>, account_scope:account_scope::State }
-impl AgentUsageState { pub fn metrics(&self)->Option<crate::provider_requests::RequestMetrics>{self.cache.metrics()} }
+pub struct AgentUsageState { cache: [RequestCache<String, AgentSnapshot>;6], metadata_cache:RequestCache<(),Value>, runtime_cache: RequestCache<(), AgentRuntimeSnapshot>, account_scope:account_scope::State }
+const QUOTA_AGENT_IDS:[&str;6]=["codex","claude","antigravity","doubao","kimi","cursor"];
+impl AgentUsageState { pub fn metrics(&self)->Option<crate::provider_requests::RequestMetrics>{
+    let mut total=crate::provider_requests::RequestMetrics::default();
+    for item in &self.cache{let item=item.metrics()?;total.commands+=item.commands;total.loads+=item.loads;total.reused+=item.reused;total.failures+=item.failures;total.in_flight|=item.in_flight;total.recent_loads_unix_ms.extend(item.recent_loads_unix_ms);}
+    total.recent_loads_unix_ms.make_contiguous().sort_unstable();while total.recent_loads_unix_ms.len()>16{total.recent_loads_unix_ms.pop_front();}Some(total)
+} }
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all="camelCase")]
@@ -242,8 +247,9 @@ fn metadata() -> Value {
     }
     #[cfg(not(windows))] { Value::Null }
 }
-fn load(_app:Option<&tauri::AppHandle>) -> AgentSnapshot {
-    let metadata = metadata();
+fn load_account(_app:Option<&tauri::AppHandle>,metadata:&Value,id:&str) -> AgentObservation {
+    match id {
+    "codex"=>{
     let mut codex = executable("codex.exe").map(|path| match cli_reader::read_codex_usage(&path) {
         Ok((auth, quotas)) => codex_observation(&auth, &quotas),
         Err(error) => {
@@ -254,6 +260,9 @@ fn load(_app:Option<&tauri::AppHandle>) -> AgentSnapshot {
     }).unwrap_or_else(|| account("codex", "Codex"));
     codex.running = metadata["codexRunning"].as_bool().unwrap_or(false);
     codex.account_key=account_scope::codex_account_key();
+    codex
+    },
+    "claude"=>{
     let mut claude = executable("claude.exe").map(|path| match cli_reader::read_cli_json(&path, &["auth", "status", "--json"], Duration::from_secs(10)) {
         Ok(value) => claude_observation(&value),
         Err(_) => { let mut result = account("claude", "Claude Code"); result.installed = true; result.source = "claude-cli-auth-status"; result.reason = "read-failed"; result }
@@ -277,40 +286,52 @@ fn load(_app:Option<&tauri::AppHandle>) -> AgentSnapshot {
             if claude.reason.is_empty(){claude.reason="not-logged-in"}
         }
     }
-    let local = |id: &str, name: &str, key: &str| {
-        let mut result = account(id, name);
-        result.installed = metadata[format!("{key}Installed")].as_bool().unwrap_or(false);
-        result.running = metadata[format!("{key}Running")].as_bool().unwrap_or(false);
-        result.cli_detected = metadata[format!("{key}Cli")].as_bool().unwrap_or(false);
-        result.configuration_detected = metadata[format!("{key}Configuration")].as_bool();
-        result.cache_detected = metadata[format!("{key}Cache")].as_bool();
-        if !metadata.is_null() { result.source = "windows-client-metadata"; }
-        result
-    };
-    let mut antigravity=local("antigravity","Antigravity","antigravity");
-    #[cfg(windows)] antigravity_quota(&mut antigravity);
-    #[cfg(windows)] let doubao={use tauri::Manager;let cache_dir=_app.and_then(|app|app.path().app_data_dir().ok());let mut result=doubao::read(cache_dir.as_deref());result.installed=metadata["doubaoInstalled"]==true||result.login_status=="verified";result.running=metadata["doubaoRunning"]==true;result};
-    #[cfg(not(windows))] let doubao=local("doubao","豆包","doubao");
-    #[cfg(windows)] let kimi=kimi::read();
-    #[cfg(not(windows))] let kimi=account("kimi","Kimi Code");
-    #[cfg(windows)] let cursor=cursor::read();
-    #[cfg(not(windows))] let cursor=account("cursor","Cursor");
-    AgentSnapshot { accounts: vec![codex, claude, antigravity, doubao, kimi, cursor], observed_at_unix_ms: observed_unix_ms(), account_revision:String::new() }
+    claude
+    },
+    "antigravity"=>{
+        let mut result=account("antigravity","Antigravity");
+        result.installed=metadata["antigravityInstalled"]==true;result.running=metadata["antigravityRunning"]==true;
+        result.cli_detected=metadata["antigravityCli"]==true;result.configuration_detected=metadata["antigravityConfiguration"].as_bool();result.cache_detected=metadata["antigravityCache"].as_bool();
+        if !metadata.is_null(){result.source="windows-client-metadata";}
+        #[cfg(windows)] antigravity_quota(&mut result);result
+    },
+    "doubao"=>{
+        #[cfg(windows)] {use tauri::Manager;let cache_dir=_app.and_then(|app|app.path().app_data_dir().ok());let mut result=doubao::read(cache_dir.as_deref());result.installed=metadata["doubaoInstalled"]==true||result.login_status=="verified";result.running=metadata["doubaoRunning"]==true;result}
+        #[cfg(not(windows))] {account("doubao","豆包")}
+    },
+    "kimi"=>{
+        #[cfg(windows)] {kimi::read()}
+        #[cfg(not(windows))] {account("kimi","Kimi Code")}
+    },
+    "cursor"=>{
+        #[cfg(windows)] {cursor::read()}
+        #[cfg(not(windows))] {account("cursor","Cursor")}
+    },
+    _=>account("unknown","未知客户端"),
+    }
+}
+#[cfg(test)]
+fn load(app:Option<&tauri::AppHandle>)->AgentSnapshot{
+    let metadata=metadata();AgentSnapshot{accounts:QUOTA_AGENT_IDS.iter().map(|id|load_account(app,&metadata,id)).collect(),observed_at_unix_ms:observed_unix_ms(),account_revision:String::new()}
 }
 #[tauri::command]
-pub async fn read_agent_account_revision(state:tauri::State<'_,AgentUsageState>,consent:Option<bool>)->Result<String,String>{
+pub async fn read_agent_account_revision(state:tauri::State<'_,AgentUsageState>,consent:Option<bool>,agent_id:String)->Result<String,String>{
     require_usage_consent(consent)?;let scope=state.account_scope.clone();
-    tauri::async_runtime::spawn_blocking(move||scope.revision(false)).await.map_err(|_|"AI 账号识别任务失败".to_string())?
+    tauri::async_runtime::spawn_blocking(move||scope.revision(&agent_id,false)).await.map_err(|_|"AI 账号识别任务失败".to_string())?
 }
 #[tauri::command]
-pub async fn read_agent_usage(app:tauri::AppHandle,state: tauri::State<'_, AgentUsageState>,force:Option<bool>,consent:Option<bool>,expected_revision:Option<String>) -> Result<AgentSnapshot, String> {
+pub async fn read_agent_usage(app:tauri::AppHandle,state: tauri::State<'_, AgentUsageState>,force:Option<bool>,consent:Option<bool>,expected_revision:Option<String>,agent_id:String) -> Result<AgentSnapshot, String> {
     require_usage_consent(consent)?;
-    let cache = state.cache.clone();let scope=state.account_scope.clone();
+    let index=QUOTA_AGENT_IDS.iter().position(|id|*id==agent_id).ok_or("未知的 AI 客户端")?;
+    let cache = state.cache[index].clone();let scope=state.account_scope.clone();let metadata_cache=state.metadata_cache.clone();
     tauri::async_runtime::spawn_blocking(move || {
-        let revision=scope.revision(true)?;
+        let revision=scope.revision(&agent_id,false)?;
         if expected_revision.as_ref().is_some_and(|expected|expected!=&revision){return Err("agent-account-changed".into())}
-        let mut snapshot=cache.read(revision.clone(),if force==Some(true){Duration::ZERO}else{Duration::from_secs(300)},Duration::from_secs(10),||Ok(load(Some(&app))))?;
-        if scope.revision(true)?!=revision{return Err("agent-account-changed".into())}
+        let mut snapshot=cache.read(revision.clone(),if force==Some(true){Duration::ZERO}else{Duration::from_secs(300)},Duration::from_secs(10),||{
+            let metadata=metadata_cache.read((),Duration::from_secs(8),Duration::from_secs(1),||Ok(metadata()))?;
+            Ok(AgentSnapshot{accounts:vec![load_account(Some(&app),&metadata,&agent_id)],observed_at_unix_ms:observed_unix_ms(),account_revision:String::new()})
+        })?;
+        if scope.revision(&agent_id,true)?!=revision{return Err("agent-account-changed".into())}
         snapshot.account_revision=revision;Ok(snapshot)
     })
         .await.map_err(|_| "Agent 状态读取任务失败".to_string())?
@@ -319,6 +340,23 @@ pub async fn read_agent_usage(app:tauri::AppHandle,state: tauri::State<'_, Agent
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn a_slow_agent_does_not_lock_another_agents_quota_cache(){
+        use std::{sync::mpsc,thread};
+        let state=AgentUsageState::default();let slow=state.cache[2].clone();let fast=state.cache[0].clone();
+        let (started_tx,started_rx)=mpsc::channel();let (release_tx,release_rx)=mpsc::channel();let (done_tx,done_rx)=mpsc::channel();
+        let slow_thread=thread::spawn(move||slow.read("synthetic-antigravity".into(),Duration::from_secs(60),Duration::ZERO,||{
+            started_tx.send(()).unwrap();release_rx.recv().unwrap();Ok(AgentSnapshot{accounts:vec![],observed_at_unix_ms:0,account_revision:"slow".into()})
+        }));
+        started_rx.recv_timeout(Duration::from_secs(2)).unwrap();
+        let fast_thread=thread::spawn(move||{
+            let result=fast.read("synthetic-codex".into(),Duration::from_secs(60),Duration::ZERO,||Ok(AgentSnapshot{accounts:vec![],observed_at_unix_ms:0,account_revision:"fast".into()}));
+            done_tx.send(result.map(|snapshot|snapshot.account_revision)).unwrap();
+        });
+        let result=done_rx.recv_timeout(Duration::from_secs(2));let _=release_tx.send(());
+        slow_thread.join().unwrap().unwrap();fast_thread.join().unwrap();
+        assert_eq!(result.unwrap().unwrap(),"fast");
+    }
     #[test]
     fn usage_and_task_reads_require_explicit_consent(){
         assert!(require_usage_consent(None).is_err());

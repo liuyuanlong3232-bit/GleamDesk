@@ -38,12 +38,13 @@ export interface NativeSnapshot {
     windows: Array<{ id: string; usedPercent: number; windowDurationMins: number | null; resetsAtUnixMs: number | null; title?:string|null }> }>;
 }
 const names = [["codex", "Codex"], ["claude", "Claude Code"], ["antigravity", "Antigravity"], ["doubao", "豆包"], ["kimi", "Kimi Code"], ["cursor", "Cursor"]];
+export const quotaAgentIds=["codex","claude","antigravity","doubao","kimi","cursor"] as const;
 export function unknownAgentUsage(reason: AgentAvailabilityReason = "no-source"): AgentQuotaData {
   return { type: "agent-quotas", mode: "live", accounts: names.map(([id, name]) => ({ id, name, state: "unknown", observedAt: "", availabilityReason: reason, source: "none", confidence: "unknown", loginStatus: "unknown", usageWindows: [] })) };
 }
-export async function readAgentAccountRevision(consent=false):Promise<string>{
+export async function readAgentAccountRevision(consent=false,agentId:string):Promise<string>{
   if(!consent||!isTauri())throw new Error("未允许读取本机 AI 账号状态");
-  const revision=await invoke<unknown>("read_agent_account_revision",{consent:true});
+  const revision=await invoke<unknown>("read_agent_account_revision",{consent:true,agentId});
   if(typeof revision!=="string"||!/^\d+:\d+:\d+$/.test(revision))throw new Error("AI 账号状态暂时不可用");
   return revision;
 }
@@ -70,23 +71,25 @@ export function normalizeAgentUsage(snapshot: NativeSnapshot,expectedRevision?:s
   });
   return { type: "agent-quotas", mode: "live", accounts };
 }
-export function createAgentUsageProvider(consent=false,accountRevision?:string): Provider<AgentQuotaData> {
-  return { id: "agent-quotas", name: "AI Agent Usage", kind: "agent", refreshIntervalMs: isTauri() && consent ? 300_000 : null,
+export function createAgentUsageProvider(consent=false,accountRevision?:string,agentId?:string,force=false): Provider<AgentQuotaData> {
+  const unknown=(reason:AgentAvailabilityReason)=>{const data=unknownAgentUsage(reason);if(agentId)data.accounts=data.accounts.filter(account=>account.id===agentId);return data;};
+  return { id: agentId?`agent-quotas-${agentId}`:"agent-quotas", name: "AI Agent Usage", kind: "agent", refreshIntervalMs: isTauri() && consent ? 300_000 : null,
     persistCache:false,
-    backgroundRefreshIntervalMs: null, timeoutMs: 70_000, retryPolicy: { maxRetries: 0 }, cacheKey: `native-agents-v8:${consent}:${accountRevision??"unconfirmed"}`,
+    backgroundRefreshIntervalMs: null, timeoutMs: 70_000, retryPolicy: { maxRetries: 0 }, cacheKey: `native-agents-v9:${consent}:${agentId??"all"}:${accountRevision??"unconfirmed"}`,
     load: async () => {
-      if (!consent) return {status:"unavailable",data:unknownAgentUsage("permission-required"),retryable:false};
-      if (!isTauri()) return { status: "unavailable", data: unknownAgentUsage("unsupported-runtime"), retryable: false };
-      if (!accountRevision) return { status:"unavailable",data:unknownAgentUsage("read-failed"),retryable:false };
+      if (!consent) return {status:"unavailable",data:unknown("permission-required"),retryable:false};
+      if (!isTauri()) return { status: "unavailable", data: unknown("unsupported-runtime"), retryable: false };
+      if (!accountRevision||!agentId||!quotaAgentIds.some(id=>id===agentId)) return { status:"unavailable",data:unknown("read-failed"),retryable:false };
       try {
-        const snapshot = await invoke<NativeSnapshot>("read_agent_usage", {consent:true,expectedRevision:accountRevision});
+        const snapshot = await invoke<NativeSnapshot>("read_agent_usage", {consent:true,expectedRevision:accountRevision,agentId,force});
+        if(agentId&&(snapshot.accounts.length!==1||snapshot.accounts[0].id!==agentId))throw new Error("Agent 响应归属无效");
         const data = normalizeAgentUsage(snapshot,accountRevision);
         await recordCodexQuotaChange(data.accounts).catch(()=>logEvent("warn","history.codex_quota_write_failed"));
         return { status: data.accounts.some(account => account.availabilityReason === "read-failed") ? "degraded" : "normal", data,
           observedAt: new Date(snapshot.observedAtUnixMs).toISOString(), retryable: false };
       } catch(error) {
-        if(String(error).includes("agent-account-changed"))window.dispatchEvent(new Event("codex-desktop.agents-refresh"));
-        return { status: "error", data: unknownAgentUsage("read-failed"), error: "Agent 本地状态读取失败", retryable: false };
+        if(String(error).includes("agent-account-changed"))window.dispatchEvent(new CustomEvent("codex-desktop.agents-refresh",{detail:{agentId}}));
+        return { status: "error", data: unknown("read-failed"), error: "Agent 本地状态读取失败", retryable: false };
       }
     } };
 }
