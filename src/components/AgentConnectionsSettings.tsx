@@ -8,7 +8,7 @@ import type {AgentQuotaAccount} from "../domain/agent/contracts";
 
 // 只保留真正接入的客户端：这里显示连接状态，不展示额度明细。
 const providers=[
-  {id:"doubao",name:"豆包",url:"https://www.doubao.com/chat/",hint:"在豆包客户端登录后自动读取会员额度，无需重复网页登录。",detectOnly:false},
+  {id:"doubao",name:"豆包",url:"https://www.doubao.com/chat/",hint:"在此单独连接豆包，客户端可保持运行。客户端换号后需重新连接。登录仅在本机加密保存，最长 7 天。",detectOnly:false},
   {id:"codex",name:"Codex",url:"https://chatgpt.com/codex",hint:"通过 Codex CLI 的官方额度接口读取 5 小时与周额度。",detectOnly:false},
   {id:"claude",name:"Claude Code",url:"https://code.claude.com/docs/en/authentication",hint:"读取 Claude Code 客户端的订阅额度与登录状态。",detectOnly:false},
   {id:"antigravity",name:"Antigravity",url:"https://antigravity.google/",hint:"请先启动并登录客户端，然后回到这里刷新。",detectOnly:false},
@@ -32,6 +32,7 @@ export function AgentConnectionsSettings({enabled=false,onEnabledChange}:{enable
  useEffect(()=>{if(!isTauri())return;let active=true,pending=false;const refresh=async()=>{if(!active||pending||!isWindowVisible())return;pending=true;try{const value=await readAgentRuntime();if(active)setRuntime(value)}finally{pending=false}};void refresh();const timer=window.setInterval(()=>void refresh(),8000);const stop=subscribeWindowVisibility(()=>{if(isWindowVisible())void refresh()});window.addEventListener("codex-desktop.agents-refresh",refresh);return()=>{active=false;window.clearInterval(timer);stop();window.removeEventListener("codex-desktop.agents-refresh",refresh)}},[]);
  const activeClients=new Set(runningAgentClients(runtime).map(client=>client.id));
  const [accounts,setAccounts]=useState<AgentQuotaAccount[]>([]),[busy,setBusy]=useState(false),[message,setMessage]=useState("");
+ const [doubaoOpen,setDoubaoOpen]=useState(false),[doubaoBusy,setDoubaoBusy]=useState(false),[doubaoMessage,setDoubaoMessage]=useState("");
  const refreshAccount=async(id:string,forced=false,checkOnly=false)=>{
   if(!allowed.current||!isTauri())return false;
   const version=generation.current;let state=accountStates.current.get(id);
@@ -73,6 +74,19 @@ export function AgentConnectionsSettings({enabled=false,onEnabledChange}:{enable
   return()=>{active=false;window.clearInterval(timer);stop();};
  },[enabled]);
  const open=(url:string,name:string)=>void launchApplication({id:"agent-connection-link",name,icon:"",type:"url",target:url,pinned:false,order:0}).catch(()=>setMessage("无法打开官方页面"));
+ const manageDoubao=async(action:"open"|"connect"|"disconnect")=>{
+  if(!allowed.current||!isTauri()||doubaoBusy)return;
+  const version=generation.current;setDoubaoBusy(true);setDoubaoMessage("");
+  try{
+   await invoke(`doubao_login_${action}`,{consent:true});
+   if(version!==generation.current||!allowed.current)return;
+   setDoubaoOpen(action==="open");
+   setDoubaoMessage(action==="open"?"在官方窗口登录后，返回这里点完成连接。":action==="connect"?"豆包已连接":"豆包已断开");
+   if(action!=="connect")setAccounts(current=>current.filter(account=>account.id!=="doubao"));
+   await refreshAccount("doubao",true);
+  }catch(error){if(version===generation.current&&allowed.current)setDoubaoMessage(typeof error==="string"?error:"豆包连接失败，请重试");}
+  finally{setDoubaoBusy(false);}
+ };
  return <div className="settings-section">
   <label className="settings-toggle"><span>允许读取本机 AI 账号与用量</span><input aria-label="允许读取本机 AI 账号与用量" type="checkbox" checked={enabled} onChange={event=>onEnabledChange?.(event.target.checked)}/></label>
   <small>开启后仅检查客户端登录与额度状态，不发送对话。关闭不会删除已有记录。</small>
@@ -86,6 +100,14 @@ export function AgentConnectionsSettings({enabled=false,onEnabledChange}:{enable
      <small>{stateLabel(account,running,runtime.available)}{account?.plan?` · ${account.plan}`:""}</small>
     </div>
     {item.detectOnly&&<small className="agent-connection-note">仅检测安装与运行，不读取额度。</small>}
+    {item.id==="doubao"&&<>
+     <div className="agent-connection-row">
+      <button className="action-button" disabled={!enabled||!isTauri()||doubaoBusy} onClick={()=>void manageDoubao("open")}>{connected?"重新连接豆包":"连接豆包"}</button>
+      {doubaoOpen&&<button className="action-button" disabled={!enabled||doubaoBusy} onClick={()=>void manageDoubao("connect")}>{doubaoBusy?"连接中…":"完成连接"}</button>}
+      {(connected||doubaoOpen)&&<button className="action-button" disabled={!enabled||doubaoBusy} onClick={()=>void manageDoubao("disconnect")}>断开豆包</button>}
+     </div>
+     {doubaoMessage&&<small role="status">{doubaoMessage}</small>}
+    </>}
     <details className="settings-help"><summary>连接说明</summary><p>{item.hint}</p><button onClick={()=>open(item.url,item.name)}>官方页面／登录说明 ↗</button></details>
    </section>;})}
   </div>

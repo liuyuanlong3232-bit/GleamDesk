@@ -20,9 +20,9 @@ test("API connection cards stay collapsed and keep permissions and consent copy"
 });
 import { normalizeAgentUsage, unknownAgentUsage, createAgentUsageProvider, agentClients, normalizeAgentRuntime, runningAgentClients } from "../src/providers/agents/agentUsageProvider";
 import {AgentConnectionsSettings} from "../src/components/AgentConnectionsSettings";
-test("Doubao connections reuse the desktop login without a separate member web window",()=>{
+test("Doubao offers an explicit independent login and explains account switching",()=>{
  const html=renderToStaticMarkup(createElement(AgentConnectionsSettings));
- assert.match(html,/豆包客户端.*登录/);assert.doesNotMatch(html,/连接豆包会员|读取豆包会员/);
+ assert.match(html,/连接豆包/);assert.match(html,/客户端换号后需重新连接/);assert.doesNotMatch(html,/无需重复网页登录/);
 });
 test("Kimi quota reaches the HUD with its actual monthly window",()=>{
  const observedAtUnixMs=Date.now();

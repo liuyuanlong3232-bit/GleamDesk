@@ -2,7 +2,7 @@
 
 使用 PowerShell。先检查现有实现，局部修改后验证相关功能。不要提交配置、凭据、数据库、日志、构建产物或真实响应。
 
-前端：`npm.cmd ci`、`npm.cmd run typecheck`、`npm.cmd test`、`npm.cmd run build`。原生：`npm.cmd run tauri -- build --debug --no-bundle`。Cargo 缓存保留在开发目录 `src-tauri/target`，禁止复制进验收归档。
+前端：`npm.cmd ci`、`npm.cmd run typecheck`、`npm.cmd test`、`npm.cmd run build`。原生：`npm.cmd run tauri -- build --debug --no-bundle`。构建前设置 `$env:CARGO_TARGET_DIR='D:\win桌面\src-tauri\target'`，复用固定开发缓存，禁止复制进验收归档。
 
 凭据或远程服务变更需用户明确授权。UI 和 Windows 窗口行为需实际运行核验，不能用构建成功代替。
 
@@ -47,8 +47,8 @@ Windows 透明 HUD 的 Computer Use 可能同时返回 14×14 小区域与完整
 HUD 邮箱面板的按钮须显式重置 appearance、背景和边框，避免 WebView 默认灰色按钮；长列表独立滚动，账户行不显示重复的邮箱类型介绍。
 HUD 展开面板须同时保留 CSS 视口宽度上限和侧边可用空间限制；只依赖 resize 更新的变量，缩小窗口的首帧可能沿用旧宽度。
 离线翻译资源可复用同版本开发副本的 `public/translation-models` 与 `public/translation-runtime`，仍须由 `npm run build` 重新校验；缺包先按锁文件运行 `npm ci`，不要跳过模型检查。
-豆包登录读取须按 `Local State` 的 `profile.last_used` 选择当前配置档，不能写死 `Default` 或跨档回退；赠送额度与订阅窗口分开读取，仅查询官方只读额度接口。
-豆包运行时可能独占 Cookies 数据库，首次退出后导入本机 DPAPI 加密缓存；DPAPI 测试需在正常 Windows 用户环境运行，沙箱失败不能判为加密实现错误。
+豆包使用用户确认的独立官方登录窗口（InPrivate WebView），不再打开客户端 Cookies 数据库或回退旧导入缓存；客户端换号不会切换此连接。赠送额度与订阅窗口分开读取，仅查询官方只读额度接口。
+豆包独立登录通过官方额度接口验证后才保存 DPAPI 缓存，最长 7 天；重新连接先撤下旧登录，取消或账号变化不能保存迟到结果。DPAPI 测试需在正常 Windows 用户环境运行，沙箱失败不能判为加密实现错误。
 NSIS 安装后的 EXE 与便携 EXE 可能仅有 `__TAURI_BUNDLE_TYPE_VAR_UNK` → `NSS` 三字节差异；验签原安装包，并逐字节确认只有该唯一标记变化，不能直接把两种 EXE 的哈希不同判为安装损坏。
 从 Codex（MSIX）直接启动的进程可能把 AppData 写入 `Packages\OpenAI.Codex_*\LocalCache`；仅核对环境变量或 EXE 路径不足以证明使用了日用配置。启动验收须确认进程无包身份（`GetPackageFullName` 返回 15700），并核对配置文件句柄的真实路径；发现重定向时，保留两边数据后恢复到正常目录，不从代理进程直接启动日用实例。
 设计类任务（图标、配色、版式、动效等）先只出稿：给出 2–3 个方向并附 16/32/48px 小尺寸预览，等用户明确选定后才修改仓库文件、替换资源并重新构建；未经确认不得提交或推送设计改动。
@@ -57,7 +57,7 @@ NSIS 安装后的 EXE 与便携 EXE 可能仅有 `__TAURI_BUNDLE_TYPE_VAR_UNK` �
 Hub 拖动图标时仍在原按钮捕获指针，以保留轻点行为；越过拖动阈值后只拦截本次 click，下一次按下要清除拦截。Hub 保持四边吸附与沿边偏移保存，不能因去掉手柄改成桌面任意坐标定位。
 工作台和 Hub 是独立窗口；手动刷新 AI 连接成功后用 Tauri 全局事件通知额度视图，不能只 dispatch 当前窗口事件，否则设置已连接而 Hub 仍保留旧读数。事件不携带账号或额度内容，视图仍按原授权读取。
 账号切换不能只靠五分钟额度刷新：各 Agent 单独核对登录来源、持有账号修订和缓存，读取前后核对并丢弃旧请求；一家退出或失败只能撤下它自己的额度，慢客户端不能阻塞其他家。恢复窗口可见时不先清空未变账号；设置刷新通知复用刚完成的原生结果。
-豆包目录不能证明账号归属；登录库锁定或当前会话无法确认时不使用旧登录缓存。关闭窗口可能仍驻留后台，须从托盘彻底退出后刷新，不能把“还有后台进程”或缓存令牌仍有效当成当前账号证明。
+豆包客户端目录、后台进程和旧缓存不能证明独立连接的账号归属；额度缓存只绑定 GleamDesk 当前连接，断开、过期或重新连接时原读数失效。
 release 原生测试 EXE 通过 Python subprocess.run 等待并捕获真实退出码；PowerShell 直接启动 Windows 子系统测试程序可能提前返回，不能据此判断测试结束。
 Antigravity.exe 可能被当作 Node 宿主运行 --import/--require 辅助服务；Hub 运行识别须排除这些进程，不能只按 EXE 名称判断编辑器仍在运行。
 Dock 常态不抢焦点；右键菜单打开时临时允许聚焦并监听原生失焦，关闭后恢复。仅监听 DOM blur 无法可靠处理裁剪窗口外的桌面点击；Dock 置顶使用 SWP_NOACTIVATE，不能再次压到普通应用下面。

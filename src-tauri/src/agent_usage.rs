@@ -75,7 +75,9 @@ pub struct AgentObservation {
 #[serde(rename_all = "camelCase")]
 pub struct AgentSnapshot { accounts: Vec<AgentObservation>, observed_at_unix_ms: u64, account_revision:String }
 #[derive(Default)]
-pub struct AgentUsageState { cache: [RequestCache<String, AgentSnapshot>;6], metadata_cache:RequestCache<(),Value>, runtime_cache: RequestCache<(), AgentRuntimeSnapshot>, account_scope:account_scope::State }
+pub struct AgentUsageState { cache: [RequestCache<String, AgentSnapshot>;6], metadata_cache:RequestCache<(),Value>, runtime_cache: RequestCache<(), AgentRuntimeSnapshot>, account_scope:account_scope::State,
+    #[cfg(windows)] browser_login:doubao::BrowserState,
+}
 const QUOTA_AGENT_IDS:[&str;6]=["codex","claude","antigravity","doubao","kimi","cursor"];
 impl AgentUsageState { pub fn metrics(&self)->Option<crate::provider_requests::RequestMetrics>{
     let mut total=crate::provider_requests::RequestMetrics::default();
@@ -315,9 +317,10 @@ fn load(app:Option<&tauri::AppHandle>)->AgentSnapshot{
     let metadata=metadata();AgentSnapshot{accounts:QUOTA_AGENT_IDS.iter().map(|id|load_account(app,&metadata,id)).collect(),observed_at_unix_ms:observed_unix_ms(),account_revision:String::new()}
 }
 #[tauri::command]
-pub async fn read_agent_account_revision(state:tauri::State<'_,AgentUsageState>,consent:Option<bool>,agent_id:String)->Result<String,String>{
-    require_usage_consent(consent)?;let scope=state.account_scope.clone();
-    tauri::async_runtime::spawn_blocking(move||scope.revision(&agent_id,false)).await.map_err(|_|"AI 账号识别任务失败".to_string())?
+pub async fn read_agent_account_revision(app:tauri::AppHandle,state:tauri::State<'_,AgentUsageState>,consent:Option<bool>,agent_id:String)->Result<String,String>{
+    use tauri::Manager;
+    require_usage_consent(consent)?;let scope=state.account_scope.clone();let dir=app.path().app_data_dir().ok();
+    tauri::async_runtime::spawn_blocking(move||scope.revision(&agent_id,false,dir.as_deref())).await.map_err(|_|"AI 账号识别任务失败".to_string())?
 }
 #[tauri::command]
 pub async fn read_agent_usage(app:tauri::AppHandle,state: tauri::State<'_, AgentUsageState>,force:Option<bool>,consent:Option<bool>,expected_revision:Option<String>,agent_id:String) -> Result<AgentSnapshot, String> {
@@ -325,16 +328,41 @@ pub async fn read_agent_usage(app:tauri::AppHandle,state: tauri::State<'_, Agent
     let index=QUOTA_AGENT_IDS.iter().position(|id|*id==agent_id).ok_or("未知的 AI 客户端")?;
     let cache = state.cache[index].clone();let scope=state.account_scope.clone();let metadata_cache=state.metadata_cache.clone();
     tauri::async_runtime::spawn_blocking(move || {
-        let revision=scope.revision(&agent_id,false)?;
+        use tauri::Manager;
+        let dir=app.path().app_data_dir().ok();
+        let revision=scope.revision(&agent_id,false,dir.as_deref())?;
         if expected_revision.as_ref().is_some_and(|expected|expected!=&revision){return Err("agent-account-changed".into())}
         let mut snapshot=cache.read(revision.clone(),if force==Some(true){Duration::ZERO}else{Duration::from_secs(300)},Duration::from_secs(10),||{
             let metadata=metadata_cache.read((),Duration::from_secs(8),Duration::from_secs(1),||Ok(metadata()))?;
             Ok(AgentSnapshot{accounts:vec![load_account(Some(&app),&metadata,&agent_id)],observed_at_unix_ms:observed_unix_ms(),account_revision:String::new()})
         })?;
-        if scope.revision(&agent_id,true)?!=revision{return Err("agent-account-changed".into())}
+        if scope.revision(&agent_id,true,dir.as_deref())?!=revision{return Err("agent-account-changed".into())}
         snapshot.account_revision=revision;Ok(snapshot)
     })
         .await.map_err(|_| "Agent 状态读取任务失败".to_string())?
+}
+
+fn require_login_window(label:&str,consent:Option<bool>)->Result<(),String>{
+    require_usage_consent(consent)?;
+    if matches!(label,"main"|"dashboard"){Ok(())}else{Err("此窗口不能管理豆包登录".into())}
+}
+#[tauri::command]
+pub async fn doubao_login_open(app:tauri::AppHandle,window:tauri::Webview,consent:Option<bool>)->Result<(),String>{
+    require_login_window(window.label(),consent)?;
+    #[cfg(windows)] {doubao::open(&app)}
+    #[cfg(not(windows))] {let _=app;Err("豆包连接需要 Windows 桌面应用".into())}
+}
+#[tauri::command]
+pub async fn doubao_login_connect(app:tauri::AppHandle,window:tauri::Webview,consent:Option<bool>)->Result<(),String>{
+    require_login_window(window.label(),consent)?;
+    #[cfg(windows)] {tauri::async_runtime::spawn_blocking(move||doubao::connect(&app)).await.map_err(|_|"豆包连接任务失败".to_string())?}
+    #[cfg(not(windows))] {let _=app;Err("豆包连接需要 Windows 桌面应用".into())}
+}
+#[tauri::command]
+pub async fn doubao_login_disconnect(app:tauri::AppHandle,window:tauri::Webview,consent:Option<bool>)->Result<(),String>{
+    require_login_window(window.label(),consent)?;
+    #[cfg(windows)] {doubao::disconnect(&app)}
+    #[cfg(not(windows))] {let _=app;Err("豆包连接需要 Windows 桌面应用".into())}
 }
 
 #[cfg(test)]

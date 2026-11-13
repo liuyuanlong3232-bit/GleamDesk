@@ -1,18 +1,26 @@
-// Quota and Chromium login handling ported from Wahwayhale/dsh-connect-doubao,
-// revision a3911074206d78d6ac170aee5ce081990f3ca30d (MIT).
-// Rust/WinHTTP adaptation: read-only app profile; no chat or browser injection.
-// User-authorized DPAPI session cache is profile-bound and expires within seven days.
+// Official quota parsing adapted from Wahwayhale/dsh-connect-doubao (MIT).
+// Browser-session approach: revision 8cefed037b065da481113b8182858ac037f1ba62.
+// Use a separate, user-operated WebView login; never open the desktop Cookies DB.
+// Only the captured session persists, protected by current-user DPAPI for <=7 days.
 use super::*;
-
-use std::{io::Read,path::Path};
-use base64::{Engine,engine::general_purpose::STANDARD};
+use std::{io::Read,path::Path,sync::Mutex};
+use tauri::{Emitter,Manager};
 use windows_sys::Win32::Security::Cryptography::*;
-const REQUIRED:&[&str]=&["sessionid","sessionid_ss","sid_tt","sid_guard","uid_tt","ttwid","odin_tt","passport_csrf_token","s_v_web_id"];
+const REQUIRED:&[&str]=&["sessionid","sessionid_ss","sid_tt","uid_tt"];
 const QUOTA_PATH:&str="/alice/commerce/sale/subscription/quota/summary/";
-
+const MAX_SESSION_AGE:u64=7*24*60*60*1000;
+const BROWSER_SCOPE:&str="gleamdesk-doubao-browser-v1";
+static SESSION_WRITE:Mutex<()>=Mutex::new(());
+struct Login{header:crate::credentials::Secret,token:Option<crate::credentials::Secret>,expires:u64}
+struct Sensitive(Vec<u8>);
+impl Drop for Sensitive{fn drop(&mut self){self.0.fill(0)}}
+#[derive(Default)]
+pub(super) struct BrowserState{flow:Mutex<Flow>}
+#[derive(Default)]
+struct Flow{generation:u64,label:Option<String>,connecting:bool}
 fn failure(issue:&'static str)->AgentObservation{
  let mut result=account("doubao","豆包");result.source="doubao-client-api";
- result.reason=if matches!(issue,"profile-not-found"|"not-logged-in"|"login-expired"){"not-logged-in"}else if issue=="quota-unavailable"{"quota-unavailable"}else{"read-failed"};
+ result.reason=if matches!(issue,"browser-not-connected"|"cache-expired"|"not-logged-in"|"login-expired"){"not-logged-in"}else if issue=="quota-unavailable"{"quota-unavailable"}else{"read-failed"};
  if result.reason=="not-logged-in"{result.login_status="not-logged-in";}
  result.membership=Some(serde_json::json!({"available":false,"benefits":[],"source":"doubao-client-api","readIssue":issue}));result
 }
@@ -43,20 +51,6 @@ fn parse_quota(value:&Value)->AgentObservation{
  result.ordinary_usage_allowed=Some(!exhausted);result.state=if exhausted||result.windows.iter().any(|w|w.used_percent>=100.){"warning"}else{"normal"};
  result.membership=Some(serde_json::json!({"available":true,"source":"doubao-client-api","planName":result.plan,"benefits":benefits,"cached":false,"observedAtUnixMs":result.observed_at_unix_ms}));result
 }
-fn decode_cookie(plaintext:&[u8],host:&str)->Result<String,&'static str>{
- let digest=crate::analysis::sha256(host.as_bytes()).map_err(|_|"login-unreadable")?;
- let hash=(0..32).map(|i|u8::from_str_radix(&digest[i*2..i*2+2],16).unwrap_or(0)).collect::<Vec<_>>();
- let prefix=[32,24,16].into_iter().find(|n|plaintext.len()>=*n&&plaintext[..*n]==hash[..*n]).unwrap_or(0);
- let value=&plaintext[prefix..];
- if value.len()>16384||!value.iter().all(|b|(0x20..=0x7e).contains(b)&&*b!=b';'){return Err("login-unreadable")}
- String::from_utf8(value.to_vec()).map_err(|_|"login-unreadable")
-}
-fn decrypt_cookie(key:&[u8],encrypted:&[u8],host:&str)->Result<String,&'static str>{
- if encrypted.starts_with(b"v20"){return Err("encryption-unsupported")}
- if encrypted.len()<31||!matches!(encrypted.get(..3),Some(b"v10"|b"v11")){return Err("login-unreadable")}
- let split=encrypted.len()-16;let plaintext=aes_gcm(key,&encrypted[3..15],&encrypted[15..split],&encrypted[split..])?;
- decode_cookie(&plaintext.0,host)
-}
 fn unprotect(input:&[u8])->Result<Sensitive,&'static str>{
  let mut output=CRYPT_INTEGER_BLOB::default();let blob=CRYPT_INTEGER_BLOB{cbData:input.len() as u32,pbData:input.as_ptr() as *mut u8};
  if input.is_empty()||input.len()>256*1024||unsafe{CryptUnprotectData(&blob,std::ptr::null_mut(),std::ptr::null(),std::ptr::null(),std::ptr::null(),CRYPTPROTECT_UI_FORBIDDEN,&mut output)}==0{return Err("login-unreadable")}
@@ -69,107 +63,20 @@ fn bounded_file(path:&Path)->Result<Sensitive,&'static str>{
  let mut bytes=Sensitive(vec![]);std::fs::File::open(path).map_err(|_|"login-unreadable")?.take(4*1024*1024+1).read_to_end(&mut bytes.0).map_err(|_|"login-unreadable")?;
  if bytes.0.len()>4*1024*1024{return Err("login-unreadable")}Ok(bytes)
 }
-fn profiles()->Vec<PathBuf>{
- let mut out=vec![];
- for name in ["GLEAMDESK_DOUBAO_PROFILE","LOCALAPPDATA","APPDATA"]{
-  let Some(value)=std::env::var_os(name)else{continue};let root=PathBuf::from(value);
-  if !root.is_absolute()||root.to_string_lossy().starts_with("\\\\"){continue}
-  let path=if name=="GLEAMDESK_DOUBAO_PROFILE"{root}else{root.join("Doubao/User Data")};
-  if path.join("Local State").is_file()&&!out.contains(&path){out.push(path)}
- }
- // Client-owned --user-data-dir is authoritative for installations moved to another drive.
- if let Ok(system)=crate::network_tools::system_executable("WindowsPowerShell/v1.0/powershell.exe"){
-  const SCRIPT:&str=r#"$ErrorActionPreference='Stop';[Console]::OutputEncoding=[Text.UTF8Encoding]::new($false);$paths=@(Get-CimInstance Win32_Process -Filter "Name='Doubao.exe'" | ForEach-Object {if($_.CommandLine -match '--user-data-dir(?:=|\s+)(?:"([^"]+)"|([^\s]+))'){if($matches[1]){$matches[1]}else{$matches[2]}}});ConvertTo-Json -InputObject @{paths=$paths} -Compress"#;
-  if let Ok(value)=cli_reader::read_cli_json(&system,&["-NoProfile","-NonInteractive","-Command",SCRIPT],Duration::from_secs(3)){
-   for path in value["paths"].as_array().into_iter().flatten().take(8).filter_map(Value::as_str).filter(|s|s.len()<2048).map(PathBuf::from){if path.is_absolute()&&!path.to_string_lossy().starts_with("\\\\")&&path.join("Local State").is_file()&&!out.contains(&path){out.insert(0,path)}}
-  }
- }
- out
-}
-fn profile_folder(value:Option<&str>)->Result<&str,&'static str>{
- let value=value.unwrap_or("Default");
- if value.is_empty()||value.len()>100||!value.bytes().all(|c|c.is_ascii_alphanumeric()||b" _-".contains(&c)){return Err("profile-unsupported")}
- Ok(value)
-}
-struct Login{header:crate::credentials::Secret,token:Option<crate::credentials::Secret>,expires:u64}
-const MAX_SESSION_AGE:u64=7*24*60*60*1000;
-fn active_profile(profile:&Path)->Result<String,&'static str>{
- let state:Value=serde_json::from_slice(&bounded_file(&profile.join("Local State"))?.0).map_err(|_|"login-unreadable")?;
- Ok(profile_folder(state.pointer("/profile/last_used").and_then(Value::as_str))?.into())
-}
-fn cookie_header(profile:&Path)->Result<Login,&'static str>{
- #[derive(serde::Deserialize)]struct State{os_crypt:Crypt,#[serde(default)]profile:Profile}
- #[derive(Default,serde::Deserialize)]struct Profile{last_used:Option<String>}
- #[derive(serde::Deserialize)]struct Crypt{encrypted_key:String}
- let state:State=serde_json::from_slice(&bounded_file(&profile.join("Local State"))?.0).map_err(|_|"login-unreadable")?;
- let bytes=Sensitive(STANDARD.decode(state.os_crypt.encrypted_key).map_err(|_|"login-unreadable")?);
- if !bytes.0.starts_with(b"DPAPI"){return Err("encryption-unsupported")}
- let key=unprotect(&bytes.0[5..])?;if key.0.len()!=32{return Err("login-unreadable")}
- let folder=profile_folder(state.profile.last_used.as_deref())?;
- let db=rusqlite::Connection::open_with_flags(profile.join(folder).join("Network/Cookies"),rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY|rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX).map_err(|_|"login-file-busy")?;
- db.busy_timeout(Duration::from_millis(200)).map_err(|_|"login-file-busy")?;
- db.execute_batch("PRAGMA query_only=ON;").map_err(|_|"login-file-busy")?;
- // Only this app's service domains. No browser-wide cookie access or profile copying.
- let mut stmt=db.prepare("SELECT host_key,name,encrypted_value,expires_utc FROM cookies WHERE (host_key IN ('doubao.com','.doubao.com','bytedance.com','.bytedance.com') OR host_key LIKE '%.doubao.com' OR host_key LIKE '%.bytedance.com') AND length(encrypted_value) BETWEEN 31 AND 32768 LIMIT 512").map_err(|_|"login-unreadable")?;
- let rows=stmt.query_map([],|r|Ok((r.get::<_,String>(0)?,r.get::<_,String>(1)?,r.get::<_,Vec<u8>>(2)?,r.get::<_,i64>(3)?))).map_err(|_|"login-file-busy")?;
- let mut pairs=std::collections::BTreeMap::new();let mut unsupported=false;let now=observed_unix_ms();let mut expires=now+MAX_SESSION_AGE;
- for row in rows{
-  let (host,name,encrypted,expiry)=row.map_err(|_|"login-file-busy")?;
-  if name.is_empty()||name.len()>100||!name.bytes().all(|c|c.is_ascii_alphanumeric()||b"-_.".contains(&c)){continue}
-  if expiry>0{let at=(expiry as u64).saturating_sub(11644473600000000)/1000;if at<=now{continue}if REQUIRED.contains(&name.as_str()){expires=expires.min(at)}}
-  match decrypt_cookie(&key.0,&encrypted,&host){Ok(value)if !value.is_empty()=>{pairs.insert(name,crate::credentials::Secret::from_string(value));},Err("encryption-unsupported")=>unsupported=true,_=>{}}
- }
- if REQUIRED.iter().any(|name|!pairs.contains_key(*name)){return Err(if unsupported{"encryption-unsupported"}else{"not-logged-in"})}
- let mut header=String::new();for (name,value) in &pairs{if !header.is_empty(){header.push_str("; ")}header.push_str(name);header.push('=');header.push_str(value.as_str());}
- if header.len()>64*1024{return Err("login-unreadable")}
- let token=pairs.remove("msToken");Ok(Login{header:crate::credentials::Secret::from_string(header),token,expires})
-}
 #[derive(serde::Serialize,serde::Deserialize)]
 struct SavedLogin{version:u8,profile:String,saved_at:u64,expires:u64,header:String,token:Option<String>}
 impl Drop for SavedLogin{fn drop(&mut self){std::mem::take(&mut self.header).into_bytes().fill(0);if let Some(token)=self.token.take(){token.into_bytes().fill(0)}}}
-fn cache_scope(root:&Path,folder:&str)->Result<String,&'static str>{
- // The folder identifies a profile, not its current account. Only client-owned
- // identity/session cookies bind an imported login to the account signed in now.
- let db=rusqlite::Connection::open_with_flags(root.join(folder).join("Network/Cookies"),rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY|rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX).map_err(|_|"account-unconfirmed")?;
- db.busy_timeout(Duration::from_millis(100)).map_err(|_|"account-unconfirmed")?;
- let mut query=db.prepare("SELECT host_key,name,encrypted_value FROM cookies WHERE (host_key IN ('doubao.com','.doubao.com','bytedance.com','.bytedance.com') OR host_key LIKE '%.doubao.com' OR host_key LIKE '%.bytedance.com') AND name IN ('uid_tt','sessionid','sessionid_ss','sid_tt','sid_guard') AND length(encrypted_value) BETWEEN 1 AND 32768 AND (expires_utc=0 OR expires_utc>?1) ORDER BY name,host_key LIMIT 64").map_err(|_|"account-unconfirmed")?;
- let expiry=observed_unix_ms().saturating_mul(1000).saturating_add(11644473600000000).min(i64::MAX as u64) as i64;
- let mut rows=query.query([expiry]).map_err(|_|"account-unconfirmed")?;
- let mut bytes=Sensitive(format!("doubao-account-source-v2\n{}",root.join(folder).to_string_lossy().to_lowercase()).into_bytes());let mut uid=false;let mut session=false;
- while let Some(row)=rows.next().map_err(|_|"account-unconfirmed")?{
-  let host:String=row.get(0).map_err(|_|"account-unconfirmed")?;let name:String=row.get(1).map_err(|_|"account-unconfirmed")?;
-  let encrypted=Sensitive(row.get::<_,Vec<u8>>(2).map_err(|_|"account-unconfirmed")?);
-  uid|=name=="uid_tt";session|=matches!(name.as_str(),"sessionid"|"sessionid_ss"|"sid_tt");
-  for part in [host.as_bytes(),name.as_bytes(),encrypted.0.as_slice()]{bytes.0.extend_from_slice(&(part.len() as u64).to_le_bytes());bytes.0.extend_from_slice(part)}
- }
- if !uid||!session{return Err("not-logged-in")}
- crate::analysis::sha256(&bytes.0).map_err(|_|"account-unconfirmed")
-}
-pub(super) fn source_scope()->Result<String,String>{
- let root=profiles().into_iter().next().ok_or("豆包当前登录目录暂时不可用")?;
- let folder=active_profile(&root).map_err(|_|"豆包当前账号暂时不可确认")?;
- cache_scope(&root,&folder).map_err(|_|"豆包当前账号暂时不可确认".into())
-}
-fn cache_file(dir:&Path)->PathBuf{dir.join("doubao-session.dpapi")}
 fn save_login(dir:&Path,scope:&str,login:&Login,now:u64)->Result<(),&'static str>{
- let payload=SavedLogin{version:2,profile:scope.into(),saved_at:now,expires:login.expires.min(now+MAX_SESSION_AGE),header:login.header.as_str().into(),token:login.token.as_ref().map(|s|s.as_str().into())};
+ let payload=SavedLogin{version:3,profile:scope.into(),saved_at:now,expires:login.expires.min(now+MAX_SESSION_AGE),header:login.header.as_str().into(),token:login.token.as_ref().map(|s|s.as_str().into())};
  let body=Sensitive(serde_json::to_vec(&payload).map_err(|_|"cache-unavailable")?);
  if body.0.len()>128*1024{return Err("cache-unavailable")}
  let input=CRYPT_INTEGER_BLOB{cbData:body.0.len() as u32,pbData:body.0.as_ptr() as *mut u8};let mut output=CRYPT_INTEGER_BLOB::default();
  if unsafe{CryptProtectData(&input,std::ptr::null(),std::ptr::null(),std::ptr::null(),std::ptr::null(),CRYPTPROTECT_UI_FORBIDDEN,&mut output)}==0{return Err("cache-unavailable")}
  let result=if output.pbData.is_null()||output.cbData>256*1024{Err("cache-unavailable")}else{
   let bytes=unsafe{std::slice::from_raw_parts(output.pbData,output.cbData as usize)};
-  std::fs::create_dir_all(dir).and_then(|_|std::fs::write(dir.join("doubao-session.dpapi.tmp"),bytes)).and_then(|_|std::fs::rename(dir.join("doubao-session.dpapi.tmp"),cache_file(dir))).map_err(|_|"cache-unavailable")
+  std::fs::create_dir_all(dir).and_then(|_|std::fs::write(dir.join("doubao-browser-session.dpapi.tmp"),bytes)).and_then(|_|std::fs::rename(dir.join("doubao-browser-session.dpapi.tmp"),cache_file(dir))).map_err(|_|"cache-unavailable")
  };
  unsafe{windows_sys::Win32::Foundation::LocalFree(output.pbData as _);};result
-}
-fn load_login(dir:&Path,scope:&str,now:u64)->Result<Login,&'static str>{
- let encrypted=bounded_file(&cache_file(dir)).map_err(|_|"login-file-busy")?;if encrypted.0.len()>256*1024{return Err("cache-invalid")}
- let plain=unprotect(&encrypted.0).map_err(|_|"cache-invalid")?;let mut payload:SavedLogin=serde_json::from_slice(&plain.0).map_err(|_|"cache-invalid")?;
- if payload.expires<=now{let _=std::fs::remove_file(cache_file(dir));return Err("cache-expired")}
- if payload.version!=2||payload.profile!=scope{return Err("account-unconfirmed")}
- if payload.saved_at>now||payload.expires<=now||payload.expires>payload.saved_at.saturating_add(MAX_SESSION_AGE)||payload.header.is_empty()||payload.header.len()>64*1024||!payload.header.bytes().all(|b|(32..=126).contains(&b))||payload.token.as_ref().is_some_and(|v|v.len()>16384||!v.bytes().all(|b|(32..=126).contains(&b))){return Err("cache-expired")}
- Ok(Login{header:crate::credentials::Secret::from_string(std::mem::take(&mut payload.header)),token:payload.token.take().map(crate::credentials::Secret::from_string),expires:payload.expires})
 }
 fn query_path(token:Option<&str>)->String{
  // Same fixed desktop request parameters as the verified upstream implementation.
@@ -178,68 +85,220 @@ fn query_path(token:Option<&str>)->String{
  if let Some(token)=token{params.query_pairs_mut().append_pair("msToken",token);}
  format!("{QUOTA_PATH}?{}",params.query().unwrap_or(""))
 }
-pub(super) fn read(cache_dir:Option<&Path>)->AgentObservation{
- let paths=profiles();if paths.is_empty(){return failure("profile-not-found")}
- let mut last="not-logged-in";
- for profile in paths.into_iter().take(1){
-  let scope=match active_profile(&profile).and_then(|folder|cache_scope(&profile,&folder)){Ok(scope)=>scope,Err(issue)=>{last=issue;continue}};
-  let mut cache_issue=None;
-  let login=match cookie_header(&profile){Ok(login)=>{if let Some(dir)=cache_dir{if save_login(dir,&scope,&login,observed_unix_ms()).is_err(){cache_issue=Some("cache-unavailable")}}login},Err("login-file-busy")=>{
-   // Re-check the actual account, never infer ownership from a directory or
-   // from an old token still accepted by the service. A locked DB fails closed.
-   if cache_scope(&profile,&active_profile(&profile).unwrap_or_default()).ok().as_ref()!=Some(&scope){last="account-unconfirmed";continue}
-   match cache_dir.ok_or("account-unconfirmed").and_then(|dir|load_login(dir,&scope,observed_unix_ms())){Ok(login)=>login,Err(issue)=>{last=issue;continue}}
-  },Err(issue)=>{last=issue;continue}};
-  if cache_scope(&profile,&active_profile(&profile).unwrap_or_default()).ok().as_ref()!=Some(&scope){last="account-unconfirmed";continue}
-  let path=crate::credentials::Secret::from_string(query_path(login.token.as_ref().map(|s|s.as_str())));
-  let headers=crate::credentials::Secret::from_string(format!("User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36 SamanthaDoubao/2.31.4\r\nReferer: chrome://doubao-chat/\r\nContent-Type: application/json\r\nAccept: */*\r\nAccept-Language: zh-CN,zh;q=0.9\r\nagw-js-conv: str\r\nCookie: {}\r\n",login.header.as_str()));
-  match crate::http::post_doubao_quota(path.as_str(),headers.as_str()){
-   Ok((200,bytes))=>{let body=Sensitive(bytes);let value=serde_json::from_slice(&body.0).map_err(|_|());
-    let mut result=value.map(|value|parse_quota(&value)).unwrap_or_else(|_|failure("response-invalid"));
-    if let Some(issue)=cache_issue{if let Some(member)=result.membership.as_mut(){member["readIssue"]=Value::String(issue.into());}}
-    if result.reason=="quota-unavailable"{
-     let overview=crate::credentials::Secret::from_string(path.as_str().replacen(QUOTA_PATH,"/alice/commerce/sale/subscription/overview/",1));
-     if let Ok((200,bytes))=crate::http::post_doubao_quota(overview.as_str(),headers.as_str()){
-      let bytes=Sensitive(bytes);if let Ok(value)=serde_json::from_slice::<Value>(&bytes.0){
-       return parse_quota(&value)
-      }
-     }
-    }
-    return result},
-   Ok((401,_))=>{if let Some(dir)=cache_dir{let _=std::fs::remove_file(cache_file(dir));}last="login-expired"},Ok((403,_))=>last="response-rejected",_=>last="request-failed"
-  }
+
+fn cache_file(dir:&Path)->PathBuf{dir.join("doubao-browser-session.dpapi")}
+fn valid_pair(name:&str,value:&str)->bool{
+ !name.is_empty()&&name.len()<=100&&name.bytes().all(|c|c.is_ascii_alphanumeric()||b"-_.".contains(&c))
+ &&!value.is_empty()&&value.len()<=16384&&value.bytes().all(|b|(0x20..=0x7e).contains(&b)&&b!=b';')
+}
+fn validate_header(header:&str)->Result<(),&'static str>{
+ if header.is_empty()||header.len()>64*1024{return Err("cache-invalid")}
+ let mut names=std::collections::BTreeSet::new();
+ for pair in header.split("; "){
+  let (name,value)=pair.split_once('=').ok_or("cache-invalid")?;
+  if !valid_pair(name,value)||!names.insert(name){return Err("cache-invalid")}
  }
- failure(last)
+ if REQUIRED.iter().any(|name|!names.contains(name)){return Err("not-logged-in")}Ok(())
+}
+fn load_login(dir:&Path,now:u64)->Result<(Login,String),&'static str>{
+ let encrypted=bounded_file(&cache_file(dir)).map_err(|_|"browser-not-connected")?;
+ if encrypted.0.len()>256*1024{return Err("cache-invalid")}
+ let signature=crate::analysis::sha256(&encrypted.0).map_err(|_|"cache-invalid")?;
+ let plain=unprotect(&encrypted.0).map_err(|_|"cache-invalid")?;
+ let mut payload:SavedLogin=serde_json::from_slice(&plain.0).map_err(|_|"cache-invalid")?;
+ if payload.version!=3||payload.profile!=BROWSER_SCOPE{return Err("cache-invalid")}
+ if payload.saved_at>now||payload.expires<=now||payload.expires>payload.saved_at.saturating_add(MAX_SESSION_AGE){return Err("cache-expired")}
+ validate_header(&payload.header)?;
+ if payload.token.as_ref().is_some_and(|value|!valid_pair("msToken",value)){return Err("cache-invalid")}
+ Ok((Login{header:crate::credentials::Secret::from_string(std::mem::take(&mut payload.header)),token:payload.token.take().map(crate::credentials::Secret::from_string),expires:payload.expires},signature))
+}
+pub(super) fn source_scope(dir:Option<&Path>)->Result<String,String>{
+ let Some(dir)=dir else{return Ok("doubao-browser-unavailable".into())};
+ Ok(match load_login(dir,observed_unix_ms()){
+  Ok((_,signature))=>format!("doubao-browser:{signature}"),
+  Err(issue)=>format!("doubao-browser:{issue}"),
+ })
+}
+fn remove_login(dir:&Path)->Result<(),String>{
+ match std::fs::remove_file(cache_file(dir)){
+  Ok(())=>Ok(()),Err(error)if error.kind()==std::io::ErrorKind::NotFound=>Ok(()),
+  Err(_)=>Err("豆包登录缓存无法清除，请关闭后重试".into()),
+ }
+}
+fn reject_login(dir:&Path,signature:&str){
+ if let Ok(_guard)=SESSION_WRITE.lock(){
+  if load_login(dir,observed_unix_ms()).is_ok_and(|(_,current)|current==signature){let _=remove_login(dir);}
+ }
+}
+fn login_navigation(url:&tauri::Url)->bool{
+ url.scheme()=="https"&&url.host_str().is_some_and(|host|["doubao.com","bytedance.com","zijieapi.com"].iter().any(|domain|host==*domain||host.ends_with(&format!(".{domain}"))))
+}
+fn capture_login(view:&tauri::WebviewWindow)->Result<Login,String>{
+ let current=view.url().map_err(|_|"豆包登录窗口地址不可读")?;
+ if current.scheme()!="https"||current.host_str()!=Some("www.doubao.com"){return Err("请先在豆包官方页面完成登录，再点完成连接".into())}
+ let url=tauri::Url::parse(&format!("https://www.doubao.com{QUOTA_PATH}")).map_err(|_|"豆包官方网址无效")?;
+ let cookies=view.cookies_for_url(url).map_err(|_|"豆包登录状态暂时不可读")?;
+ let now=observed_unix_ms();let mut expires=now+MAX_SESSION_AGE;
+ let mut pairs=std::collections::BTreeMap::<String,crate::credentials::Secret>::new();
+ for cookie in cookies{
+  let name=cookie.name();let value=cookie.value();
+  if !valid_pair(name,value){continue}
+  if let Some(at)=cookie.expires_datetime(){
+   let at=at.unix_timestamp().max(0) as u64*1000;
+   if at<=now{continue}if REQUIRED.contains(&name){expires=expires.min(at)}
+  }
+  if let Some(previous)=pairs.get(name){
+   if REQUIRED.contains(&name)&&previous.as_str()!=value{return Err("豆包登录状态不一致，请重新连接".into())}
+  }else{pairs.insert(name.into(),crate::credentials::Secret::from_string(value.into()));}
+ }
+ if REQUIRED.iter().any(|name|!pairs.contains_key(*name)){return Err("豆包尚未完成登录，请登录后再点完成连接".into())}
+ let mut header=String::new();for (name,value) in &pairs{if !header.is_empty(){header.push_str("; ")}header.push_str(name);header.push('=');header.push_str(value.as_str());}
+ let header=crate::credentials::Secret::from_string(header);
+ validate_header(header.as_str()).map_err(|_|"豆包登录状态格式无效")?;
+ Ok(Login{header,token:pairs.remove("msToken"),expires})
+}
+fn same_account(a:&Login,b:&Login)->bool{
+ fn identity(header:&str)->Vec<(&str,&str)>{header.split("; ").filter_map(|part|part.split_once('=')).filter(|(key,_)|REQUIRED.contains(key)).collect()}
+ identity(a.header.as_str())==identity(b.header.as_str())
+}
+pub(super) fn open(app:&tauri::AppHandle)->Result<(),String>{
+ let state=app.state::<AgentUsageState>();
+ let existing=state.browser_login.flow.lock().map_err(|_|"豆包连接忙碌")?.label.clone();
+ if let Some(view)=existing.and_then(|label|app.get_webview_window(&label)){
+  view.show().map_err(|_|"豆包登录窗口无法显示")?;return view.set_focus().map_err(|_|"豆包登录窗口无法聚焦".into());
+ }
+ let dir=app.path().app_data_dir().map_err(|_|"豆包登录目录不可用")?;
+ let (generation,label)={
+  let mut flow=state.browser_login.flow.lock().map_err(|_|"豆包连接忙碌")?;
+  let _guard=SESSION_WRITE.lock().map_err(|_|"豆包登录保存忙碌")?;remove_login(&dir)?;
+  flow.generation=flow.generation.saturating_add(1);flow.connecting=false;
+  let label=format!("doubao-account-{}",flow.generation);flow.label=Some(label.clone());(flow.generation,label)
+ };
+ let _=state.account_scope.revision("doubao",true,Some(&dir));
+ let _=app.emit("agent-usage-changed",serde_json::json!({"agentId":"doubao"}));
+ let url=tauri::Url::parse("https://www.doubao.com/chat/").map_err(|_|"豆包官方网址无效")?;
+ let view=tauri::WebviewWindowBuilder::new(app,&label,tauri::WebviewUrl::External(url))
+  .title("豆包官方登录 · 登录后返回工作台点完成连接")
+  .inner_size(1050.,760.).data_directory(dir.join("doubao-login-webview")).incognito(true)
+  .on_navigation(login_navigation).on_new_window(|_,_|tauri::webview::NewWindowResponse::Deny)
+  .build().map_err(|_|"豆包登录窗口创建失败")?;
+ let app=app.clone();
+ view.on_window_event(move|event|{
+  if matches!(event,tauri::WindowEvent::Destroyed){
+   let state=app.state::<AgentUsageState>();if let Ok(mut flow)=state.browser_login.flow.lock(){
+    if flow.generation==generation{flow.generation=flow.generation.saturating_add(1);flow.label=None;flow.connecting=false;}
+   };
+  }
+ });Ok(())
+}
+pub(super) fn connect(app:&tauri::AppHandle)->Result<(),String>{
+ let state=app.state::<AgentUsageState>();
+ let (generation,label)={
+  let mut flow=state.browser_login.flow.lock().map_err(|_|"豆包连接忙碌")?;
+  if flow.connecting{return Err("正在连接豆包，请稍候".into())}
+  let label=flow.label.clone().ok_or("请先点击连接豆包并完成官方登录")?;
+  flow.connecting=true;(flow.generation,label)
+ };
+ let result=(||{
+  let view=app.get_webview_window(&label).ok_or("豆包登录窗口已关闭，请重新连接")?;
+  let login=capture_login(&view)?;let result=query_quota(&login);
+  // A missing/unsupported quota is not proof of a usable login.
+  if result.login_status!="verified"{
+   return Err(match result.membership.as_ref().and_then(|m|m["readIssue"].as_str()){
+    Some("quota-unavailable")=>"豆包已响应，但未返回可识别额度；请确认此账号支持会员额度",
+    Some("request-failed")=>"豆包额度连接失败，请稍后再次点完成连接",
+    _=>"豆包未接受此登录，请确认登录完成后重试",
+   }.into())
+  }
+  let current=capture_login(&view)?;
+  if !same_account(&login,&current){return Err("连接时豆包账号发生变化，请重新连接".into())}
+  let dir=app.path().app_data_dir().map_err(|_|"豆包登录目录不可用")?;
+  {
+   let flow=state.browser_login.flow.lock().map_err(|_|"豆包连接忙碌")?;
+   if flow.generation!=generation||flow.label.as_deref()!=Some(&label){return Err("本次豆包连接已取消".into())}
+   let _guard=SESSION_WRITE.lock().map_err(|_|"豆包登录保存忙碌")?;
+   save_login(&dir,BROWSER_SCOPE,&current,observed_unix_ms()).map_err(|_|"豆包额度已验证，但加密登录保存失败，请重试")?;
+  }
+  let _=state.account_scope.revision("doubao",true,Some(&dir));
+  let _=view.close();let _=app.emit("agent-usage-changed",serde_json::json!({"agentId":"doubao"}));Ok(())
+ })();
+ if let Ok(mut flow)=state.browser_login.flow.lock(){if flow.generation==generation{flow.connecting=false;}}
+ result
+}
+pub(super) fn disconnect(app:&tauri::AppHandle)->Result<(),String>{
+ let dir=app.path().app_data_dir().map_err(|_|"豆包登录目录不可用")?;
+ let state=app.state::<AgentUsageState>();let label={
+  let mut flow=state.browser_login.flow.lock().map_err(|_|"豆包连接忙碌")?;
+  let _guard=SESSION_WRITE.lock().map_err(|_|"豆包登录保存忙碌")?;remove_login(&dir)?;
+  flow.generation=flow.generation.saturating_add(1);flow.connecting=false;flow.label.take()
+ };
+ if let Some(view)=label.and_then(|label|app.get_webview_window(&label)){let _=view.close();}
+ let _=state.account_scope.revision("doubao",true,Some(&dir));
+ let _=app.emit("agent-usage-changed",serde_json::json!({"agentId":"doubao"}));Ok(())
+}
+fn query_quota(login:&Login)->AgentObservation{
+ let path=crate::credentials::Secret::from_string(query_path(login.token.as_ref().map(|s|s.as_str())));
+ let headers=crate::credentials::Secret::from_string(format!("User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36 SamanthaDoubao/2.31.4\r\nReferer: chrome://doubao-chat/\r\nContent-Type: application/json\r\nAccept: */*\r\nAccept-Language: zh-CN,zh;q=0.9\r\nagw-js-conv: str\r\nCookie: {}\r\n",login.header.as_str()));
+ match crate::http::post_doubao_quota(path.as_str(),headers.as_str()){
+  Ok((200,bytes))=>{
+   let body=Sensitive(bytes);let result=serde_json::from_slice(&body.0).map(|value|parse_quota(&value)).unwrap_or_else(|_|failure("response-invalid"));
+   if result.reason=="quota-unavailable"{
+    let overview=crate::credentials::Secret::from_string(path.as_str().replacen(QUOTA_PATH,"/alice/commerce/sale/subscription/overview/",1));
+    if let Ok((200,bytes))=crate::http::post_doubao_quota(overview.as_str(),headers.as_str()){
+     let bytes=Sensitive(bytes);if let Ok(value)=serde_json::from_slice::<Value>(&bytes.0){return parse_quota(&value)}
+    }
+   }result
+  },
+  Ok((401,_))=>failure("login-expired"),Ok((403,_))=>failure("response-rejected"),_=>failure("request-failed"),
+ }
+}
+pub(super) fn read(cache_dir:Option<&Path>)->AgentObservation{
+ let Some(dir)=cache_dir else{return failure("browser-not-connected")};
+ let (login,signature)=match load_login(dir,observed_unix_ms()){Ok(login)=>login,Err(issue)=>return failure(issue)};
+ let result=query_quota(&login);
+ if result.membership.as_ref().is_some_and(|m|m["readIssue"]=="login-expired"){reject_login(dir,&signature);}
+ result
 }
 
 #[cfg(test)]
 mod tests{
  use super::*;use serde_json::json;
- #[test]fn changed_cookie_source_cannot_reuse_the_previous_account_login(){
-  let root=std::env::temp_dir().join(format!("gleamdesk-doubao-account-scope-{}-{}",std::process::id(),observed_unix_ms()));
-  let network=root.join("profile/Default/Network");std::fs::create_dir_all(&network).unwrap();
-  let db=rusqlite::Connection::open(network.join("Cookies")).unwrap();
-  db.execute_batch("CREATE TABLE cookies(host_key TEXT,name TEXT,encrypted_value BLOB,expires_utc INTEGER DEFAULT 0)").unwrap();
-  for name in ["uid_tt","sessionid"]{db.execute("INSERT INTO cookies(host_key,name,encrypted_value) VALUES('.doubao.com',?1,?2)",rusqlite::params![name,b"synthetic-account-a".as_slice()]).unwrap();}
-  let scope=cache_scope(&root.join("profile"),"Default").unwrap();let now=observed_unix_ms();
-  let login=Login{header:crate::credentials::Secret::from_string("sessionid=synthetic-a".into()),token:None,expires:now+MAX_SESSION_AGE};
-  save_login(&root,&scope,&login,now).unwrap();
-  db.execute("UPDATE cookies SET encrypted_value=?1 WHERE name='uid_tt'",[b"synthetic-account-b".as_slice()]).unwrap();drop(db);
-  let next_scope=cache_scope(&root.join("profile"),"Default").unwrap();
-  let reused=load_login(&root,&next_scope,now).is_ok();std::fs::remove_dir_all(&root).unwrap();
-  assert!(!reused,"same profile directory must not authorize another account's cached login");
+ fn synthetic_login(value:&str,expires:u64)->Login{
+  Login{header:crate::credentials::Secret::from_string(REQUIRED.iter().map(|name|format!("{name}={value}")).collect::<Vec<_>>().join("; ")),token:None,expires}
  }
- #[test]fn doubao_uses_active_profile_and_never_traverses_another_directory(){assert_eq!(profile_folder(Some("Profile 2")),Ok("Profile 2"));assert_eq!(profile_folder(None),Ok("Default"));for name in ["../other","C:\\other","another/profile","",".hidden"]{assert!(profile_folder(Some(name)).is_err())}}
+ #[test]fn browser_session_is_encrypted_expires_in_seven_days_and_retires_old_owners(){
+  let root=std::env::temp_dir().join(format!("gleamdesk-doubao-browser-{}-{}",std::process::id(),observed_unix_ms()));
+  let now=observed_unix_ms();let a=synthetic_login("synthetic-owner-a",now+MAX_SESSION_AGE*2);
+  save_login(&root,BROWSER_SCOPE,&a,now).unwrap();let (loaded,scope_a)=load_login(&root,now).unwrap();
+  assert!(same_account(&a,&loaded));assert_eq!(loaded.expires,now+MAX_SESSION_AGE);
+  let bytes=std::fs::read(cache_file(&root)).unwrap();assert!(!bytes.windows(17).any(|part|part==b"synthetic-owner-a"));
+  let b=synthetic_login("synthetic-owner-b",now+MAX_SESSION_AGE);
+  save_login(&root,BROWSER_SCOPE,&b,now).unwrap();let (loaded,scope_b)=load_login(&root,now).unwrap();
+  assert!(same_account(&b,&loaded));assert!(!same_account(&a,&loaded));assert_ne!(scope_a,scope_b);
+  reject_login(&root,&scope_a);assert!(cache_file(&root).exists(),"late failure for A must not remove B");
+  assert!(load_login(&root,now+MAX_SESSION_AGE).is_err());
+  reject_login(&root,&scope_b);assert!(!cache_file(&root).exists());std::fs::remove_dir(root).unwrap();
+ }
+ #[test]fn browser_session_never_imports_a_legacy_client_cache(){
+  let root=std::env::temp_dir().join(format!("gleamdesk-doubao-legacy-{}-{}",std::process::id(),observed_unix_ms()));
+  std::fs::create_dir(&root).unwrap();std::fs::write(root.join("doubao-session.dpapi"),b"synthetic-legacy-session").unwrap();
+  assert!(matches!(load_login(&root,observed_unix_ms()),Err("browser-not-connected")));
+  assert_eq!(read(Some(&root)).login_status,"not-logged-in");
+  std::fs::remove_file(root.join("doubao-session.dpapi")).unwrap();std::fs::remove_dir(root).unwrap();
+ }
+ #[test]fn login_window_is_restricted_and_headers_require_an_unambiguous_identity(){
+  for url in ["https://www.doubao.com/chat/","https://sso.doubao.com/","https://www.bytedance.com/"]{assert!(login_navigation(&tauri::Url::parse(url).unwrap()))}
+  for url in ["http://www.doubao.com/","https://doubao.com.evil.example/","file:///C:/secret","https://evil.example/?doubao.com"]{assert!(!login_navigation(&tauri::Url::parse(url).unwrap()))}
+  let login=synthetic_login("synthetic",observed_unix_ms()+1000);assert!(validate_header(login.header.as_str()).is_ok());
+  assert!(validate_header("sessionid=partial").is_err());
+  assert!(validate_header(&format!("{}; uid_tt=other",login.header.as_str())).is_err());
+  assert!(!valid_pair("sessionid","bad\r\nheader"));assert!(!valid_pair("sessionid","bad;injected=value"));
+  assert!(require_login_window("dashboard",Some(true)).is_ok());
+  assert!(require_login_window("dashboard",Some(false)).is_err());assert!(require_login_window("doubao-account-1",Some(true)).is_err());
+ }
  #[test]fn doubao_activity_quota_uses_only_reported_percentage(){let result=parse_quota(&json!({"code":0,"data":{"current_subscription":{"display":{"product_name":"体验套餐"}},"incentive_quota_section":{"window_limit_groups":[{"window_limits":[{"window_type":9,"used_percent":45,"end_time":1800000000000u64}]}]}}}));assert_eq!(result.login_status,"verified");assert_eq!(result.plan.as_deref(),Some("体验套餐"));assert_eq!(result.membership.as_ref().unwrap()["benefits"][0]["label"],"活动赠送额度");assert_eq!(result.windows[0].used_percent,45.);assert_eq!(result.windows[0].window_duration_mins,None);assert!(crate::http::post_doubao_quota("/chat/completion","Cookie: fixture").is_err());}
  #[test]#[ignore="explicitly authorized, read-only live Doubao account quota query"]
  fn inspect_live_doubao_quota(){let dir=std::env::var_os("APPDATA").map(|s|PathBuf::from(s).join("org.agentroom.desktop"));let result=read(dir.as_deref());println!("{}",serde_json::to_string(&result).unwrap());assert_eq!(result.login_status,"verified");}
- #[test]fn doubao_cache_is_encrypted_profile_bound_and_bounded_in_time(){
-  let root=std::env::temp_dir().join(format!("gleamdesk-doubao-cache-{}-{}",std::process::id(),observed_unix_ms()));let now=observed_unix_ms();
-  let login=Login{header:crate::credentials::Secret::from_string("sessionid=synthetic-session".into()),token:None,expires:now+MAX_SESSION_AGE};
-  save_login(&root,"fixture-profile",&login,now).unwrap();let bytes=std::fs::read(cache_file(&root)).unwrap();assert!(!bytes.windows(17).any(|s|s==b"synthetic-session"));
-  assert_eq!(load_login(&root,"fixture-profile",now).unwrap().header.as_str(),login.header.as_str());assert!(load_login(&root,"another-profile",now).is_err());assert!(load_login(&root,"fixture-profile",now+MAX_SESSION_AGE).is_err());
-  assert!(!cache_file(&root).exists());std::fs::remove_dir(root).unwrap();
- }
  #[test]fn doubao_official_quota_keeps_periods_and_less_than_one(){
   let value=json!({"code":0,"data":{"current_subscription":{"display":{"short_name":"标准套餐"}},"window_limit_section":{"usage_exhausted":false,"window_limit_groups":[{"window_limits":[{"window_type":1,"used_percent":1,"less_than_one_percent":true,"start_time":1800000000000u64,"end_time":1800018000000u64},{"window_type":2,"used_percent":23,"start_time":1800000000000u64,"end_time":1800604800000u64}]}]}}});
   let result=parse_quota(&value);assert_eq!(result.login_status,"verified");assert_eq!(result.source,"doubao-client-api");assert_eq!(result.plan.as_deref(),Some("标准套餐"));
@@ -251,35 +310,4 @@ mod tests{
   let value=json!({"data":{"window_limit_section":{"usage_exhausted":true,"window_limit_groups":[{"window_limits":[{"window_type":1,"used_percent":100,"start_time":0,"end_time":0},{"window_type":2,"used_percent":-1}]}]}}});
   let result=parse_quota(&value);assert_eq!(result.state,"warning");assert_eq!(result.windows.len(),1);assert_eq!(result.windows[0].resets_at_unix_ms,None);
  }
- #[test]fn doubao_cookie_host_binding_and_header_validation(){
-  let host=".doubao.com";let digest=crate::analysis::sha256(host.as_bytes()).unwrap();let bytes=(0..32).map(|i|u8::from_str_radix(&digest[i*2..i*2+2],16).unwrap()).collect::<Vec<_>>();
-  for n in [32,24,16]{let mut plaintext=bytes[..n].to_vec();plaintext.extend_from_slice(b"fixture-session");assert_eq!(decode_cookie(&plaintext,host).unwrap(),"fixture-session");}
-  assert_eq!(decode_cookie(b"legacy-value",host).unwrap(),"legacy-value");
-  assert!(decode_cookie(b"bad\r\nheader",host).is_err());assert!(decode_cookie(b"bad;another=value",host).is_err());
-  assert!(decrypt_cookie(&[0;32],b"v20unsupported",host).is_err());
- }
- #[test]fn doubao_aes_gcm_authenticates_ciphertext(){
-  // NIST AES-256-GCM zero-key/zero-IV vector, 16 zero plaintext bytes.
-  let ciphertext=[0xce,0xa7,0x40,0x3d,0x4d,0x60,0x6b,0x6e,0x07,0x4e,0xc5,0xd3,0xba,0xf3,0x9d,0x18];
-  let tag=[0xd0,0xd1,0xc8,0xa7,0x99,0x99,0x6b,0xf0,0x26,0x5b,0x98,0xb5,0xd4,0x8a,0xb9,0x19];
-  let mut encrypted=b"v10".to_vec();encrypted.extend_from_slice(&[0;12]);encrypted.extend_from_slice(&ciphertext);encrypted.extend_from_slice(&tag);
-  // Zero bytes are not cookie header values, so authenticated decrypt and header validation are separate.
-  assert_eq!(aes_gcm(&[0;32],&encrypted[3..15],&encrypted[15..31],&encrypted[31..]).unwrap().0,vec![0;16]);
-  encrypted[15]^=1;assert!(aes_gcm(&[0;32],&encrypted[3..15],&encrypted[15..31],&encrypted[31..]).is_err());
- }
-}
-struct Sensitive(Vec<u8>);
-impl Drop for Sensitive{fn drop(&mut self){self.0.fill(0)}}
-fn aes_gcm(key:&[u8],nonce:&[u8],ciphertext:&[u8],tag:&[u8])->Result<Sensitive,&'static str>{
- if key.len()!=32||nonce.len()!=12||tag.len()!=16||ciphertext.len()>32768{return Err("login-unreadable")}
- struct Algorithm(BCRYPT_ALG_HANDLE);impl Drop for Algorithm{fn drop(&mut self){unsafe{BCryptCloseAlgorithmProvider(self.0,0);}}}
- struct Key(BCRYPT_KEY_HANDLE);impl Drop for Key{fn drop(&mut self){unsafe{BCryptDestroyKey(self.0);}}}
- let mut handle=std::ptr::null_mut();if unsafe{BCryptOpenAlgorithmProvider(&mut handle,BCRYPT_AES_ALGORITHM,std::ptr::null(),0)}<0{return Err("login-unreadable")}let algorithm=Algorithm(handle);
- let mode:Vec<u16>="ChainingModeGCM\0".encode_utf16().collect();
- if unsafe{BCryptSetProperty(algorithm.0,BCRYPT_CHAINING_MODE,mode.as_ptr() as *const u8,(mode.len()*2) as u32,0)}<0{return Err("login-unreadable")}
- let mut handle=std::ptr::null_mut();if unsafe{BCryptGenerateSymmetricKey(algorithm.0,&mut handle,std::ptr::null_mut(),0,key.as_ptr(),32,0)}<0{return Err("login-unreadable")}let key=Key(handle);
- let mut info=BCRYPT_AUTHENTICATED_CIPHER_MODE_INFO{cbSize:std::mem::size_of::<BCRYPT_AUTHENTICATED_CIPHER_MODE_INFO>() as u32,dwInfoVersion:BCRYPT_AUTHENTICATED_CIPHER_MODE_INFO_VERSION,pbNonce:nonce.as_ptr() as *mut u8,cbNonce:12,pbTag:tag.as_ptr() as *mut u8,cbTag:16,..Default::default()};
- let mut output=Sensitive(vec![0;ciphertext.len().max(1)]);let mut length=0;
- if unsafe{BCryptDecrypt(key.0,ciphertext.as_ptr(),ciphertext.len() as u32,&mut info as *mut _ as *mut _,std::ptr::null_mut(),0,output.0.as_mut_ptr(),output.0.len() as u32,&mut length,0)}<0{return Err("login-unreadable")}
- output.0.truncate(length as usize);Ok(output)
 }

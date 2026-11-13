@@ -31,9 +31,9 @@ impl State {
         if !QUOTA_AGENT_IDS.contains(&id){return Err("未知的 AI 客户端".into())}
         Ok(self.entries.lock().map_err(|_|"AI 账号状态暂时不可用")?.entry(id.into()).or_default().clone())
     }
-    pub(super) fn revision(&self, id:&str, fresh:bool) -> Result<String,String> {
+    pub(super) fn revision(&self, id:&str, fresh:bool, cache_dir:Option<&Path>) -> Result<String,String> {
         let entry=self.entry(id)?;
-        let signature=entry.probes.read((),if fresh {Duration::ZERO}else{Duration::from_secs(2)},Duration::from_secs(1),||fingerprint(id))?;
+        let signature=entry.probes.read((),if fresh {Duration::ZERO}else{Duration::from_secs(2)},Duration::from_secs(1),||fingerprint(id,cache_dir))?;
         let revision=entry.tracker.lock().map_err(|_|"AI 账号状态暂时不可用")?.observe(signature);
         Ok(revision)
     }
@@ -91,7 +91,7 @@ fn claude_scope()->Result<String,String>{
     }
     digest(parts.join("\n").as_bytes())
 }
-fn fingerprint(id:&str)->Result<String,String>{
+fn fingerprint(id:&str,_cache_dir:Option<&Path>)->Result<String,String>{
     let mut parts=vec![];
     if id=="codex"{if let Some(home)=codex_home(){parts.push(file_scope(&home.join("auth.json"))?);parts.push(file_scope(&home.join("config.toml"))?);}else{parts.push("no-codex-home".into())}}
     if id=="claude"{parts.push(claude_scope()?);}
@@ -99,7 +99,7 @@ fn fingerprint(id:&str)->Result<String,String>{
         match id {
             "kimi"=>parts.push(kimi::source_scope().unwrap_or_else(|_|"kimi-unconfirmed".into())),
             "cursor"=>parts.push(cursor::source_scope().unwrap_or_else(|_|"cursor-unconfirmed".into())),
-            "doubao"=>parts.push(doubao::source_scope().unwrap_or_else(|_|"doubao-unconfirmed".into())),
+            "doubao"=>parts.push(doubao::source_scope(_cache_dir).unwrap_or_else(|_|"doubao-unconfirmed".into())),
             "antigravity"=>parts.push(antigravity_owner_scope().unwrap_or_else(|_|"antigravity-unconfirmed".into())),
             _=>{},
         }

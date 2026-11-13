@@ -67,7 +67,8 @@ export function useProviderDashboardData(providerIds: string[], beszelConfig: Be
     const stopAccountVisibility=monitorAccounts?subscribeWindowVisibility(()=>{if(isWindowVisible())checkAccounts();}):undefined;
     if(monitorAccounts)checkAccounts();
     const refreshAgents=(event?:unknown)=>{
-      const id=(event as {detail?:{agentId?:string}}|undefined)?.detail?.agentId;
+      const change=event as {detail?:{agentId?:string};payload?:{agentId?:string}}|undefined;
+      const id=change?.detail?.agentId??change?.payload?.agentId;
       if(monitorAccounts&&quotaAgentIds.some(agent=>agent===id)){void checkAccountRevision(id as typeof quotaAgentIds[number],true);return;}
       // Settings already performed its forced read. Other windows reuse that
       // verified native result instead of issuing the same six queries again.

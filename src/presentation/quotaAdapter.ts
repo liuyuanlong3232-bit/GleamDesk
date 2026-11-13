@@ -69,10 +69,11 @@ export function presentAgentQuotas(accounts: AgentQuotaAccount[], status: Provid
 
 export function doubaoReadIssueMessage(issue?:string):string|undefined{
   if(!issue)return undefined;
-  if(issue==="account-unconfirmed")return "当前账号待确认，请退出豆包后刷新一次";
-  if(issue==="cache-unavailable")return "额度已读取，但加密登录保存失败；豆包运行时可能无法自动更新";
-  if(["cache-invalid","cache-expired","profile-unsupported"].includes(issue))return "已保存登录不可用，请退出豆包后刷新一次，重新读取当前账号";
-  const messages:Record<string,string>={"profile-not-found":"请先启动并登录豆包客户端","not-logged-in":"请先在豆包客户端登录","login-expired":"豆包登录已过期，请回客户端重新登录","login-file-busy":"豆包登录文件暂被占用，请退出豆包后刷新一次","encryption-unsupported":"当前豆包版本的登录加密暂不支持","login-unreadable":"豆包登录信息暂时无法读取","request-failed":"豆包额度连接失败，请稍后刷新","response-rejected":"豆包未接受本次查询，请在客户端检查登录后重试","response-invalid":"豆包返回的额度格式暂不支持","quota-unavailable":"此账号未返回可识别的会员额度"};
+  if(issue==="browser-not-connected")return "请在设置中连接豆包";
+  if(issue==="account-unconfirmed")return "豆包账号待确认，请在设置中重新连接";
+  if(issue==="cache-unavailable")return "豆包加密登录保存失败，请重新连接";
+  if(["cache-invalid","cache-expired","profile-unsupported"].includes(issue))return "豆包登录已失效，请在设置中重新连接";
+  const messages:Record<string,string>={"not-logged-in":"请在设置中连接豆包","login-expired":"豆包登录已过期，请在设置中重新连接","login-unreadable":"豆包登录信息暂时无法读取","request-failed":"豆包额度连接失败，请稍后刷新","response-rejected":"豆包未接受本次查询，请在设置中重新连接","response-invalid":"豆包返回的额度格式暂不支持","quota-unavailable":"此账号未返回可识别的会员额度"};
   return messages[issue]??"豆包额度暂时无法读取";
 }
 function agentReason(account: AgentQuotaAccount): string | undefined {
