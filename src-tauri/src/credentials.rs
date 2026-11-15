@@ -87,6 +87,10 @@ pub(crate) fn refresh_mimo_console(expected:&str,updated:&str)->Result<bool,Stri
     replace_named_if_matches(CredentialSource::MimoConsole.target(),expected,updated)
 }
 #[cfg(windows)]
+pub(crate) fn refresh_beszel(expected:&str,updated:&str)->Result<bool,String>{
+    replace_named_if_matches(CredentialSource::Beszel.target(),expected,updated)
+}
+#[cfg(windows)]
 fn save_unlocked(target_name:&str,value:&str)->Result<(),String>{
     validate(value)?;
     let mut bytes = Secret(value.as_bytes().to_vec());

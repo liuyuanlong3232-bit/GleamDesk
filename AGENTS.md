@@ -62,3 +62,4 @@ release 原生测试 EXE 通过 Python subprocess.run 等待并捕获真实退�
 Antigravity.exe 可能被当作 Node 宿主运行 --import/--require 辅助服务；Hub 运行识别须排除这些进程，不能只按 EXE 名称判断编辑器仍在运行。
 Dock 位于普通应用下方，不遮挡输入框；启动、缩放或获得焦点时均不能重新置顶，使用 alwaysOnBottom 与 SWP_NOACTIVATE 保持桌面层。右键菜单临时允许聚焦并监听原生失焦，关闭后恢复；仅监听 DOM blur 无法可靠处理裁剪窗口外的桌面点击。
 MiMo 余额依赖官方网页会话，不是模型 API 密钥；仅在官方登录失效时复用自己的 mimo-console-profile 尝试恢复，不读取其他浏览器。恢复须核对原 userId、验证余额并比较原凭据后替换，断开或手动换号不能被迟到恢复覆盖；网络错误不要求重新登录。
+Beszel 的 PocketBase 用户令牌会过期；系统查询前检查 exp，过期不能误报 System ID 丢失。仅当前已授权的 127.0.0.1:8090 本机 Hub 在到期前三天续期，失败限频五分钟；核对同一用户和集合后比较原凭据再保存，不保存密码，不修改 VPS。

@@ -187,12 +187,127 @@ fn validate_auth_token(token: &str) -> Result<(), String> {
     if !jwt_format(token) {
         return Err("Beszel 读取需要 PocketBase 用户认证 JWT；请填写登录用户获得的令牌，不带 Bearer 前缀。Agent 注册 Token 不适用于此读取。".into());
     }
+    #[cfg(windows)] {
+    let claims=token_claims(token)?;
+    if claims.expires<=observed_unix_ms()/1000{return Err(LOGIN_EXPIRED.into())}
+    }
     Ok(())
+}
+
+const LOGIN_EXPIRED:&str="Beszel 登录已过期，请在 VPS 连接中重新登录";
+const LOGIN_INVALID:&str="Beszel 登录令牌无效，请在 VPS 连接中重新登录";
+#[derive(PartialEq,Debug)]
+#[cfg(windows)]
+struct TokenClaims{user:String,collection:String,expires:u64}
+#[cfg(windows)]
+fn token_claims(token:&str)->Result<TokenClaims,String>{
+    use base64::Engine;
+    if !jwt_format(token){return Err(LOGIN_INVALID.into())}
+    let payload=token.split('.').nth(1).ok_or(LOGIN_INVALID)?;
+    let bytes=LoginSecret(base64::engine::general_purpose::URL_SAFE_NO_PAD.decode(payload).map_err(|_|LOGIN_INVALID)?);
+    let value:Value=serde_json::from_slice(&bytes.0).map_err(|_|LOGIN_INVALID)?;
+    let text=|key:&str|value[key].as_str().filter(|s|!s.is_empty()&&s.len()<=128).map(str::to_owned).ok_or(LOGIN_INVALID.to_string());
+    let expires=value["exp"].as_u64().filter(|expiry|*expiry>0).ok_or(LOGIN_INVALID)?;
+    Ok(TokenClaims{user:text("id")?,collection:text("collectionId")?,expires})
+}
+#[cfg(windows)]
+fn renewal_due(claims:&TokenClaims,now:u64)->bool{claims.expires>now&&claims.expires-now<=3*86400}
+#[cfg(windows)]
+fn refreshed_claims_match(original:&TokenClaims,updated:&TokenClaims,now:u64)->bool{
+    original.user==updated.user&&original.collection==updated.collection&&updated.expires>original.expires&&updated.expires>now
+}
+fn local_refresh_allowed(hub:&HubUrl)->bool{hub.host=="127.0.0.1"&&hub.port==8090&&!hub.secure&&hub.prefix.is_empty()}
+#[cfg(windows)]
+fn refreshed_token(original:&TokenClaims,body:&[u8],now:u64)->Result<Option<crate::credentials::Secret>,String>{
+    if body.len()>65536{return Ok(None)}
+    let value:Value=match serde_json::from_slice(body){Ok(value)=>value,Err(_)=>return Ok(None)};
+    let Some(updated)=value["token"].as_str()else{return Ok(None)};
+    crate::credentials::validate(updated).map_err(|_|LOGIN_INVALID)?;
+    let claims=token_claims(updated)?;
+    if claims.user!=original.user||claims.collection!=original.collection||value["record"]["id"]!=original.user
+        ||value["record"]["collectionId"]!=original.collection||value["record"]["collectionName"]!="users"{return Err(LOGIN_INVALID.into())}
+    if !refreshed_claims_match(original,&claims,now){return Ok(None)}
+    Ok(Some(crate::credentials::Secret::from_string(updated.to_owned())))
+}
+#[cfg(windows)]
+fn token_for_snapshot(hub:&HubUrl,state:&BeszelState,check:&impl Fn()->Result<(),String>)->Result<crate::credentials::Secret,String>{
+    use crate::credentials::{self,CredentialSource::Beszel};
+    let token=credentials::read(Beszel)?;validate_auth_token(token.as_str())?;
+    let original=token_claims(token.as_str())?;
+    if !local_refresh_allowed(hub)||!renewal_due(&original,observed_unix_ms()/1000){return Ok(token)}
+    let mut attempt=state.refresh.lock().map_err(|_|"Beszel 读取任务无法完成")?;
+    let revision=credentials::revision();
+    if credentials::read(Beszel)?.as_str()!=token.as_str(){return Err("服务凭据已更新，请重新读取".into())}
+    if attempt.as_ref().is_some_and(|(stamp,version)|*version==revision&&stamp.elapsed()<Duration::from_secs(300)){return Ok(token)}
+    check()?;*attempt=Some((Instant::now(),revision));
+    // A transient renewal failure must not discard a still-valid connection.
+    let reply=crate::http::refresh_local_beszel(token.as_str(),Instant::now()+Duration::from_secs(5),check);
+    check()?;
+    let (status,body)=match reply{Ok((status,bytes))=>(status,LoginSecret(bytes)),Err(_)=>return Ok(token)};
+    if matches!(status,401|403){return Err(LOGIN_INVALID.into())}
+    if status!=200{return Ok(token)}
+    let Some(updated)=refreshed_token(&original,&body.0,observed_unix_ms()/1000)?else{return Ok(token)};
+    check()?;
+    if !credentials::refresh_beszel(token.as_str(),updated.as_str())?{return Err("服务凭据已更新，请重新读取".into())}
+    Ok(updated)
 }
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BeszelTokenStatus { configured: bool, jwt_format: bool }
+
+#[cfg(all(test,windows))]
+mod renewal_tests{
+    use super::*;
+    #[test]
+    #[ignore="explicitly authorized local Hub token renewal and snapshot acceptance; no password or VPS changes"]
+    fn renew_current_local_connection_without_returning_credentials(){
+        use crate::credentials::{self,CredentialSource::Beszel};
+        assert_eq!(std::env::var("GLEAMDESK_BESZEL_RENEWAL_ACCEPTANCE").as_deref(),Ok("1"));
+        let system_id=std::env::var("GLEAMDESK_BESZEL_SYSTEM_ID").expect("explicit configured system required");validate_system_id(&system_id).unwrap();
+        let original=credentials::read(Beszel).unwrap();validate_auth_token(original.as_str()).unwrap();
+        let claims=token_claims(original.as_str()).unwrap();
+        let (status,bytes)=crate::http::refresh_local_beszel(original.as_str(),Instant::now()+Duration::from_secs(5),&||Ok(())).expect("local renewal transport failed");
+        let body=LoginSecret(bytes);assert_eq!(status,200,"local Hub rejected renewal");
+        let renewed=refreshed_token(&claims,&body.0,observed_unix_ms()/1000).expect("local Hub returned mismatching identity").expect("local Hub did not extend expiry");
+        assert!(credentials::refresh_beszel(original.as_str(),renewed.as_str()).unwrap(),"connection changed during acceptance");
+        assert_eq!(credentials::read(Beszel).unwrap().as_str()==renewed.as_str(),true);
+        let state=BeszelState::default();
+        let snapshot=fetch_beszel_snapshot_blocking(state.cache.clone(),&state,"http://127.0.0.1:8090".into(),system_id,1000,&||Ok(())).expect("snapshot read failed after renewal");
+        assert_eq!(snapshot.state,"online");
+        println!("Local Hub renewal: HTTP 200; same account; expiry extended; credential saved; VPS snapshot online. No account, token or metrics returned.");
+    }
+    fn jwt(user:&str,collection:&str,expires:u64)->String{
+        use base64::Engine;
+        format!("header.{}.signature",base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(serde_json::to_vec(&serde_json::json!({"id":user,"collectionId":collection,"exp":expires})).unwrap()))
+    }
+    #[test]fn expired_login_is_rejected_before_system_lookup(){
+        assert_eq!(validate_auth_token(&jwt("synthetic","users-id",1)).unwrap_err(),LOGIN_EXPIRED);
+        assert_eq!(token_claims("header.payload.signature").unwrap_err(),LOGIN_INVALID);
+        assert!(validate_auth_token(&jwt("synthetic","users-id",observed_unix_ms()/1000+86400)).is_ok());
+    }
+    #[test]fn renewal_only_starts_in_the_last_three_valid_days(){
+        for (expiry,due) in [(999,false),(1000,false),(1001,true),(1000+3*86400,true),(1001+3*86400,false)]{
+            assert_eq!(renewal_due(&token_claims(&jwt("a","users",expiry)).unwrap(),1000),due);
+        }
+    }
+    #[test]fn renewal_accepts_only_the_same_users_collection_and_a_later_expiry(){
+        let original=token_claims(&jwt("a","users-id",2000)).unwrap();
+        let reply=|user:&str,collection:&str,expiry:u64|serde_json::to_vec(&serde_json::json!({"token":jwt(user,collection,expiry),"record":{"id":user,"collectionId":collection,"collectionName":"users"}})).unwrap();
+        assert!(refreshed_token(&original,&reply("a","users-id",3000),1000).unwrap().is_some());
+        for (user,collection) in [("b","users-id"),("a","other-collection")]{assert!(refreshed_token(&original,&reply(user,collection,3000),1000).is_err());}
+        for expiry in [999,2000]{assert!(refreshed_token(&original,&reply("a","users-id",expiry),1000).unwrap().is_none());}
+        assert!(refreshed_token(&original,b"not-json",1000).unwrap().is_none());
+        let mut mismatch:Value=serde_json::from_slice(&reply("a","users-id",3000)).unwrap();mismatch["record"]["id"]="b".into();
+        assert!(refreshed_token(&original,&serde_json::to_vec(&mismatch).unwrap(),1000).is_err());
+    }
+    #[test]fn automatic_renewal_is_scoped_to_the_authorized_local_hub_and_cancels_before_network(){
+        assert!(local_refresh_allowed(&parse_hub_url("http://127.0.0.1:8090").unwrap()));
+        for url in ["https://example.com","http://localhost:8090","http://127.0.0.1:8091","http://127.0.0.1:8090/prefix"]{assert!(!local_refresh_allowed(&parse_hub_url(url).unwrap()));}
+        let error=crate::http::refresh_local_beszel("synthetic.token.value",Instant::now()+Duration::from_secs(1),&||Err("synthetic-cancelled".into())).unwrap_err();
+        assert!(error.contains("synthetic-cancelled"));
+    }
+}
 
 #[tauri::command]
 pub fn inspect_beszel_token() -> Result<BeszelTokenStatus, String> {
@@ -273,28 +388,32 @@ pub fn clear_beszel_token() -> Result<(), String> {
 
 #[tauri::command]
 pub async fn fetch_beszel_snapshot(state: tauri::State<'_, BeszelState>, base_url: String, system_id: String, minimum_interval_ms: Option<u64>) -> Result<BeszelSnapshot, String> {
+    let permit=crate::simulation::require_live()?;
     let cache = state.cache.clone();
     let interval = minimum_interval_ms.unwrap_or(2_000).clamp(1_000, 300_000);
-    tauri::async_runtime::spawn_blocking(move || fetch_beszel_snapshot_blocking(cache, base_url, system_id, interval))
+    let app=state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || fetch_beszel_snapshot_blocking(cache, &app,base_url, system_id, interval,&||permit.check()))
         .await.map_err(|_| "Beszel 读取任务无法完成".to_string())?
 }
 
-#[derive(Default)]
-pub struct BeszelState { cache: RequestCache<(HubUrl, String, u64), BeszelSnapshot>, location_cache:RequestCache<String,VpsLocation> }
+#[derive(Default,Clone)]
+pub struct BeszelState { cache: RequestCache<(HubUrl, String, u64), BeszelSnapshot>, location_cache:RequestCache<String,VpsLocation>,refresh:std::sync::Arc<std::sync::Mutex<Option<(Instant,u64)>>> }
 impl BeszelState {
     pub fn metrics(&self) -> Option<crate::provider_requests::RequestMetrics> { self.cache.metrics() }
 }
 
-fn fetch_beszel_snapshot_blocking(cache: RequestCache<(HubUrl, String, u64), BeszelSnapshot>, base_url: String, system_id: String, interval_ms: u64) -> Result<BeszelSnapshot, String> {
+fn fetch_beszel_snapshot_blocking(cache: RequestCache<(HubUrl, String, u64), BeszelSnapshot>, state:&BeszelState,base_url: String, system_id: String, interval_ms: u64,check:&impl Fn()->Result<(),String>) -> Result<BeszelSnapshot, String> {
     validate_system_id(&system_id)?;
     let hub = parse_hub_url(&base_url)?;
     let revision = crate::credentials::revision();
+    let mut completed_revision=revision;
     let key = (hub.clone(), system_id.clone(), revision);
     let result = cache.read(key, Duration::from_millis(interval_ms), Duration::from_millis(500), || {
         #[cfg(windows)]
         {
-            let token = crate::credentials::read(crate::credentials::CredentialSource::Beszel)?;
-            validate_auth_token(token.as_str())?;
+            check()?;
+            let token = token_for_snapshot(&hub,state,check)?;
+            completed_revision=crate::credentials::revision();
             let started = Instant::now();
             let system_path = format!("{}/api/collections/systems/records/{}?fields=id,name,host,status,info,updated", hub.prefix, system_id);
             let (system_status, body) = beszel_get(&hub, &system_path, token.as_str())?;
@@ -307,12 +426,14 @@ fn fetch_beszel_snapshot_blocking(cache: RequestCache<(HubUrl, String, u64), Bes
                 Ok((status, _)) if !(200..300).contains(&status) && status != 404 => return Err(api_error_message(status)),
                 _ => None,
             };
+            check()?;
+            if crate::credentials::read(crate::credentials::CredentialSource::Beszel)?.as_str()!=token.as_str(){return Err("服务凭据已更新，请重新读取".into())}
             parse_record(&body, "Beszel", &system_id, latency, stats.as_ref())
         }
         #[cfg(not(windows))]
         { let _ = hub; Err("Beszel API 连接目前仅支持 Windows 桌面版本".into()) }
     });
-    if revision != crate::credentials::revision() { return Err("服务凭据已更新，请重新读取".into()); }
+    if completed_revision != crate::credentials::revision() { return Err("服务凭据已更新，请重新读取".into()); }
     result
 }
 

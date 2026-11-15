@@ -8,6 +8,7 @@ export function safeBeszelError(value: unknown): string {
   const known = [
     "尚未配置服务凭据", "Windows 凭据格式无效", "凭据为空、过长或包含控制字符",
     "服务凭据已更新，请重新读取", "Beszel API 令牌无效或无权读取该系统",
+    "Beszel 登录已过期，请在 VPS 连接中重新登录", "Beszel 登录令牌无效，请在 VPS 连接中重新登录",
     "找不到 Beszel 系统，请检查 System ID 和访问权限", "Beszel 返回了无法识别的数据",
     "服务 网络连接失败或请求超时", "无法初始化 Windows HTTP 客户端", "无法设置网络超时",
     "无法连接到 服务", "无法创建服务 API 请求", "无法设置 HTTP 重定向策略",

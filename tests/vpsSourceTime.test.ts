@@ -1,6 +1,17 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { safeBeszelError } from "../src/domain/vps/contracts";
+import {snapshotAfterFailure} from "../src/providers/server/beszelProvider";
+
+test("Beszel登录过期保留明确提示，不误报服务器离线",()=>{
+ const message="Beszel 登录已过期，请在 VPS 连接中重新登录";
+ assert.equal(safeBeszelError(message),message);
+ const failed=snapshotAfterFailure("one",message);
+ assert.equal(failed.availability,"credentials-missing");
+ assert.equal(failed.state,"unknown");
+ const previous={...failed,state:"online" as const};
+ assert.equal(snapshotAfterFailure("one",message,previous).state,"unknown");
+});
 
 test("Beszel诊断只保留固定分类，不回显地址、密钥或响应正文",()=>{
  for(const message of ["服务 网络连接失败或请求超时","Beszel API 令牌无效或无权读取该系统","找不到 Beszel 系统，请检查 System ID 和访问权限","尚未配置服务凭据","Beszel 返回了无法识别的数据","Beszel API 请求失败（HTTP 503）","Beszel VPS 状态 超过采样时限"]){

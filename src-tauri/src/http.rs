@@ -290,6 +290,12 @@
         post_request_json(host_name,port,secure,path,"Content-Type: application/json\r\nAccept: application/json\r\n",body,deadline,check)
     }
 
+    pub(crate) fn refresh_local_beszel(token:&str,deadline:std::time::Instant,check:&impl Fn()->Result<(),String>)->Result<(u32,Vec<u8>),String>{
+        crate::credentials::validate(token)?;
+        let headers=crate::credentials::Secret::from_string(format!("Authorization: {token}\r\nContent-Type: application/json\r\nAccept: application/json\r\n"));
+        post_request_json("127.0.0.1",8090,false,"/api/collections/users/auth-refresh",headers.as_str(),b"{}",deadline,check)
+    }
+
     // Room-specific allowlist: no arbitrary hosts, redirects or attachment upload endpoints.
     pub(crate) fn post_room_json(host:&str,path:&str,headers:&str,body:&[u8],deadline:std::time::Instant,check:&impl Fn()->Result<(),String>)->Result<(u32,Vec<u8>),String>{
         let fixed=matches!((host,path),("api.deepseek.com","/chat/completions")|("api.openai.com","/v1/chat/completions")|("api.anthropic.com","/v1/messages")|("api.xiaomimimo.com","/v1/chat/completions")|("dashscope.aliyuncs.com","/compatible-mode/v1/chat/completions")|("api.moonshot.cn","/v1/chat/completions")|("api.x.ai","/v1/chat/completions")|("ark.cn-beijing.volces.com","/api/v3/chat/completions"));

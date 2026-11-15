@@ -28,14 +28,14 @@ function readableError(error: unknown) {
 }
 
 export function snapshotAfterFailure(systemId: string, message: string, previous?: VpsObservation): VpsObservation {
-  const availability = message.includes("尚未配置") ? "credentials-missing" : "failed";
+  const availability = message.includes("尚未配置") || message.startsWith("Beszel 登录") ? "credentials-missing" : "failed";
   if (previous) {
-    return { ...previous, state: availability === "failed" ? "offline" : previous.state, availability, error: message };
+    return { ...previous, state: availability === "failed" ? "offline" : "unknown", availability, error: message };
   }
   return {
     ...emptyVpsObservation(availability, systemId),
     name: systemId || "Beszel",
-    state: message.includes("尚未配置") ? "unknown" : "offline",
+    state: availability === "credentials-missing" ? "unknown" : "offline",
     error: message,
   };
 }
