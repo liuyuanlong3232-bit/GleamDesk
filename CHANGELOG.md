@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+## [0.1.11] - 2026-11-15
+
+- Detect expired Beszel user tokens before querying systems, and show a login prompt instead of a missing-system or offline-server error.
+- Renew the existing local Hub token at 127.0.0.1:8090 during its last three valid days, with a five-minute failure cooldown and no password retention or VPS changes.
+- Verify the same user, collection and extended expiry before replacing the unchanged Windows credential; protect newer logins and disconnected accounts.
+
+## [0.1.10] - 2026-11-13
+
+- Restore expired MiMo balance sessions using GleamDesk’s own official login profile and distinguish network failures from login expiry.
+- Isolate each Agent’s account and quota refresh so one client cannot clear or block another client’s results.
+- Add an independent Doubao login that works while its desktop client is running; changing the official client account requires reconnecting in GleamDesk.
+- Keep the desktop Dock below ordinary apps, close its context menu on outside clicks, filter Antigravity helper hosts and synchronize settings quota refresh with the Hub.
+
 ## [0.1.9] - 2026-11-11
 
 - Simplify the workbench overview and shared navigation; retain seven overview cards and to-dos, while removing the scratch-note UI without deleting existing note data.
