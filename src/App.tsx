@@ -1,6 +1,6 @@
 import {appThemes,applyTheme} from "./presentation/theme";
 import {CloseIcon} from "./components/CloseIcon";
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { getTauriVersion, getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";
@@ -28,6 +28,7 @@ import { StatusHud,HudLogo,HudQuotaDetails,HudWorkbenchButton,HudMailButton,HudP
 import {MailOtpSettings} from './components/MailOtpSettings';
 import { hudQuotaUsed,apiHudSummary } from "./presentation/quotaAdapter";
 import {agentClients,readAgentRuntime,unavailableAgentRuntime,runningAgentClients} from "./providers/agents/agentUsageProvider";
+import { useCodexActivity } from "./providers/agents/useCodexActivity";
 import { AgentConnectionsSettings } from "./components/AgentConnectionsSettings";
 import { PrivacyNotice } from "./components/PrivacyNotice";
 import { AppUpdateIndicator, AppUpdateSettings } from "./components/AppUpdates";
@@ -50,11 +51,9 @@ import {useApiMoneyClock} from "./components/ApiMoneyDetails";
 import { DashboardPageControls,dashboardNavigationItems,buildWorkbenchSearchItems,WorkbenchSearch,type WorkbenchSearchItem } from "./components/DashboardPageControls";
 import {loadWebApps,subscribeWebApps,configureToolboxPreset,saveWebApps,webAppUrl} from "./services/webAppStore";
 import { DashboardPageManager, WorkbenchRail } from "./components/DashboardAvatarMenu";
-import { ToolboxWorkspace } from "./components/ToolboxWorkspace";
 import { PagedViewport } from "./components/PagedViewport";
 import { WebAppManager } from "./components/WebAppManager";
 import { WebAppDiagnostics } from "./components/WebAppDiagnostics";
-import { Workspace } from "./components/Workspace";
 import { WorkbenchOverview, WorkbenchResources } from "./components/WorkbenchOverview";
 import { activeDashboardPage, adjacentDashboardPage, adjacentWidgetPage, supportsDashboardWidgets, createDashboardPages, pageLayout, replacePageLayout, selectDashboardPage, moveDashboardWidget, placeDashboardWidget, reorderDashboardWidget, type DashboardPages } from "./domain/dashboard/pages";
 import type { WidgetDragPosition } from "./components/PagedViewport";
@@ -62,6 +61,9 @@ import { loadDashboardPages, saveDashboardPages, parseDashboardPages, loadNamedP
 import { isWindowVisible, startNativeWindowVisibility, subscribeWindowVisibility } from "./services/windowVisibility";
 
 type ScreenMode = "main" | "dashboard";
+
+const Workspace = lazy(() => import("./components/Workspace").then(module => ({ default: module.Workspace })));
+const ToolboxWorkspace = lazy(() => import("./components/ToolboxWorkspace").then(module => ({ default: module.ToolboxWorkspace })));
 
 const initialScreen: ScreenMode = window.location.pathname.endsWith("main.html") ? "main" : "dashboard";
 const appStartedAt = new Date().toISOString();
@@ -369,8 +371,7 @@ function MainScreen({
     void refresh();const timer=window.setInterval(()=>void refresh(),8000);const stop=subscribeWindowVisibility(()=>{if(isWindowVisible())void refresh()});
     return()=>{active=false;window.clearInterval(timer);stop()};
   },[settings.simulationEnabled]);
-  const [codexActivity,setCodexActivity]=useState<{state:string;activeTasks:number;source:string}>({state:"unknown",activeTasks:0,source:"none"});
-  useEffect(()=>{if(!isTauri()||settings.simulationEnabled||settings.apiConnections.localAgentUsageEnabled!==true){setCodexActivity({state:"unknown",activeTasks:0,source:"permission-required"});return;}let active=true,pending=false;const refresh=async()=>{if(!active||pending||!isWindowVisible())return;pending=true;try{const value=await invoke<{state:string;activeTasks:number;source:string}>("read_codex_activity",{consent:true});if(active)setCodexActivity(value)}catch{if(active)setCodexActivity({state:"unknown",activeTasks:0,source:"read-failed"})}finally{pending=false}};void refresh();const timer=window.setInterval(()=>void refresh(),3000);return()=>{active=false;window.clearInterval(timer)}},[settings.simulationEnabled,settings.apiConnections.localAgentUsageEnabled]);
+  const codexActivity = useCodexActivity(settings.simulationEnabled, settings.apiConnections.localAgentUsageEnabled);
   const [managerOpen, setManagerOpen] = useState(false);
   const [selectedApp, setSelectedApp] = useState<string | null>(null);
   const [applications, setApplications] = useApplications(setSelectedApp);
@@ -1079,6 +1080,7 @@ function Dashboard({
       {editing && !supportsDashboardWidgets(currentPage) && currentPage.widgets.length>0 && <div className="dashboard-toolbar"><div className="toolbar-controls"><strong>此页有未显示的组件</strong>{currentPage.widgets.map(item=><label key={item.id}>{widgetRegistry.find(widget=>widget.id===item.id)?.title??item.id}<select aria-label={`移回${item.id}`} defaultValue="" onChange={event=>{const target=event.target.value;if(!target)return;try{changePages(moveDashboardWidget(pageDocument,currentPage.id,target,item.id));}catch(error){setToast(error instanceof Error?error.message:"无法移动组件");}event.currentTarget.value="";}}><option value="">移回组件页…</option>{editablePages.filter(page=>page.id!==currentPage.id).map(page=><option value={page.id} key={page.id}>{page.name}</option>)}</select></label>)}</div></div>}
       {supportsDashboardWidgets(currentPage)&&(!["overview","resources"].includes(currentPage.kind)||editing)&&<header className="workbench-page-heading"><div><h1>{currentPage.kind==="overview"?"工作台":currentPage.kind==="resources"?"本机与 VPS":currentPage.name}</h1>{editing&&<p>拖动标题调整卡片，完成后保存布局</p>}</div><div><button onClick={onOpenNotifications}>通知中心</button><button onClick={()=>editing?persist():setEditing(true)}>{editing?"完成编辑":"编辑布局"}</button></div></header>}
       <PagedViewport retainForTransition={currentPage.kind!=="workspace"} pageId={viewportPageId} pageIds={viewportPageIds} editing={editing} onStep={stepPage} onWidgetDrag={(id,position)=>{setDragging(id);setDragPosition(position??null);}} onWidgetDrop={(id,target,position)=>{try{if(target){reorder(target,id);return;}if(position)changePages(placeDashboardWidget(pageDocument,currentPage.id,id,position.x,position.y));}catch(error){setToast(error instanceof Error?error.message:"无法放置组件");}}} onEdgeMove={(id,direction)=>{try{const target=adjacentWidgetPage({...pageDocument,pages:editablePages},direction,id);if(!target){setToast("其他自定义组件页没有可容纳的位置，可新建页面或调整布局");return;}const next=moveDashboardWidget(pageDocument,currentPage.id,target.id,id);if(next!==pageDocument)changePages(selectDashboardPage(next,target.id));}catch(error){setToast(error instanceof Error?error.message:"无法跨页移动");}}}>
+      <Suspense fallback={<p className="wb-empty" role="status">正在加载页面…</p>}>
       {currentPage.kind==="overview"&&!editing?<WidgetErrorBoundary widgetId="workbench-overview"><WorkbenchOverview cardSizes={settings.workbenchOverviewSizes} onCardSizesChange={sizes=>onSettingsChange({workbenchOverviewSizes:sizes})} animationsEnabled={settings.animations} cardOrder={settings.workbenchOverviewOrder} onCardOrderChange={order=>onSettingsChange({workbenchOverviewOrder:order})} displayName={settings.displayName} healthRequest={openAppRequest?.id==="health"?openAppRequest.nonce:undefined} data={displayData} simulationEnabled={settings.simulationEnabled} vpsInterval={settings.beszelRefreshIntervalSeconds} vpsConfigured={settings.simulationEnabled||Boolean(settings.beszelUrl.trim()&&settings.beszelSystemId.trim())} onNotifications={onOpenNotifications} onRoom={()=>openWebTool("agents")} onConnections={()=>{setSettingsModule("api");setSettingsOpen(true);}}/></WidgetErrorBoundary>:currentPage.kind==="resources"&&!editing?<WidgetErrorBoundary widgetId="workbench-resources"><WorkbenchResources data={displayData} view={resourceView} onView={setResourceView} simulationEnabled={settings.simulationEnabled} vpsHubUrl={settings.beszelUrl} animationsEnabled={settings.animations} onOpenServicePanel={openServicePanel} onConnections={()=>{setSettingsModule("beszel");setSettingsOpen(true);}}/></WidgetErrorBoundary>:currentPage.kind === "workspace" ? <WidgetErrorBoundary widgetId="workspace"><Workspace navigationHidden onSelectionChange={setWorkspaceSelection} covered={notificationOverlayVisible||pageManagerOpen} visible={!settingsOpen&&!searchOpen} simulationEnabled={settings.simulationEnabled} onManageWebApps={openWebAppsManager} openAppRequest={openAppRequest} openUrlRequest={openUrlRequest} /></WidgetErrorBoundary> : currentPage.kind === "toolbox" ? <WidgetErrorBoundary widgetId="toolbox"><ToolboxWorkspace openToolRequest={openToolRequest} onResources={()=>selectWorkbenchPage("resources")} onHealth={()=>{setOpenAppRequest({id:"health",nonce:Date.now()});selectPage("overview");}} onAgentRoom={()=>openWebTool("agents")} onLocalAi={()=>window.dispatchEvent(new CustomEvent("codex-desktop.local-ai-request",{detail:{id:"builtin-ollama"}}))} onManageWebApps={openWebAppsManager} onOpenWebApp={openWebTool} /></WidgetErrorBoundary> : <section className={`widget-grid page-${currentPage.kind} grid-rows-${Math.max(editing?4:3,...visiblePlacements.map(item=>item.y+item.height))}`} style={{"--page-rows":Math.max(editing?4:3,...visiblePlacements.map(item=>item.y+item.height))} as CSSProperties} aria-label="副屏组件">
         {visiblePlacements.map((placement) => (
           <div
@@ -1101,6 +1103,7 @@ function Dashboard({
           </div>
         ))}
       </section>}
+      </Suspense>
       </PagedViewport>
 
       {toast && <div className="toast glass">{toast}</div>}
