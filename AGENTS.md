@@ -38,6 +38,7 @@ Windows 透明 HUD 的 Computer Use 可能同时返回 14×14 小区域与完整
 原生快捷方式临时文件替换测试在沙箱中可能失败；先在普通用户环境复测，仅操作测试临时目录，不据此修改实际系统启动项。
 
 复制并修改生成的 NSIS 测试脚本时保留 UTF-8 BOM；否则 NSIS 可能将中文路径按 ANSI 解码并报 LicenseData 文件不存在。隔离升级测试使用独立产品登记和一次性测试密钥，不使用正式更新密钥签署合成可执行文件。
+由更新模块 `include!` 引入的验收源文件放在 `src-tauri/tests/fixtures/`，避免 Cargo 将其再次作为独立集成测试编译。合成升级验收复用当前版本生成的按用户安装模板，移除正式安装钩子。
 
 离线英译中使用固定版本 Transformers.js 与 OPUS-MT ONNX；首次开发运行 `npm.cmd run prepare:translation` 下载并校验模型，构建只检查本机资源，不自动联网下载。`public/translation-models` 和 `public/translation-runtime` 可重新生成，不提交 Git；运行时禁止远程模型及 CDN。
 主屏交互面板须放在 `.main-screen` 内并标记 `data-main-hit-region`，否则原生透明窗口裁剪会让面板在可访问树中存在却不可见、不可点击。

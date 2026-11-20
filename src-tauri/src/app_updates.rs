@@ -158,7 +158,7 @@ mod tests {
     use super::*;
     #[cfg(windows)]
     mod installer_acceptance {
-        include!(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/updater_acceptance.rs"));
+        include!(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/updater_acceptance.rs"));
     }
     fn fixture(version: &str, signed: bool) -> Value {
         let tag = format!("v{version}");
