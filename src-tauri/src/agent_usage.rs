@@ -23,30 +23,163 @@ fn activity_timestamp(text:&str)->Option<u64>{
  (((file.dwHighDateTime as u64)<<32)|file.dwLowDateTime as u64).checked_sub(116444736000000000).map(|ticks|ticks/10000)
 }
 #[cfg(not(windows))]fn activity_timestamp(_: &str)->Option<u64>{None}
-#[cfg(test)]fn activity_evidence(text:&str,now:u64)->Option<(&'static str,u64)>{activity_evidence_since(text,now,0)}
-fn activity_evidence_since(text:&str,now:u64,session_started:u64)->Option<(&'static str,u64)>{
- let mut state=None;let mut turn=String::new();let mut at=0;let mut latest=0;
- for line in text.lines(){let Ok(value)=serde_json::from_str::<Value>(line)else{continue};let Some(time)=value["timestamp"].as_str().and_then(activity_timestamp)else{continue};if time<session_started||time>now.saturating_add(5000){continue}latest=latest.max(time);
-  if value["type"]!="event_msg"||time<at{continue}let payload=&value["payload"];let id=payload["turn_id"].as_str().unwrap_or("");
-  match payload["type"].as_str(){Some("task_started")=>{state=Some("running");turn=id.into();at=time},Some("task_complete")|Some("turn_aborted")=>{if !turn.is_empty()&&!id.is_empty()&&turn!=id{continue}state=Some(if payload["type"]=="turn_aborted"||!payload["error"].is_null(){"interrupted"}else{"completed"});at=time},_=>{}}
- }
- let state=state?;Some((if state=="running"&&now.saturating_sub(latest)>30*60*1000{"unknown"}else if state!="running"&&now.saturating_sub(at)>5*60*1000{"idle"}else{state},at))
+#[derive(Default)]
+struct ActivityEvidence {
+    task: Option<(&'static str, u64)>,
+    last_line_at: u64,
+    next_eligible_at: Option<u64>,
+}
+
+impl ActivityEvidence {
+    fn state_at(&self, now: u64) -> Option<(&'static str, u64)> {
+        let (state, at) = self.task?;
+        let state = match state {
+            "running" if now.saturating_sub(self.last_line_at) > 30 * 60 * 1000 => "unknown",
+            "running" => "running",
+            _ if now.saturating_sub(at) > 5 * 60 * 1000 => "idle",
+            _ => state,
+        };
+        Some((state, at))
+    }
+}
+
+fn activity_evidence_since(text: &str, now: u64, session_started: u64) -> ActivityEvidence {
+    let mut evidence = ActivityEvidence::default();
+    let mut turn = String::new();
+    let mut at = 0;
+    for line in text.lines() {
+        let Ok(value) = serde_json::from_str::<Value>(line) else { continue };
+        let Some(time) = value["timestamp"].as_str().and_then(activity_timestamp) else { continue };
+        if time < session_started { continue }
+        if time > now.saturating_add(5000) {
+            let eligible_at = time - 5000;
+            evidence.next_eligible_at = Some(evidence.next_eligible_at.map_or(eligible_at, |prior| prior.min(eligible_at)));
+            continue;
+        }
+        evidence.last_line_at = evidence.last_line_at.max(time);
+        if value["type"] != "event_msg" || time < at { continue }
+        let payload = &value["payload"];
+        let id = payload["turn_id"].as_str().unwrap_or("");
+        let state = match payload["type"].as_str() {
+            Some("task_started") => {
+                id.clone_into(&mut turn);
+                "running"
+            }
+            Some("task_complete") | Some("turn_aborted") => {
+                if !turn.is_empty() && !id.is_empty() && turn != id { continue }
+                if payload["type"] == "turn_aborted" || !payload["error"].is_null() {
+                    "interrupted"
+                } else {
+                    "completed"
+                }
+            }
+            _ => continue,
+        };
+        at = time;
+        evidence.task = Some((state, time));
+    }
+    evidence
 }
 fn collect_activity_paths(root:&std::path::Path,depth:usize,left:&mut usize,out:&mut Vec<(std::time::SystemTime,PathBuf)>){
  if depth>4||*left==0{return}let Ok(entries)=std::fs::read_dir(root)else{return};
  for entry in entries.flatten(){if *left==0{break}*left-=1;let Ok(kind)=entry.file_type()else{continue};let path=entry.path();if kind.is_dir(){collect_activity_paths(&path,depth+1,left,out)}else if kind.is_file()&&entry.file_name().to_str().is_some_and(|name|name.starts_with("rollout-")&&name.ends_with(".jsonl")){if let Ok(modified)=entry.metadata().and_then(|meta|meta.modified()){out.push((modified,path))}}}
 }
-fn local_codex_activity()->CodexActivity{
- use std::io::{Read,Seek,SeekFrom};
- let unknown=||CodexActivity{state:"unknown",active_tasks:0,source:"local-task-events"};
- let Some(home)=std::env::var_os("CODEX_HOME").map(PathBuf::from).or_else(||std::env::var_os("USERPROFILE").map(|home|PathBuf::from(home).join(".codex")))else{return unknown()};
- if home.to_string_lossy().starts_with("\\\\"){return unknown()}let mut files=vec![];collect_activity_paths(&home.join("sessions"),0,&mut 8192,&mut files);files.sort_by(|a,b|b.0.cmp(&a.0));
- let now=observed_unix_ms();let mut active=0;let mut latest=None;let mut uncertain_recent=false;
- for (modified,path) in files.into_iter().take(12){let recent=modified.duration_since(std::time::UNIX_EPOCH).ok().is_some_and(|time|now.saturating_sub(time.as_millis() as u64)<=30*60*1000);let Ok(mut file)=std::fs::File::open(path)else{uncertain_recent|=recent;continue};let Ok(size)=file.metadata().map(|meta|meta.len())else{uncertain_recent|=recent;continue};let mut head=vec![];if (&mut file).take(64*1024).read_to_end(&mut head).is_err(){uncertain_recent|=recent;continue}let header=String::from_utf8_lossy(&head);let session_started=header.lines().next().and_then(|line|serde_json::from_str::<Value>(line).ok()).filter(|value|value["type"]=="session_meta").and_then(|value|value["timestamp"].as_str().and_then(activity_timestamp));let Some(session_started)=session_started else{uncertain_recent|=recent;continue};
-  let start=size.saturating_sub(96*1024);if file.seek(SeekFrom::Start(start)).is_err(){uncertain_recent|=recent;continue}let mut bytes=vec![];if file.take(96*1024).read_to_end(&mut bytes).is_err(){uncertain_recent|=recent;continue}let text=String::from_utf8_lossy(&bytes);let text=if start>0{text.split_once('\n').map(|(_,rest)|rest).unwrap_or("")}else{&text};
-  if let Some((state,at))=activity_evidence_since(text,now,session_started){if state=="running"{active+=1}if latest.is_none_or(|(_,previous)|at>previous){latest=Some((state,at))}}else{uncertain_recent|=recent}
- }
- CodexActivity{state:if active>0{"running"}else if uncertain_recent{"unknown"}else{latest.map(|(state,_)|state).unwrap_or("unknown")},active_tasks:active,source:"local-task-events"}
+type ActivityFileStamp = (std::time::SystemTime, Option<std::time::SystemTime>, u64);
+type ActivityCache = std::collections::HashMap<PathBuf, CachedActivity>;
+
+struct CachedActivity {
+    stamp: ActivityFileStamp,
+    read_at: u64,
+    evidence: ActivityEvidence,
+}
+
+fn activity_file_stamp(metadata: &std::fs::Metadata) -> std::io::Result<ActivityFileStamp> {
+    Ok((metadata.modified()?, metadata.created().ok(), metadata.len()))
+}
+
+fn read_activity_evidence(file: &mut std::fs::File, size: u64, now: u64) -> std::io::Result<ActivityEvidence> {
+    use std::io::{Read, Seek, SeekFrom};
+    let mut head = Vec::new();
+    (&mut *file).take(64 * 1024).read_to_end(&mut head)?;
+    let session_started = String::from_utf8_lossy(&head)
+        .lines().next()
+        .and_then(|line| serde_json::from_str::<Value>(line).ok())
+        .filter(|value| value["type"] == "session_meta")
+        .and_then(|value| value["timestamp"].as_str().and_then(activity_timestamp));
+    let Some(session_started) = session_started else { return Ok(ActivityEvidence::default()) };
+
+    let start = size.saturating_sub(96 * 1024);
+    file.seek(SeekFrom::Start(start))?;
+    let mut bytes = Vec::new();
+    file.take(96 * 1024).read_to_end(&mut bytes)?;
+    let text = String::from_utf8_lossy(&bytes);
+    let text = if start > 0 { text.split_once('\n').map_or("", |(_, rest)| rest) } else { &text };
+    Ok(activity_evidence_since(text, now, session_started))
+}
+
+fn activity_for_file(path: PathBuf, now: u64, cache: &mut ActivityCache) -> std::io::Result<Option<(&'static str, u64)>> {
+    let cached = cache.remove(&path);
+    let mut file = std::fs::File::open(&path)?;
+    // Use the open handle for length. Windows directory entries can lag an open writer.
+    let metadata = file.metadata()?;
+    let stamp = activity_file_stamp(&metadata).ok();
+    if let Some(cached) = cached.filter(|entry| {
+        stamp == Some(entry.stamp)
+            && now >= entry.read_at
+            && now - entry.read_at < 60_000
+            && entry.evidence.next_eligible_at.is_none_or(|eligible_at| now < eligible_at)
+    }) {
+        let state = cached.evidence.state_at(now);
+        cache.insert(path, cached);
+        return Ok(state);
+    }
+
+    let evidence = read_activity_evidence(&mut file, metadata.len(), now)?;
+    let state = evidence.state_at(now);
+    // Expire entries periodically to pick up changes that preserve file metadata.
+    if let Some(stamp) = stamp {
+        if file.metadata().and_then(|meta| activity_file_stamp(&meta)).ok() == Some(stamp) {
+            cache.insert(path, CachedActivity { stamp, read_at: now, evidence });
+        }
+    }
+    Ok(state)
+}
+
+fn poll_codex_activity(sessions: &std::path::Path, now: u64, cache: &mut ActivityCache) -> CodexActivity {
+    let mut files = Vec::new();
+    collect_activity_paths(sessions, 0, &mut 8192, &mut files);
+    files.sort_by(|a, b| b.0.cmp(&a.0));
+    files.truncate(12);
+    cache.retain(|path, _| files.iter().any(|(_, candidate)| candidate == path));
+
+    let mut active_tasks = 0;
+    let mut latest = None;
+    let mut uncertain_recent = false;
+    for (modified, path) in files {
+        if let Ok(Some((state, at))) = activity_for_file(path, now, cache) {
+            if state == "running" { active_tasks += 1; }
+            if latest.is_none_or(|(_, previous)| at > previous) { latest = Some((state, at)); }
+        } else {
+            uncertain_recent |= modified.duration_since(std::time::UNIX_EPOCH).ok()
+                .is_some_and(|time| now.saturating_sub(time.as_millis() as u64) <= 30 * 60 * 1000);
+        }
+    }
+    let state = if active_tasks > 0 { "running" } else if uncertain_recent { "unknown" } else {
+        latest.map_or("unknown", |(state, _)| state)
+    };
+    CodexActivity { state, active_tasks, source: "local-task-events" }
+}
+
+fn local_codex_activity() -> CodexActivity {
+    static CACHE: std::sync::LazyLock<std::sync::Mutex<ActivityCache>> = std::sync::LazyLock::new(Default::default);
+    let unknown = || CodexActivity { state: "unknown", active_tasks: 0, source: "local-task-events" };
+    let Some(home) = std::env::var_os("CODEX_HOME").map(PathBuf::from)
+        .or_else(|| std::env::var_os("USERPROFILE").map(|home| PathBuf::from(home).join(".codex")))
+    else { return unknown() };
+    if home.to_string_lossy().starts_with("\\\\") { return unknown() }
+
+    let mut cache = CACHE.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    poll_codex_activity(&home.join("sessions"), observed_unix_ms(), &mut cache)
 }
 /// Metadata-only observation. No transcript text, paths, tokens or credentials leave this reader.
 #[tauri::command]
@@ -449,6 +582,7 @@ mod tests {
     #[cfg(windows)]
     #[test]
     fn codex_activity_uses_task_events_not_text_mentions_or_file_touches(){
+        let activity_evidence = |text: &str, now| activity_evidence_since(text, now, 0).state_at(now);
         let now=activity_timestamp("2026-10-14T12:01:00Z").unwrap();
         let start=r#"{"timestamp":"2026-10-14T12:00:00Z","type":"event_msg","payload":{"type":"task_started","turn_id":"a"}}"#;
         assert_eq!(activity_evidence(start,now),Some(("running",now-60000)));
@@ -457,11 +591,41 @@ mod tests {
         let end=r#"{"timestamp":"2026-10-14T12:00:30Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"a"}}"#;
         assert_eq!(activity_evidence(&format!("{start}\n{end}"),now),Some(("completed",now-30000)));
         assert_eq!(activity_evidence(start,now+31*60*1000).unwrap().0,"unknown");
-        assert_eq!(activity_evidence_since(start,now,now-30000),None);
+        assert_eq!(activity_evidence_since(start,now,now-30000).state_at(now),None);
         let other=r#"{"timestamp":"2026-10-14T12:00:30Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"other"}}"#;
         assert_eq!(activity_evidence(&format!("{start}\n{other}"),now).unwrap().0,"running");
         let failed=r#"{"timestamp":"2026-10-14T12:00:30Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"a","error":{"message":"fixture failure"}}}"#;
         assert_eq!(activity_evidence(&format!("{start}\n{failed}"),now).unwrap().0,"interrupted");
+    }
+    #[cfg(windows)]
+    #[test]
+    fn codex_activity_cache_follows_file_and_clock_changes() {
+        use std::{fs, io::Write};
+        let root = std::env::temp_dir().join(format!("gleamdesk-codex-activity-{}-{}", std::process::id(), observed_unix_ms()));
+        fs::create_dir(&root).unwrap();
+        let path = root.join("rollout-fixture.jsonl");
+        let mut writer = fs::File::create(&path).unwrap();
+        let now = activity_timestamp("2026-10-14T12:00:10Z").unwrap();
+        writeln!(writer, "{}", r#"{"timestamp":"2026-10-14T12:00:00Z","type":"session_meta"}"#).unwrap();
+        writeln!(writer, "{}", r#"{"timestamp":"2026-10-14T12:00:05Z","type":"event_msg","payload":{"type":"task_started","turn_id":"a"}}"#).unwrap();
+
+        let mut cache = ActivityCache::new();
+        assert_eq!(poll_codex_activity(&root, now, &mut cache).active_tasks, 1);
+        assert_eq!(poll_codex_activity(&root, now + 1_000, &mut cache).active_tasks, 1);
+        assert_eq!(cache[&path].read_at, now);
+
+        // A writer that stays open can change the length before Windows updates the timestamp.
+        writeln!(writer, "{}", r#"{"timestamp":"2026-10-14T12:00:20Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"a"}}"#).unwrap();
+        assert_eq!(poll_codex_activity(&root, now + 2_000, &mut cache).state, "running");
+        assert_eq!(cache[&path].read_at, now + 2_000);
+        assert_eq!(poll_codex_activity(&root, now + 5_000, &mut cache).state, "completed");
+        assert_eq!(poll_codex_activity(&root, now + 4_000, &mut cache).state, "running");
+        assert_eq!(poll_codex_activity(&root, now + 311_000, &mut cache).state, "idle");
+        drop(writer);
+        fs::remove_file(path).unwrap();
+        assert_eq!(poll_codex_activity(&root, now, &mut cache).state, "unknown");
+        assert!(cache.is_empty());
+        fs::remove_dir(root).unwrap();
     }
     #[test]
     fn no_login_and_api_key_do_not_invent_subscription_quotas() {
