@@ -28,7 +28,11 @@ if($Stage -eq 'Prepare') {
     $target=if($env:CARGO_TARGET_DIR){$env:CARGO_TARGET_DIR}else{Join-Path $project 'src-tauri/target'}
     $templateDir=Join-Path $target 'release/nsis/x64'
     $template=[IO.File]::ReadAllText((Join-Path $templateDir 'installer.nsi'))
-    if($template -notmatch '(?m)^!define VERSION "0.1.3"\r?$' -or $template -notmatch '!define INSTALLMODE "currentUser"'){throw 'Build the current-user 0.1.3 NSIS installer first.'}
+    $buildVersion=(Get-Content -LiteralPath (Join-Path $project 'src-tauri/tauri.conf.json') -Raw|ConvertFrom-Json).version
+    $templateVersion='(?m)^!define VERSION "'+[regex]::Escape($buildVersion)+'"\r?$'
+    if($template -notmatch $templateVersion -or $template -notmatch '(?m)^!define INSTALLMODE "currentUser"\r?$'){throw "Build the current-user $buildVersion NSIS installer first."}
+    # Exercise the SDK and NSIS only; the synthetic installer must not load product-specific hooks.
+    $template=$template -replace '(?im)^!include "[^"\r\n]*[\\/]nsis-hooks\.nsh"\r?\n',''
     New-Item -ItemType Directory -Path $root,$roaming,(Join-Path $local 'EBWebView/Default') -Force | Out-Null
     [IO.File]::WriteAllText($owner,$identifier,$utf8)
     foreach($name in @('utils.nsh','FileAssociation.nsh')) { Copy-Item -LiteralPath (Join-Path $templateDir $name) -Destination $root }
